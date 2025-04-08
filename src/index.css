@@ -1,0 +1,14 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    font-family: 'Roboto', sans-serif;
+  }
+
+  .oswald-text {
+    font-family: 'Oswald', sans-serif;
+  }
+  
+  
