@@ -22,27 +22,115 @@
 
 
 
-import React from "react";
+// import React, { useState } from "react";
+// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// import Navbar from "./NAYSA Cloud/Components/Navbar";
+// import Sidebar from "./NAYSA Cloud/Components/Sidebar";
+// import Dashboard from "./NAYSA Cloud/Components/Dashboard";
+// import PayeeMasterData from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/REFERENCE FILES/PayeeMasterData.jsx";
+
+// const App = () => {
+//   const [selectedModule, setSelectedModule] = useState("");
+
+//   return (
+//     <Router>
+//       <div className="h-screen flex flex-col">
+//         {/* Navbar */}
+//         <div className="h-[60px]">
+//           <Navbar />
+//         </div>
+
+//         {/* Sidebar + Content */}
+//         <div className="flex flex-1 overflow-hidden">
+//           <Sidebar onMenuClick={setSelectedModule} />
+
+//           <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
+//             <Routes>
+//               {/* Dashboard when Accounts Payable is selected */}
+//               {selectedModule === "Accounts Payable" && (
+//                 <Route path="/" element={<Dashboard />} />
+//               )}
+
+//               {/* Other static route */}
+//               <Route path="/payeemasterdata" element={<PayeeMasterData />} />
+
+//               {/* Fallback for no selection */}
+//               <Route
+//                 path="*"
+//                 element={
+//                   selectedModule ? (
+//                     <div className="text-gray-600 text-lg">
+//                       {selectedModule} module selected.
+//                     </div>
+//                   ) : (
+//                     <div className="text-gray-400 text-lg">
+//                       Please select a module from the sidebar.
+//                     </div>
+//                   )
+//                 }
+//               />
+//             </Routes>
+//           </main>
+//         </div>
+//       </div>
+//     </Router>
+//   );
+// };
+
+// export default App;
+
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Header from "./NAYSA Cloud/Components/Header";
+import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
+import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV";
 
-function App() {
+const App = () => {
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarVisible(prev => !prev);
+  };
+
   return (
-    <div className="flex flex-col h-screen">
-      <Navbar />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 p-4 bg-gray-50">
-          {/* Page content goes here */}
-        </main>
+    <Router>
+      <div className="relative h-screen overflow-hidden">
+        {/* Sidebar overlay */}
+        {isSidebarVisible && (
+          <div className="absolute inset-0 z-50 flex">
+            <Sidebar />
+            <div
+              className="flex-1 bg-black bg-opacity-50"
+              onClick={toggleSidebar}
+            />
+          </div>
+        )}
+
+        {/* Main layout */}
+        <div className="flex flex-col h-full">
+          {/* Navbar with fixed height */}
+          <div className="h-16">
+            <Navbar onMenuClick={toggleSidebar} />
+          </div>
+
+          {/* Header */}
+          <Header />
+
+          {/* Page content area with background color */}
+          <div className="bg-gray-100 min-h-screen font-roboto flex-1 overflow-y-auto">
+            <Routes>
+              <Route path="/" element={<APV />} />
+            </Routes>
+          </div>
+        </div>
       </div>
-    </div>
+    </Router>
   );
-}
+};
 
 export default App;
-
-
 
 
 
