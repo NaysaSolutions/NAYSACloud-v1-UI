@@ -3,17 +3,17 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
-const BankLookupModal = ({ isOpen, onClose }) => {
-  const [banks, setBanks] = useState([]);
+const CurrLookupModal = ({ isOpen, onClose }) => {
+  const [currency, setCurr] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [filters, setFilters] = useState({ bankTypeCode: '', bankTypeName: '' });
+  const [filters, setFilters] = useState({ currCode: '', currName: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
   
-      axios.post("http://127.0.0.1:8000/api/lookupBankType", {
+      axios.post("http://127.0.0.1:8000/api/lookupCurr", {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
@@ -28,15 +28,15 @@ const BankLookupModal = ({ isOpen, onClose }) => {
       .then((response) => {
         const result = response.data;
         if (result.success) {
-          const bankData = JSON.parse(result.data[0].result);
-          setBanks(bankData);
-          setFiltered(bankData);
+          const currData = JSON.parse(result.data[0].result);
+          setCurr(currData);
+          setFiltered(currData);
         } else {
-          alert(result.message || "Failed to fetch bank");
+          alert(result.message || "Failed to fetch Currency");
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch bank:", err);
+        console.error("Failed to fetch currency:", err);
         alert(`Error: ${err.message}`);
       })
       .finally(() => {
@@ -47,17 +47,17 @@ const BankLookupModal = ({ isOpen, onClose }) => {
   
 
   useEffect(() => {
-    const newFiltered = banks.filter(bank =>
-        bank.bankTypeCode.toLowerCase().includes(filters.bankTypeCode.toLowerCase()) &&
-        bank.bankTypeName.toLowerCase().includes(filters.bankTypeName.toLowerCase())
+    const newFiltered = currency.filter(curr =>
+      curr.currCode.toLowerCase().includes(filters.currCode.toLowerCase()) &&
+      curr.currName.toLowerCase().includes(filters.currName.toLowerCase())
     );
     setFiltered(newFiltered);
-  }, [filters, banks]);
+  }, [filters, currency]);
 
-  const handleApply = (bank) => {
+  const handleApply = (curr) => {
 
     
-    onClose(bank);
+    onClose(curr);
   };
 
   const handleFilterChange = (e, key) => {
@@ -77,7 +77,7 @@ const BankLookupModal = ({ isOpen, onClose }) => {
           <FontAwesomeIcon icon={faTimes} size="lg" />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4 uppercase">Select Bank</h2>
+        <h2 className="text-lg font-semibold mb-4 uppercase">Select Currency</h2>
 
         {loading ? (
           <div className="flex justify-center items-center h-32">
@@ -88,24 +88,24 @@ const BankLookupModal = ({ isOpen, onClose }) => {
             <table className="min-w-full border-collapse text-sm text-center border border-gray-200">
               <thead className='text-gray-700 uppercase bg-gray-100'>
                 <tr>
-                  <th className="px-2 py-2 border">Bank Code</th>
-                  <th className="px-6 py-2 border">Bank Name</th>
+                  <th className="px-2 py-2 border">Currency Code</th>
+                  <th className="px-6 py-2 border">Currency Name</th>
                   <th className="px-4 py-2 border">Action</th>
                 </tr>
                 <tr className="bg-white">
                   <th className="border px-4 py-1">
                     <input
                       type="text"
-                      value={filters.banktype_code}
-                      onChange={(e) => handleFilterChange(e, 'banktype_code')}
+                      value={filters.currCode}
+                      onChange={(e) => handleFilterChange(e, 'currCode')}
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
                   <th className="border px-4 py-1">
                     <input
                       type="text"
-                      value={filters.bankTypeName}
-                      onChange={(e) => handleFilterChange(e, 'bankTypeName')}
+                      value={filters.currName}
+                      onChange={(e) => handleFilterChange(e, 'currName')}
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
@@ -117,17 +117,17 @@ const BankLookupModal = ({ isOpen, onClose }) => {
     <tr>
       <td colSpan="3" className="py-10 text-center">
         <div className="w-8 h-8 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <div className="text-sm text-gray-500 mt-2">Loading banks...</div>
+        <div className="text-sm text-gray-500 mt-2">Loading currency...</div>
       </td>
     </tr>
   ) : filtered.length > 0 ? (
-    filtered.map((bank, index) => (
+    filtered.map((curr, index) => (
       <tr key={index} className="bg-white hover:bg-gray-100 transition">
-        <td className="px-4 py-2 border">{bank.bankTypeCode}</td>
-        <td className="px-4 py-2 border">{bank.bankTypeName}</td>
+        <td className="px-4 py-2 border">{curr.currCode}</td>
+        <td className="px-4 py-2 border">{curr.currName}</td>
         <td className="border px-4 py-2">
           <button
-            onClick={() => handleApply(bank)}
+            onClick={() => handleApply(curr)}
             className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
           >
             Apply
@@ -138,7 +138,7 @@ const BankLookupModal = ({ isOpen, onClose }) => {
   ) : (
     <tr>
       <td colSpan="3" className="px-4 py-6 text-center text-gray-500">
-        No matching bank found.
+        No matching currency found.
       </td>
     </tr>
   )}
@@ -146,7 +146,7 @@ const BankLookupModal = ({ isOpen, onClose }) => {
 
             </table>
             <div className="p-3 text-sm text-gray-600">
-              Showing <strong>{filtered.length}</strong> of {banks.length} entries
+              Showing <strong>{filtered.length}</strong> of {currency.length} entries
             </div>
           </div>
         )}
@@ -155,4 +155,4 @@ const BankLookupModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default BankTypeLookupModal;
+export default CurrLookupModal;

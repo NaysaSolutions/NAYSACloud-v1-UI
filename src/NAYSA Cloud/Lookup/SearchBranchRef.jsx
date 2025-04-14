@@ -32,11 +32,11 @@ const BranchLookupModal = ({ isOpen, onClose }) => {
           setBranches(branchData);
           setFiltered(branchData);
         } else {
-          alert(result.message || "Failed to fetch branches");
+          alert(result.message || "Failed to fetch Branch");
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch branches:", err);
+        console.error("Failed to fetch Branch:", err);
         alert(`Error: ${err.message}`);
       })
       .finally(() => {
@@ -55,6 +55,8 @@ const BranchLookupModal = ({ isOpen, onClose }) => {
   }, [filters, branches]);
 
   const handleApply = (branch) => {
+
+    
     onClose(branch);
   };
 

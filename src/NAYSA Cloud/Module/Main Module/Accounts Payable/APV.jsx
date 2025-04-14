@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faTrashAlt, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
-import BranchLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
+import BranchLookupModal from "C:/NSIApps/phpProgramming/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
 // import OpenBalanceModal from "./openBalanceQueryModal";
 
 const APV = () => {
