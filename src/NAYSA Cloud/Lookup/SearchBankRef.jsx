@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
-const BankLookupModal = ({ isOpen, onClose }) => {
+const BankLookupModal = ({ isOpen, onClose, customParam }) => {
   const [banks, setBanks] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [filters, setFilters] = useState({ bankTypeCode: '', bankTypeName: '' });
@@ -47,9 +47,9 @@ const BankLookupModal = ({ isOpen, onClose }) => {
   
 
   useEffect(() => {
-    const newFiltered = banks.filter(bank =>
-        bank.bankTypeCode.toLowerCase().includes(filters.bankTypeCode.toLowerCase()) &&
-        bank.bankTypeName.toLowerCase().includes(filters.bankTypeName.toLowerCase())
+    const newFiltered = banks.filter(item =>
+      item.bankTypeCode.toLowerCase().includes(filters.bankTypeCode.toLowerCase()) &&
+      item.bankTypeName.toLowerCase().includes(filters.bankTypeName.toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, banks]);

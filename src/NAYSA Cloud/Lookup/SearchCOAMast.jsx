@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
-const COAMasterLookupModal = ({ isOpen, onClose }) => {
+const COAMastLookupModal = ({ isOpen, onClose, customParam  }) => {
   const [accounts, setAccounts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [filters, setFilters] = useState({ acctCode: '', acctName: '', acctBalance: '' , reqSL: ''  , reqRC: '' });
@@ -12,10 +12,20 @@ const COAMasterLookupModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-  
+
+
+      switch (customParam) {
+        case "apv_hd":
+          customParam = "APGL";
+          break;         
+        default:
+          break;
+      }
+
+
       axios.post("http://127.0.0.1:8000/api/lookupCOA", {
         PARAMS: JSON.stringify({
-          search: "",
+          search: customParam || "",
           page: 1,
           pageSize: 10
         })
@@ -47,22 +57,21 @@ const COAMasterLookupModal = ({ isOpen, onClose }) => {
   
 
   useEffect(() => {
-    const newFiltered = accounts.filter(coa =>
-      coa.acctCode.toLowerCase().includes(filters.acctCode.toLowerCase()) &&
-      coa.acctName.toLowerCase().includes(filters.acctName.toLowerCase()) &&
-      coa.acctBalance.toLowerCase().includes(filters.acctBalance.toLowerCase()) &&
-      coa.reqSL.toLowerCase().includes(filters.reqSL.toLowerCase()) &&
-      coa.reqRC.toLowerCase().includes(filters.reqRC.toLowerCase()) 
+    const newFiltered = accounts.filter(item =>
+      item.acctCode.toLowerCase().includes(filters.acctCode.toLowerCase()) &&
+      item.acctName.toLowerCase().includes(filters.acctName.toLowerCase()) &&
+      item.acctBalance.toLowerCase().includes(filters.acctBalance.toLowerCase()) &&
+      item.reqSL.toLowerCase().includes(filters.reqSL.toLowerCase()) &&
+      item.reqRC.toLowerCase().includes(filters.reqRC.toLowerCase()) 
     );
     setFiltered(newFiltered);
   }, [filters, accounts]);
 
-  const handleApply = (coa) => {
-
-    
+  const handleApply = (coa) => {  
     onClose(coa);
   };
 
+  
   const handleFilterChange = (e, key) => {
     setFilters({ ...filters, [key]: e.target.value });
   };
@@ -152,16 +161,16 @@ const COAMasterLookupModal = ({ isOpen, onClose }) => {
       </td>
     </tr>
   ) : filtered.length > 0 ? (
-    filtered.map((branch, index) => (
+    filtered.map((coa, index) => (
       <tr key={index} className="bg-white hover:bg-gray-100 transition">
-        <td className="px-4 py-2 border">{branch.acctCode}</td>
-        <td className="px-4 py-2 border">{branch.acctName}</td>
-        <td className="px-4 py-2 border">{branch.acctBalance}</td>
-        <td className="px-4 py-2 border">{branch.reqSL}</td>
-        <td className="px-4 py-2 border">{branch.reqRC}</td>
+        <td className="px-4 py-2 border">{coa.acctCode}</td>
+        <td className="px-4 py-2 border">{coa.acctName}</td>
+        <td className="px-4 py-2 border">{coa.acctBalance}</td>
+        <td className="px-4 py-2 border">{coa.reqSL}</td>
+        <td className="px-4 py-2 border">{coa.reqRC}</td>
         <td className="border px-4 py-2">
           <button
-            onClick={() => handleApply(branch)}
+            onClick={() => handleApply(coa)}
             className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
           >
             Apply
@@ -189,4 +198,4 @@ const COAMasterLookupModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default COAMasterLookupModal;
+export default COAMastLookupModal;

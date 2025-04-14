@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
-const BranchLookupModal = ({ isOpen, onClose }) => {
+const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   const [branches, setBranches] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [filters, setFilters] = useState({ branchCode: '', branchName: '' });

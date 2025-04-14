@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, customParam } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
@@ -47,9 +47,9 @@ const CurrLookupModal = ({ isOpen, onClose }) => {
   
 
   useEffect(() => {
-    const newFiltered = currency.filter(curr =>
-      curr.currCode.toLowerCase().includes(filters.currCode.toLowerCase()) &&
-      curr.currName.toLowerCase().includes(filters.currName.toLowerCase())
+    const newFiltered = currency.filter(item =>
+      item.currCode.toLowerCase().includes(filters.currCode.toLowerCase()) &&
+      item.currName.toLowerCase().includes(filters.currName.toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, currency]);
