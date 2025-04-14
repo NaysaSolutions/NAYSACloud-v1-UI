@@ -86,6 +86,7 @@ import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
 import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV";
+import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 
 const App = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -96,41 +97,43 @@ const App = () => {
 
   return (
     <Router>
-      <div className="relative h-screen overflow-hidden">
-        {/* Sidebar overlay */}
-        {isSidebarVisible && (
-          <div className="absolute inset-0 z-50 flex">
-            <Sidebar />
-            <div
-              className="flex-1 bg-black bg-opacity-50"
-              onClick={toggleSidebar}
-            />
-          </div>
-        )}
+      <ResetProvider>
+        <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto">
+          {/* Sidebar overlay for mobile view */}
+          {isSidebarVisible && (
+            <div className="fixed inset-0 z-50 flex">
+              <Sidebar />
+              <div
+                className="flex-1 bg-black bg-opacity-50"
+                onClick={toggleSidebar}
+              />
+            </div>
+          )}
 
-        {/* Main layout */}
-        <div className="flex flex-col h-full">
-          {/* Navbar with fixed height */}
-          <div className="h-16">
+          {/* Fixed Navbar */}
+          <div className="sticky top-0 z-40">
             <Navbar onMenuClick={toggleSidebar} />
           </div>
 
           {/* Header */}
           <Header />
-
-          {/* Page content area with background color */}
-          <div className="bg-gray-100 min-h-screen font-roboto flex-1 overflow-y-auto">
+{/* Main scrollable content area */}
+<div className="flex-1 p-4 overflow-y-auto">
             <Routes>
               <Route path="/" element={<APV />} />
+              {/* <Route path="/cv" element={<CV />} /> */}
             </Routes>
           </div>
         </div>
-      </div>
+        </ResetProvider>
     </Router>
   );
 };
 
 export default App;
+
+
+
 
 
 

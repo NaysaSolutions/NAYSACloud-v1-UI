@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faTrashAlt, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
-import BranchLookupModal from "C:/NSIApps/phpProgramming/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
+import { faMagnifyingGlass, faPlus, faTrashAlt  } from "@fortawesome/free-solid-svg-icons";
+import BranchLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
+import { useReset } from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Components/ResetContext.jsx";
 // import OpenBalanceModal from "./openBalanceQueryModal";
 
 const APV = () => {
+  const { resetFlag } = useReset();
+
+  const [detailRows, setDetailRows] = useState([]);
   const [detailData, setDetailData] = useState([]);
   const [isFetchDisabled, setIsFetchDisabled] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -18,6 +22,43 @@ const APV = () => {
     apv_date: "",
   });
 
+  useEffect(() => {
+    if (resetFlag) {
+      setBranchName("");
+      console.log("Fields in APV reset!");
+    }
+  }, [resetFlag]);
+
+  const handleAddRow = () => {
+    setDetailRows([
+      ...detailRows,
+      {
+        type: "",
+        rrNo: "",
+        category: "",
+        classification: "",
+        poNo: "",
+        invoiceNo: "",
+        invoiceDate: "",
+        origAmount: "",
+        currency: "",
+        invoiceAmount: "",
+        drAccount: "",
+        rcCode: "",
+        rcDescription: "",
+        slCode: "",
+        vatCode: "",
+        vatDescription: "",
+        vatAmount: "",
+        ewtCode: "",
+        ewtDescription: "",
+        ewtAmount: "",
+        terms: "",
+        dueDate: "",
+      }
+    ]);
+  };
+  
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     setHeader((prev) => ({ ...prev, apv_date: today }));
@@ -61,11 +102,12 @@ const APV = () => {
   return (
     <div className="p-4 bg-gray-100 min-h-screen font-roboto">
 
+<h1 className="text-center justify-center font-black text-4xl mb-4 mt-[-30px] font-robotoMono">ACCOUNTS PAYABLE VOUCHER</h1>
       {/* Form Layout */}
-      <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 bg-white shadow-md p-9 rounded-lg relative">
+      <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 bg-white shadow-md p-9 rounded-lg relative" >
         {/* Column 1 */}
         <div className="space-y-5">
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="branchName"
@@ -90,7 +132,7 @@ const APV = () => {
           </div>
 
 
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="APVNo"
@@ -112,7 +154,7 @@ const APV = () => {
                   </button>
           </div>
 
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="date"
               id="APVDate"
@@ -126,9 +168,12 @@ const APV = () => {
               APV Date
             </label>
           </div>
+        </div>
 
+        {/* Column 2 */}
+        <div className="space-y-5">
 
-          <div className="relative w-[250px]">
+        <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="payeeCode"
@@ -150,7 +195,7 @@ const APV = () => {
                   </button>
           </div>
 
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="payeeName"
@@ -164,11 +209,8 @@ const APV = () => {
               Payee Name
             </label>
           </div>
-        </div>
 
-        {/* Column 2 */}
-        <div className="space-y-5">
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="APVNo"
@@ -176,10 +218,10 @@ const APV = () => {
               className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
             />
             <label
-              htmlFor="APVNo"
+              htmlFor="acctCode"
               className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
             >
-              Account Code
+              AP Account Code
             </label>
             <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
@@ -189,8 +231,11 @@ const APV = () => {
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
           </div>
-
-          <div className="relative w-[250px]">
+        </div>
+                  
+        {/* Column 3 */}
+        <div className="space-y-5">        
+        <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="currCode"
@@ -212,7 +257,7 @@ const APV = () => {
                   </button>
           </div>
 
-          <div className="relative w-[250px]">
+          <div className="relative w-[270px] mx-auto">
             <input
               type="text"
               id="currName"
@@ -227,7 +272,63 @@ const APV = () => {
               Currency Name
             </label>
           </div>
-        </div>
+
+          <div className="relative w-[270px] mx-auto">
+            <input
+              type="text"
+              id="APVNo"
+              placeholder=" "
+              className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+            />
+            <label
+              htmlFor="apType"
+              className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+            >
+              AP Type
+            </label>
+            <button
+                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
+                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
+                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+          </div>
+          </div>  
+
+          {/* Column 4 */}
+        <div className="space-y-5">        
+
+          <div className="relative w-[270px] mx-auto">
+            <input
+              type="text"
+              id="refDocNo1"
+              placeholder=" "
+              className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+            />
+            <label
+              htmlFor="refDocNo1"
+              className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+            >
+              Ref Doc No. 1
+            </label>
+          </div>
+
+          <div className="relative w-[270px] mx-auto">
+            <input
+              type="text"
+              id="refDocNo2"
+              placeholder=" "
+              className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+            />
+            <label
+              htmlFor="refDocNo2"
+              className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+            >
+              Ref Doc No. 2
+            </label>
+          </div>
+          </div>  
 
         {/* Open Balance Query Button
         <button
@@ -238,21 +339,21 @@ const APV = () => {
           Open Balance
         </button> */}
 
-        {/* Remarks Section (adjust top position) */}
-        <div className="relative w-[690px] col-span" style={{ marginTop: '5px' }}> {/* Adjust marginTop */}
-          <textarea
-            id="remarks"
-            placeholder=""
-            rows={13} // Adjust rows as needed
-            className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pt-4 pb-1.5 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 resize-none"
-          />
-          <label
-            htmlFor="remarks"
-            className="absolute left-2.5 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-1 text-sm text-gray-600 transition-all peer-placeholder-shown:top-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-blue-600"
-          >
-            Remarks
-          </label>
-        </div>
+        {/* Remarks Section */}
+        <div className="relative w-full col-span-full mt-[-40px]">
+    <textarea
+      id="remarks"
+      placeholder=""
+      rows={10}
+      className="peer block w-[99%] mx-auto appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pt-4 pb-1.5 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 resize-none"
+    />
+    <label
+      htmlFor="remarks"
+      className="absolute left-2.5 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-1 text-sm text-gray-600 transition-all peer-placeholder-shown:top-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-blue-600"
+    >
+      Remarks
+    </label>
+  </div>
 
       </div>
       <br />
@@ -267,36 +368,218 @@ const APV = () => {
       </div>
 
       {/* Invoice Details Table */}
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg">
         <table className="min-w-full table-auto border-collapse">
         <thead>
-            <tr className="bg-gray-100">
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">LN</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Type</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RR No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Category</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Classification</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">PO/JO No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice Date</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Orig Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Currency</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">DR Account</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RC Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RC Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">SL Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Terms</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Due Date</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Action</th>
-            </tr>
-          </thead>
+  <tr className="bg-gray-100">
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">LN</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Type</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">RR No.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">PO/JO No.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Invoice No.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Invoice Date</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Original Amount</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Currency</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Invoice Amount</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">DR Account</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">RC Code</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">RC Desc.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">SL Code</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">VAT Code</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">VAT Desc.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">VAT Amount</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">ATC</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">ATC Desc.</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">ATC Amount</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Payment Terms</th>
+    <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Due Date</th>
+    {/* <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Action</th> */}
+  </tr>
+</thead>
+<tbody>
+    {detailRows.map((row, index) => (
+      <tr key={index}>
+        <td className="border px-2 py-1">{index + 1}</td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.type || ""}
+            onChange={(e) => handleDetailChange(index, 'type', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.rrNo || ""}
+            onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.poNo || ""}
+            onChange={(e) => handleDetailChange(index, 'poNo', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.invoiceNo || ""}
+            onChange={(e) => handleDetailChange(index, 'invoiceNo', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.invoiceDate || ""}
+            onChange={(e) => handleDetailChange(index, 'invoiceDate', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="number"
+            className="w-full border border-gray-300 rounded px-1 text-sm text-right"
+            value={row.origAmount || ""}
+            onChange={(e) => handleDetailChange(index, 'origAmount', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.currency || ""}
+            onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="number"
+            className="w-full border border-gray-300 rounded px-1 text-sm text-right"
+            value={row.invoiceAmount || ""}
+            onChange={(e) => handleDetailChange(index, 'invoiceAmount', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.drAccount || ""}
+            onChange={(e) => handleDetailChange(index, 'drAccount', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.rcCode || ""}
+            onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.rcDescription || ""}
+            onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.slCode || ""}
+            onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.vatCode || ""}
+            onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.vatDescription || ""}
+            onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="number"
+            className="w-full border border-gray-300 rounded px-1 text-sm text-right"
+            value={row.vatAmount || ""}
+            onChange={(e) => handleDetailChange(index, 'vatAmount', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.ewtCode || ""}
+            onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.ewtDescription || ""}
+            onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="number"
+            className="w-full border border-gray-300 rounded px-1 text-sm text-right"
+            value={row.ewtAmount || ""}
+            onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.terms || ""}
+            onChange={(e) => handleDetailChange(index, 'terms', e.target.value)}
+          />
+        </td>
+        <td className="border px-2 py-1">
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded px-1 text-sm"
+            value={row.dueDate || ""}
+            onChange={(e) => handleDetailChange(index, 'dueDate', e.target.value)}
+          />
+        </td>
+        {/* <td className="border px-2 py-1">
+          <button
+    onClick={() => handleDeleteRow(index)}
+    className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm focus:outline-none flex items-center justify-center"
+  >
+    <FontAwesomeIcon icon={faTrashAlt} /> Delete
+  </button>
+        </td> */}
+      </tr>
+    ))}
+
+    {/* Add Button at the bottom */}
+    {/* <button
+  onClick={handleAddRow}
+  className="mt-[200px] bottom-4 ml-6 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center focus:outline-none self-start"
+>
+  <FontAwesomeIcon icon={faPlus} className="mr-2" />
+  Add
+</button> */}
+  </tbody>
         </table>
       </div>
       </div>

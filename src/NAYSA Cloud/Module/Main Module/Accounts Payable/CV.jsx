@@ -19,12 +19,14 @@ const CV = () => {
   });
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0]; // Format:<ctrl3348>-MM-DD
     setHeader((prev) => ({ ...prev, apv_date: today }));
   }, []);
 
   return (
     <div className="p-4 bg-gray-100 min-h-screen font-roboto">
+
+      <h1 className="text-center justify-center font-black text-4xl mb-4 mt-[-30px] font-robotoMono">CHECK VOUCHER</h1>
       {/* Form Layout with Tabs */}
       <div className="bg-white shadow-md rounded-lg p-4">
         {/* Tab Navigation */}
@@ -46,7 +48,7 @@ const CV = () => {
         {/* Tab Content */}
         <div className="p-4">
           {activeTab === 'basic' ? (
-            <div className="grid grid-cols-1 md:grid-cols-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-y-4"> {/* Added gap-y-4 for vertical spacing */}
               {/* Column 1 */}
               <div className="space-y-4">
                 <div className="relative w-[250px]">
@@ -61,7 +63,7 @@ const CV = () => {
                     htmlFor="BranchCode"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
-                    Branch Code
+                    Branch
                   </label>
                   <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
@@ -108,7 +110,10 @@ const CV = () => {
                     CV Date
                   </label>
                 </div>
+              </div>
 
+              {/* Column 2 */}
+              <div className="space-y-4">
                 <div className="relative w-[250px]">
                   <input
                     type="text"
@@ -147,17 +152,17 @@ const CV = () => {
                 </div>
               </div>
 
-              {/* Column 2 */}
+              {/* Column 3 */}
               <div className="space-y-4">
                 <div className="relative w-[250px]">
                   <input
                     type="text"
-                    id="APVNo"
+                    id="refAPV"
                     placeholder=" "
                     className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
                   />
                   <label
-                    htmlFor="APVNo"
+                    htmlFor="refAPV"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     with Ref APV
@@ -170,8 +175,59 @@ const CV = () => {
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
-
                 <div className="relative w-[250px]">
+                  <input
+                    type="text"
+                    id="apType"
+                    placeholder=" "
+                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                  />
+                  <label
+                    htmlFor="apType"
+                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                  >
+                    AP Type
+                  </label>
+                </div>
+                <div className="relative w-[250px]">
+                  <input
+                    type="text"
+                    id="refDocNo"
+                    placeholder=" "
+                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                  />
+                  <label
+                    htmlFor="refDocNo"
+                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                  >
+                    Ref Doc No.
+                  </label>
+                </div>
+              </div>
+
+              {/* Column 4 - Remarks */}
+              <div className="col-span-full"> 
+                <div className="relative w-full mt-4">
+                  <textarea
+                    id="remarks"
+                    placeholder=""
+                    rows={10} 
+                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pt-4 pb-2.5 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 resize-none"
+                  />
+                  <label
+      htmlFor="remarks"
+      className="absolute left-2.5 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-1 text-sm text-gray-600 transition-all peer-placeholder-shown:top-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-blue-600"
+    >
+                    Remarks
+                  </label>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              {/* Column 3 */}
+              <div className="space-y-4">
+              <div className="relative w-[250px]">
                   <input
                     type="text"
                     id="currCode"
@@ -222,43 +278,12 @@ const CV = () => {
                     Payment Type
                   </label>
                 </div>
-
-                <div className="relative w-[250px]">
-                  <input
-                    type="text"
-                    id="currName"
-                    placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-                  />
-                  <label
-                    htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-                  >
-                    AP Type
-                  </label>
-                </div>
               </div>
-               {/* Remarks Section (outside tabs) */}
-        <div className="relative w-[720px] mt-4">
-          <textarea
-            id="remarks"
-            placeholder=""
-            rows={10}
-            className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pt-4 pb-1.5 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 resize-none"
-          />
-          <label
-            htmlFor="remarks"
-            className="absolute left-2.5 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-1 text-sm text-gray-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-blue-600"
-          >
-            Remarks
-          </label>
-        </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4">
-              {/* Column 3 */}
+
+              {/* Column 4 */}
               <div className="space-y-4">
-                <div className="relative w-[250px]">
+
+              <div className="relative w-[250px]">
                   <input
                     type="text"
                     id="APVNo"
@@ -316,41 +341,12 @@ const CV = () => {
                     Check Amount(Orig)
                   </label>
                 </div>
-
-                <div className="relative w-[250px]">
-                  <input
-                    type="text"
-                    id="currName"
-                    placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-                  />
-                  <label
-                    htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-                  >
-                    Currency
-                  </label>
-                </div>
-
-                <div className="relative w-[250px]">
-                  <input
-                    type="text"
-                    id="currName"
-                    placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-                  />
-                  <label
-                    htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-                  >
-                    Currency Rate
-                  </label>
-                </div>
               </div>
 
-              {/* Column 4 */}
+              {/* Column 5 */}
               <div className="space-y-4">
-                <div className="relative w-[250px]">
+
+              <div className="relative w-[250px]">
                   <input
                     type="text"
                     id="APVNo"
@@ -361,7 +357,7 @@ const CV = () => {
                     htmlFor="APVNo"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
-                    Check Amount(PHP)
+                    Currency
                   </label>
                   <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
@@ -383,7 +379,7 @@ const CV = () => {
                     htmlFor="currCode"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
-                    Ref Doc No.
+                    Currency Rate
                   </label>
                   <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
@@ -392,6 +388,21 @@ const CV = () => {
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
+                </div>
+
+                <div className="relative w-[250px]">
+                  <input
+                    type="text"
+                    id="currName"
+                    placeholder=" "
+                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                  />
+                  <label
+                    htmlFor="currName"
+                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                  >
+                    AP Type
+                  </label>
                 </div>
               </div>
             </div>
@@ -408,34 +419,28 @@ const CV = () => {
       </div>
 
       {/* Invoice Details Table */}
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg">
         <table className="min-w-full table-auto border-collapse">
         <thead>
             <tr className="bg-gray-100">
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">LN</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Type</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RR No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Category</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Classification</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">PO/JO No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice No.</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice Date</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Orig Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Currency</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Invoice Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">DR Account</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RC Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">RC Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">SL Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">VAT Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Code</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Description</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">EWT Amount</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Terms</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Due Date</th>
-              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900">Action</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">LN</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">AP Type</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">APV No.</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">RR No.</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">PO No.</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Invoice No.</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Invoice Date</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">AP Amount</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Currency</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Currency Rate</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Applied</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Unapplied</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Balance</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">DR Account</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">RC Code</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">AP Account</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">AP LN</th>
+              <th className="px-4 py-2 border-b text-left text-sm font-medium text-gray-900 nowrap-header">Action</th>
             </tr>
           </thead>
           <tbody>
