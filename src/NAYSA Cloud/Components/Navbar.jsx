@@ -11,7 +11,7 @@ const Navbar = ({ onMenuClick }) => {
   };
 
   return (
-    <div className="w-full bg-[#5a8ff9] h-16 flex items-center justify-between px-4 shadow-md"> {/* h-16 limits the height */}
+    <div className="w-full bg-blue-500 h-16 flex items-center justify-between px-4 shadow-md">
       {/* Left side: Logo and Menu */}
       <div className="flex items-center space-x-3">
         <div>

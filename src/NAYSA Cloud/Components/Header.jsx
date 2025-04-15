@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faList, faPen, faSave, faUndo, faPrint } from "@fortawesome/free-solid-svg-icons";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useReset } from "./ResetContext";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { triggerReset } = useReset();
 
   // State for handling save and reset logic
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,8 @@ const Header = () => {
   };
 
   const handleReset = () => {
-    console.log("Reset button clicked");
+    console.log("Reset clicked");
+    triggerReset();
   };
 
   return (
