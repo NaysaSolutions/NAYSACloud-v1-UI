@@ -155,14 +155,6 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam  }) => {
                   <th className="border px-4 py-1">
                     <input
                       type="text"
-                      value={filters.vendTin}
-                      onChange={(e) => handleFilterChange(e, 'vendTin')}
-                      className="w-full border px-2 py-1 rounded text-sm"
-                    />
-                  </th>
-                  <th className="border px-4 py-1">
-                    <input
-                      type="text"
                       value={filters.atcCode}
                       onChange={(e) => handleFilterChange(e, 'atcCode')}
                       className="w-full border px-2 py-1 rounded text-sm"

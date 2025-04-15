@@ -28,9 +28,9 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
       .then((response) => {
         const result = response.data;
         if (result.success) {
-          const atcData = JSON.parse(result.data[0].result);
-          setATCs(atcData);
-          setFiltered(atcData);
+          const resultData = JSON.parse(result.data[0].result);
+          setATCs(resultData);
+          setFiltered(resultData);
         } else {
           alert(result.message || "Failed to fetch ATC");
         }
