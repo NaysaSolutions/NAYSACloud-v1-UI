@@ -26,7 +26,10 @@ const CV = () => {
   return (
     <div className="p-4 bg-gray-100 min-h-screen font-roboto">
 
-      <h1 className="text-center justify-center font-black text-4xl mb-4 mt-[-30px] font-robotoMono">CHECK VOUCHER</h1>
+<div className="text-center justify-center mb-4">
+<h1 className=" font-black text-4xl mb-4 mt-[-30px] font-robotoMono text-blue-600">CHECK VOUCHER</h1>
+ <span className=" font-black text-2xl font-robotoMono text-red-600">Posted Transaction</span>
+ </div>
       {/* Form Layout with Tabs */}
       <div className="bg-white shadow-md rounded-lg p-4">
         {/* Tab Navigation */}
