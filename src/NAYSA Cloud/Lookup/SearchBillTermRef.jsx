@@ -48,9 +48,9 @@ const BillTermLookupModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const newFiltered = billterm.filter(item =>
-        item.billtermCode.toLowerCase().includes(filters.billtermCode.toLowerCase()) &&
-        item.billtermName.toLowerCase().includes(filters.billtermName.toLowerCase()) &&
-        item.daysDue.toString().toLowerCase().includes(filters.daysDue.toLowerCase())
+      (item.billtermCode || '').toLowerCase().includes((filters.billtermCode || '').toLowerCase()) &&
+      (item.billtermName || '').toLowerCase().includes((filters.billtermName || '').toLowerCase()) &&
+      (item.daysDue?.toString() || '').toLowerCase().includes((filters.daysDue || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, billterm]);

@@ -48,8 +48,8 @@ const CurrLookupModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const newFiltered = currency.filter(item =>
-      item.currCode.toLowerCase().includes(filters.currCode.toLowerCase()) &&
-      item.currName.toLowerCase().includes(filters.currName.toLowerCase())
+      (item.currCode || '').toLowerCase().includes((filters.currCode || '').toLowerCase()) &&
+      (item.currName || '').toLowerCase().includes((filters.currName || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, currency]);

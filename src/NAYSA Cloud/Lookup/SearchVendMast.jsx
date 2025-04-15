@@ -52,7 +52,7 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam  }) => {
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch Chart of Payee:", err);
+        console.error("Failed to fetch Payee:", err);
         alert(`Error: ${err.message}`);
       })
       .finally(() => {
@@ -64,13 +64,13 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam  }) => {
 
   useEffect(() => {
     const newFiltered = payees.filter(item =>
-        (item.vendCode || '').toLowerCase().includes((filters.vendCode || '').toLowerCase()) &&
-        (item.vendName || '').toLowerCase().includes((filters.vendName || '').toLowerCase()) &&
-        (item.source || '').toLowerCase().includes((filters.source || '').toLowerCase()) &&
-        (item.vendTin || '').toLowerCase().includes((filters.vendTin || '').toLowerCase()) &&
-        (item.atcCode || '').toLowerCase().includes((filters.atcCode || '').toLowerCase()) &&
-        (item.vatCode || '').toLowerCase().includes((filters.vatCode || '').toLowerCase()) &&
-        (item.addr || '').toLowerCase().includes((filters.addr || '').toLowerCase())
+      (item.vendCode || '').toLowerCase().includes((filters.vendCode || '').toLowerCase()) &&
+      (item.vendName || '').toLowerCase().includes((filters.vendName || '').toLowerCase()) &&
+      (item.source || '').toLowerCase().includes((filters.source || '').toLowerCase()) &&
+      (item.vendTin || '').toLowerCase().includes((filters.vendTin || '').toLowerCase()) &&
+      (item.atcCode || '').toLowerCase().includes((filters.atcCode || '').toLowerCase()) &&
+      (item.vatCode || '').toLowerCase().includes((filters.vatCode || '').toLowerCase()) &&
+      (item.addr || '').toLowerCase().includes((filters.addr || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, payees]);

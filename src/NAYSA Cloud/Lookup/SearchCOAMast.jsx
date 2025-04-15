@@ -58,11 +58,11 @@ const COAMastLookupModal = ({ isOpen, onClose, customParam  }) => {
 
   useEffect(() => {
     const newFiltered = accounts.filter(item =>
-      item.acctCode.toLowerCase().includes(filters.acctCode.toLowerCase()) &&
-      item.acctName.toLowerCase().includes(filters.acctName.toLowerCase()) &&
-      item.acctBalance.toLowerCase().includes(filters.acctBalance.toLowerCase()) &&
-      item.reqSL.toLowerCase().includes(filters.reqSL.toLowerCase()) &&
-      item.reqRC.toLowerCase().includes(filters.reqRC.toLowerCase()) 
+      (item.acctCode || '').toLowerCase().includes((filters.acctCode || '').toLowerCase()) &&
+      (item.acctName || '').toLowerCase().includes((filters.acctName || '').toLowerCase()) &&
+      (item.acctBalance || '').toLowerCase().includes((filters.acctBalance || '').toLowerCase()) &&
+      (item.reqSL || '').toLowerCase().includes((filters.reqSL || '').toLowerCase()) &&
+      (item.reqRC || '').toLowerCase().includes((filters.reqRC || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, accounts]);

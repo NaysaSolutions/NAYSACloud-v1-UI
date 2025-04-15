@@ -32,11 +32,11 @@ const BankLookupModal = ({ isOpen, onClose, customParam }) => {
           setBanks(bankData);
           setFiltered(bankData);
         } else {
-          alert(result.message || "Failed to fetch bank");
+          alert(result.message || "Failed to fetch Bank Type");
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch bank:", err);
+        console.error("Failed to fetch Bank Type:", err);
         alert(`Error: ${err.message}`);
       })
       .finally(() => {
@@ -48,8 +48,8 @@ const BankLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = banks.filter(item =>
-      item.bankTypeCode.toLowerCase().includes(filters.bankTypeCode.toLowerCase()) &&
-      item.bankTypeName.toLowerCase().includes(filters.bankTypeName.toLowerCase())
+      (item.bankTypeCode || '').toLowerCase().includes((filters.bankTypeCode || '').toLowerCase()) &&
+      (item.bankTypeName || '').toLowerCase().includes((filters.bankTypeName || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, banks]);
@@ -77,7 +77,7 @@ const BankLookupModal = ({ isOpen, onClose, customParam }) => {
           <FontAwesomeIcon icon={faTimes} size="lg" />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4 uppercase">Select Bank</h2>
+        <h2 className="text-lg font-semibold mb-4 uppercase">Select Bank Type</h2>
 
         {loading ? (
           <div className="flex justify-center items-center h-32">

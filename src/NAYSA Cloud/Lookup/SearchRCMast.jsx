@@ -58,9 +58,9 @@ const RCLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = rc.filter(item =>
-        item.rcCode.toLowerCase().includes(filters.rcCode.toLowerCase()) &&
-        item.rcName.toLowerCase().includes(filters.rcName.toLowerCase()) &&
-        item.rcType.toLowerCase().includes(filters.rcType.toLowerCase())
+      (item.rcCode || '').toLowerCase().includes((filters.rcCode || '').toLowerCase()) &&
+      (item.rcName || '').toLowerCase().includes((filters.rcName || '').toLowerCase()) &&
+      (item.rcType || '').toLowerCase().includes((filters.rcType || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, rc]);

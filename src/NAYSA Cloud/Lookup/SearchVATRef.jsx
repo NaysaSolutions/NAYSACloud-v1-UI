@@ -48,8 +48,8 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = vat.filter(item =>
-        item.vatCode.toLowerCase().includes(filters.vatCode.toLowerCase()) &&
-        item.vatName.toLowerCase().includes(filters.vatName.toLowerCase())
+      (item.vatCode || '').toLowerCase().includes((filters.vatCode || '').toLowerCase()) &&
+      (item.vatName || '').toLowerCase().includes((filters.vatName || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, vat]);

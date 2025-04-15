@@ -48,9 +48,9 @@ const BillCodeLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = billcode.filter(item =>
-        item.billCode.toLowerCase().includes(filters.billCode.toLowerCase()) &&
-        item.billName.toLowerCase().includes(filters.billName.toLowerCase()) &&
-        item.uomCode.toLowerCase().includes(filters.uomCode.toLowerCase())
+      (item.billCode || '').toLowerCase().includes((filters.billCode || '').toLowerCase()) &&
+      (item.billName || '').toLowerCase().includes((filters.billName || '').toLowerCase()) &&
+      (item.uomCode || '').toLowerCase().includes((filters.uomCode || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, billcode]);

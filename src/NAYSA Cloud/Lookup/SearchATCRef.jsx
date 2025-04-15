@@ -48,9 +48,9 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = atc.filter(item =>
-        item.atcCode.toLowerCase().includes(filters.atcCode.toLowerCase()) &&
-        item.atcName.toLowerCase().includes(filters.atcName.toLowerCase()) &&
-        item.atcRate.toString().toLowerCase().includes(filters.atcRate.toLowerCase())
+      (item.atcCode || '').toLowerCase().includes((filters.atcCode || '').toLowerCase()) &&
+      (item.atcName || '').toLowerCase().includes((filters.atcName || '').toLowerCase()) &&
+      (item.atcRate?.toString() || '').toLowerCase().includes((filters.atcRate || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, atc]);

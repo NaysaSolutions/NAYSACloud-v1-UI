@@ -61,13 +61,13 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam  }) => {
 
   useEffect(() => {
     const newFiltered = customers.filter(item =>
-        (item.custCode || '').toLowerCase().includes((filters.custCode || '').toLowerCase()) &&
-        (item.custName || '').toLowerCase().includes((filters.custName || '').toLowerCase()) &&
-        (item.source || '').toLowerCase().includes((filters.source || '').toLowerCase()) &&
-        (item.custTin || '').toLowerCase().includes((filters.custTin || '').toLowerCase()) &&
-        (item.atcCode || '').toLowerCase().includes((filters.atcCode || '').toLowerCase()) &&
-        (item.vatCode || '').toLowerCase().includes((filters.vatCode || '').toLowerCase()) &&
-        (item.addr || '').toLowerCase().includes((filters.addr || '').toLowerCase())
+      (item.custCode || '').toLowerCase().includes((filters.custCode || '').toLowerCase()) &&
+      (item.custName || '').toLowerCase().includes((filters.custName || '').toLowerCase()) &&
+      (item.source || '').toLowerCase().includes((filters.source || '').toLowerCase()) &&
+      (item.custTin || '').toLowerCase().includes((filters.custTin || '').toLowerCase()) &&
+      (item.atcCode || '').toLowerCase().includes((filters.atcCode || '').toLowerCase()) &&
+      (item.vatCode || '').toLowerCase().includes((filters.vatCode || '').toLowerCase()) &&
+      (item.addr || '').toLowerCase().includes((filters.addr || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, customers]);

@@ -48,9 +48,9 @@ const PayTermLookupModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const newFiltered = payterm.filter(item =>
-        item.paytermCode.toLowerCase().includes(filters.paytermCode.toLowerCase()) &&
-        item.paytermName.toLowerCase().includes(filters.paytermName.toLowerCase()) &&
-        item.daysDue.toString().toLowerCase().includes(filters.daysDue.toLowerCase())
+      (item.paytermCode || '').toLowerCase().includes((filters.paytermCode || '').toLowerCase()) &&
+      (item.paytermName || '').toLowerCase().includes((filters.paytermName || '').toLowerCase()) &&
+      (item.daysDue?.toString() || '').toLowerCase().includes((filters.daysDue || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, payterm]);

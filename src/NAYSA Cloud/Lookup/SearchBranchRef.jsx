@@ -48,8 +48,8 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
 
   useEffect(() => {
     const newFiltered = branches.filter(branch =>
-      branch.branchCode.toLowerCase().includes(filters.branchCode.toLowerCase()) &&
-      branch.branchName.toLowerCase().includes(filters.branchName.toLowerCase())
+      (branch.branchCode || '').toLowerCase().includes((filters.branchCode || '').toLowerCase()) &&
+      (branch.branchName || '').toLowerCase().includes((filters.branchName || '').toLowerCase())
     );
     setFiltered(newFiltered);
   }, [filters, branches]);
