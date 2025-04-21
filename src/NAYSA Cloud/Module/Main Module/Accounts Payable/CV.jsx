@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import Swal from 'sweetalert2';
+// import './index.css';
 
 const CV = () => {
 
@@ -49,17 +50,17 @@ const CV = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="p-4">
+        <div className="p-2">
           {activeTab === 'basic' ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-y-4"> {/* Added gap-y-4 for vertical spacing */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3"> {/* Added gap-y-4 for vertical spacing */}
               {/* Column 1 */}
-              <div className="space-y-4">
-                <div className="relative w-[250px]">
+              <div className="space-y-3 p-3">
+                <div className="relative">
                   <input
                     type="text"
                     id="BranchCode"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui focus:border-blue-600 focus:outline-none focus:ring-0"
                     disabled
                   />
                   <label
@@ -77,12 +78,12 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -99,11 +100,11 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="date"
                     id="APVDate"
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                     value={header.apv_date}
                   />
                   <label
@@ -116,13 +117,13 @@ const CV = () => {
               </div>
 
               {/* Column 2 */}
-              <div className="space-y-4">
-                <div className="relative w-[250px]">
+              <div className="space-y-3 p-3">
+                <div className="relative">
                   <input
                     type="text"
                     id="payeeCode"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="payeeCode"
@@ -139,12 +140,12 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="payeeName"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="payeeName"
@@ -156,13 +157,13 @@ const CV = () => {
               </div>
 
               {/* Column 3 */}
-              <div className="space-y-4">
-                <div className="relative w-[250px]">
+              <div className="space-y-3 p-3">
+                <div className="relative">
                   <input
                     type="text"
                     id="refAPV"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="refAPV"
@@ -178,12 +179,12 @@ const CV = () => {
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="apType"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="apType"
@@ -192,12 +193,12 @@ const CV = () => {
                     AP Type
                   </label>
                 </div>
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="refDocNo"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="refDocNo"
@@ -215,7 +216,7 @@ const CV = () => {
                     id="remarks"
                     placeholder=""
                     rows={10} 
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pt-4 pb-2.5 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 resize-none"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
       htmlFor="remarks"
@@ -227,15 +228,15 @@ const CV = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4">
+            <div className="grid grid-cols-1 md:grid-cols-3">
               {/* Column 3 */}
-              <div className="space-y-4">
-              <div className="relative w-[250px]">
+              <div className="space-y-3 p-3">
+              <div className="relative">
                   <input
                     type="text"
                     id="currCode"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currCode"
@@ -252,12 +253,12 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="currName"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currName"
@@ -267,12 +268,12 @@ const CV = () => {
                   </label>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="currName"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currName"
@@ -284,14 +285,14 @@ const CV = () => {
               </div>
 
               {/* Column 4 */}
-              <div className="space-y-4">
+              <div className="space-y-3 p-3">
 
-              <div className="relative w-[250px]">
+              <div className="relative">
                   <input
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -308,12 +309,12 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="currCode"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currCode"
@@ -330,12 +331,13 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="currName"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    defaultValue="0.00"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currName"
@@ -347,14 +349,14 @@ const CV = () => {
               </div>
 
               {/* Column 5 */}
-              <div className="space-y-4">
+              <div className="space-y-3 p-3">
 
-              <div className="relative w-[250px]">
+              <div className="relative">
                   <input
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -371,12 +373,12 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
+                <div className="relative">
                   <input
                     type="text"
                     id="currCode"
                     placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer transaction-textbox-ui"
                   />
                   <label
                     htmlFor="currCode"
@@ -393,13 +395,16 @@ const CV = () => {
                   </button>
                 </div>
 
-                <div className="relative w-[250px]">
-                  <input
-                    type="text"
+                <div className="relative">
+                  <select
                     id="currName"
-                    placeholder=" "
-                    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-                  />
+                    className="peer transaction-textbox-ui"
+                    defaultValue=""
+                  >
+                    <option value="APV001" disabled hidden></option>
+                    <option value="APV001">Purchases</option>
+                    <option value="APV002">Non-Purchases</option>
+                  </select>
                   <label
                     htmlFor="currName"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
@@ -407,6 +412,7 @@ const CV = () => {
                     AP Type
                   </label>
                 </div>
+
               </div>
             </div>
           )}

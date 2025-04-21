@@ -8,13 +8,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faTrashAlt, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
 
 // Importing the Branch Lookup Modal component for selecting or searching branch references
-import BranchLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
+import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
 
 // Importing a custom hook or context for resetting forms or states across components
-import { useReset } from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Components/ResetContext.jsx";
+import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
 
 // Importing the Currency Lookup Modal component for selecting or searching currency references
-import CurrLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
+import CurrLookupModal from "@/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
 
 // Importing (currently commented out) the Open Balance Query Modal component, likely for future use
 // import OpenBalanceModal from "./openBalanceQueryModal";
@@ -168,14 +168,18 @@ const handleSelectBranch = (selectedBranch) => {
   return (
      // Main container for the APV form with padding, background color, and custom font
   <div className="p-4 bg-gray-100 min-h-screen ">
+
+
 {/* Page title and subheading */}
 <div className="text-center justify-center m-0 h-16">
       <h1 className=" font-black text-2xl mt-[-15px]  text-blue-600">ACCOUNTS PAYABLE VOUCHER</h1>
       <span className=" font-black text-lg mb-[-20px] text-red-600">Posted Transaction</span>
     </div>
-
+    
        {/* APV Header Form Section */}
     <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 bg-white shadow-lg p-5 rounded-lg relative" >
+
+
 
 {/* Column 1 */}
 <div className="space-y-5">
