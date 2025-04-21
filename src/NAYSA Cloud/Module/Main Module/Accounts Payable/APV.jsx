@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faTrashAlt, faFolderOpen  } from "@fortawesome/free-solid-svg-icons";
-import BranchLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
-import { useReset } from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Components/ResetContext.jsx";
-import CurrLookupModal from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
+import BranchLookupModal from "C:/Users/Admin/Documents/GitHub/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
+import { useReset } from "C:/Users/Admin/Documents/GitHub/NAYSACloud-v1-UI/src/NAYSA Cloud/Components/ResetContext.jsx";
+import CurrLookupModal from "C:/Users/Admin/Documents/GitHub/NAYSACloud-v1-UI/src/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
 // import OpenBalanceModal from "./openBalanceQueryModal";
 
 const APV = () => {
-  const { resetFlag } = useReset();
+  const { resetFlag } = useReset(); //fields will be cleared or reset automatically.
 
+  //modal
   const [detailRows, setDetailRows] = useState([]);
   const [detailData, setDetailData] = useState([]);
   const [isFetchDisabled, setIsFetchDisabled] = useState(false);
@@ -16,7 +17,6 @@ const APV = () => {
   const [branches, setBranches] = useState([]);
   const [branchName, setBranchName] = useState("");
   const [modalContext, setModalContext] = useState('');
-  // const [showOpenBalanceModal, setShowOpenBalanceModal] = useState(false);
   const [selectionContext, setSelectionContext] = useState('');
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [currencyCode, setCurrencyCode] = useState("PHP");
@@ -36,6 +36,7 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
     }
   }, [resetFlag]);
 
+  //add row
   const handleAddRow = () => {
     setDetailRows([
       ...detailRows,
@@ -66,6 +67,7 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
     ]);
   };
 
+  //currency modal
   const openCurrencyModal = () => {
     setCurrencyModalOpen(true);
   };
@@ -78,11 +80,13 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
     setCurrencyModalOpen(false); // always close modal
   };
   
+  //sets today’s date 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     setHeader((prev) => ({ ...prev, apv_date: today }));
   }, []);
 
+  //branch selection
  const handleBranchClick = (e) => {
   const parentDiv = e.currentTarget.closest('div[id]');
   const contextId = parentDiv?.id || 'unknown';
@@ -104,7 +108,7 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
     setShowModal(false);
     setSelectionContext(''); // Reset context
   };
-
+//delete row
   const handleDeleteRow = (index) => {
     const updatedData = detailData.filter((_, i) => i !== index);
     setDetailData(updatedData);
@@ -397,7 +401,8 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
     </label>
   </div>
 
-      </div>
+      </div> 
+      {/* id apv_hd */}
       <br />
       
       {/* APV Detail Section */}
@@ -661,6 +666,6 @@ const [currencyName, setCurrencyName] = useState("Philippine Peso");
 
     </div>
   );
-};
+}; //const apv
 
 export default APV;

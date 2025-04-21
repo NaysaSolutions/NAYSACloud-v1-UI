@@ -86,12 +86,12 @@ const Header = () => {
         Print
       </button>
 
-      <button
+      {/* <button
         className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 ml-3"
       >
         <FontAwesomeIcon icon={faPrint} className="mr-2" />
         BIR Form
-      </button>
+      </button> */}
 
       <button
         className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 ml-6" 
