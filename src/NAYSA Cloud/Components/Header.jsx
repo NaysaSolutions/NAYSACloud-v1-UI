@@ -24,8 +24,8 @@ const Header = () => {
   };
 
   return (
-    <div className="p-3 h-14  bg-gray-200 font-roboto">
-  <div className="flex items-center justify-between border-b-2 pb-3">
+    <div className="p-4 h-16 bg-blue-100 font-roboto shadow-md px-6">
+  <div className="flex items-center justify-between">
     {/* Header Tabs */}
     <div className="flex items-center space-x-8">
       <button
