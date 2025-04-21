@@ -24,14 +24,14 @@ const Header = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-100 font-roboto">
+    <div className="p-3 h-14  bg-gray-200 font-roboto">
   <div className="flex items-center justify-between border-b-2 pb-3">
     {/* Header Tabs */}
     <div className="flex items-center space-x-8">
       <button
         className={`flex items-center pb-1 ${
           location.pathname === "/"
-            ? "text-blue-600 border-b-4 border-blue-600"
+            ? "text-blue-600 border-b-2 border-blue-600"
             : "text-gray-600 hover:text-blue-600"
         }`}
         onClick={() => navigate("/")}
@@ -64,7 +64,7 @@ const Header = () => {
             handleSave();
           }
         }}
-        className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 focus:ring-4 focus:ring-blue-300 ml-3"
+        className="bg-green-500 text-white px-3 py-2 text-sm rounded-lg hover:bg-green-600 focus:ring-4 focus:ring-blue-300 ml-3"
         aria-label="Save transaction"
       >
         <FontAwesomeIcon icon={faSave} className="mr-2" />
@@ -73,28 +73,28 @@ const Header = () => {
 
       <button
         onClick={handleReset}
-        className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-700 ml-3"
+        className="bg-blue-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-blue-700 ml-3"
       >
         <FontAwesomeIcon icon={faUndo} className="mr-2" />
         Reset
       </button>
 
       <button
-        className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 ml-3"
+        className="bg-blue-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-blue-700 ml-3"
       >
         <FontAwesomeIcon icon={faPrint} className="mr-2" />
         Print
       </button>
 
       <button
-        className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 ml-3"
+        className="bg-blue-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-blue-700 ml-3"
       >
         <FontAwesomeIcon icon={faPrint} className="mr-2" />
         BIR Form
       </button>
 
       <button
-        className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 ml-6" 
+        className="bg-red-500 text-white px-3 py-2 text-sm rounded-lg hover:bg-red-600 ml-6" 
       >
         <FontAwesomeIcon icon={faPrint} className="mr-2" />
         Cancel

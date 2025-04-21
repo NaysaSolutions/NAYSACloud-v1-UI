@@ -21,7 +21,7 @@ const Navbar = ({ onMenuClick }) => {
             alt="Naysa Logo"
           />
         </div>
-        <Menu className="text-white cursor-pointer" onClick={onMenuClick} />
+        {/* <Menu className="text-white cursor-pointer" onClick={onMenuClick} /> */}Financials
       </div>
 
       {/* Right side */}

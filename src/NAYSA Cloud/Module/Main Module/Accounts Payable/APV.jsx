@@ -55,10 +55,10 @@ const APV = () => {
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   // State to hold the selected currency code (defaulting to PHP)
-  const [currencyCode, setCurrencyCode] = useState("PHP");
+  const [currencyCode, setCurrencyCode] = useState("");
 
   // State to hold the name of the selected currency (defaulting to Philippine Peso)
-  const [currencyName, setCurrencyName] = useState("Philippine Peso");
+  const [currencyName, setCurrencyName] = useState("");
 
 
 
@@ -167,15 +167,15 @@ const handleSelectBranch = (selectedBranch) => {
 
   return (
      // Main container for the APV form with padding, background color, and custom font
-  <div className="p-4 bg-gray-100 min-h-screen font-roboto">
+  <div className="p-4 bg-gray-100 min-h-screen ">
 {/* Page title and subheading */}
-<div className="text-center justify-center mb-4">
-      <h1 className=" font-black text-4xl mb-4 mt-[-30px] font-robotoMono text-blue-600">ACCOUNTS PAYABLE VOUCHER</h1>
-      <span className=" font-black text-2xl font-robotoMono text-red-600">Posted Transaction</span>
+<div className="text-center justify-center m-0 h-16">
+      <h1 className=" font-black text-2xl mt-[-15px]  text-blue-600">ACCOUNTS PAYABLE VOUCHER</h1>
+      <span className=" font-black text-lg mb-[-20px] text-red-600">Posted Transaction</span>
     </div>
 
        {/* APV Header Form Section */}
-    <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 bg-white shadow-md p-9 rounded-lg relative" >
+    <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 bg-white shadow-lg p-5 rounded-lg relative" >
 
 {/* Column 1 */}
 <div className="space-y-5">
@@ -441,7 +441,7 @@ const handleSelectBranch = (selectedBranch) => {
         </button> */}
 
         {/* Remarks Section */}
-        <div className="relative w-full col-span-full mt-[-40px]">
+        <div className="relative w-full col-span-full mt-[-62px]">
     <textarea
       id="remarks"
       placeholder=""
@@ -463,16 +463,19 @@ const handleSelectBranch = (selectedBranch) => {
       <div id="apv_dtl">
   {/* Invoice Details Button */}
   <div className="flex items-center space-x-8 border-b-2 pb-2 mb-4">
-    <button className="flex items-center text-gray-900 border-b-4 border-blue-600 pb-1">
+    <button className="flex items-center text-blue-600 border-b-2 border-blue-600 pb-1">
       <span className="font-semibold">Invoice Details</span>
+    </button>
+    <button className="flex items-center text-gray-900 border-b-4  pb-1">
+      <span className="font-semibold">General Ledger</span>
     </button>
   </div>
 
   {/* Table */}
-  <div className="overflow-x-auto bg-white shadow-md rounded-lg">
+  <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
   <div className="max-h-[430px] overflow-y-auto relative"> 
     <table className="min-w-full border-collapse">
-      <thead className="sticky top-0 bg-gray-100 z-10">
+      <thead className="sticky top-0 bg-gray-200 z-10">
         <tr>
           <th className="px-3 py-4 text-center text-xs font-bold text-gray-900">LN</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">Type</th>
@@ -485,13 +488,13 @@ const handleSelectBranch = (selectedBranch) => {
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">Invoice Amount</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">DR Account</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">RC Code</th>
-          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">RC Desc.</th>
+          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">RC Name</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">SL Code</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">VAT Code</th>
-          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">VAT Desc.</th>
+          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">VAT Name</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">VAT Amount</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">ATC</th>
-          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">ATC Desc.</th>
+          <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">ATC Name</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">ATC Amount</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">Payment Terms</th>
           <th className="px-1 py-1 border text-center text-xs font-bold text-gray-900">Due Date</th>
@@ -674,7 +677,7 @@ const handleSelectBranch = (selectedBranch) => {
   {/* Add Button */}
   <button
     onClick={handleAddRow}
-    className="mt-4 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center focus:outline-none"
+    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />
     Add

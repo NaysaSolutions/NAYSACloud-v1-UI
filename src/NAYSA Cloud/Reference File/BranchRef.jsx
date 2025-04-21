@@ -152,7 +152,7 @@ const resetForm = () => {
 
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen font-roboto">
+    <div className="p-4 bg-gray-200 min-h-screen font-roboto">
 
       <div className="mx-auto">
 
@@ -331,6 +331,34 @@ const resetForm = () => {
                 </label>
               </div>
 
+              {/* Country
+              <div className="relative w-[270px]">
+                <input
+                  type="text"
+                  id="country"
+                  placeholder=" "
+                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                    ${isEditing 
+                      ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
+                      : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  disabled={!isEditing}
+                />
+                <label
+                  htmlFor="country"
+                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
+                    bg-gray-100 text-sm text-gray-500 duration-300 
+                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
+                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
+                    peer-focus:px-1 peer-focus:text-blue-600 
+                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                >
+                  Country
+                </label>
+              </div> */}
+
               {/* Zip Code */}
               <div className="relative w-[270px]">
                 <input
@@ -456,6 +484,33 @@ const resetForm = () => {
               </div>
 
             </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="mt-6 flex gap-2 justify-center">
+          <button
+    onClick={() => setIsEditing(true)}
+    className="bg-blue-500 text-white px-4 py-2 rounded"
+  >
+    Add
+  </button>
+
+  <button
+    onClick={handleSaveBranch}
+    className="bg-blue-500 text-white px-4 py-2 rounded"
+    disabled={!isEditing}
+  >
+    Save
+  </button>
+
+  <button
+    onClick={resetForm}
+    className="bg-gray-400 text-white px-4 py-2 rounded"
+    disabled={!isEditing}
+  >
+    Reset
+  </button>
+
           </div>
         </div>
 
