@@ -78,60 +78,63 @@
 // };
 
 // export default App;
-
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./NAYSA Cloud/Components/Header";
-import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV";
-import PCV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
-import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV";
+import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
+import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 
-const App = () => {
+const AppContent = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const location = useLocation();
 
   const toggleSidebar = () => {
     setIsSidebarVisible(prev => !prev);
   };
 
   return (
-    <Router>
-      <ResetProvider>
-        <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto">
-          {/* Sidebar overlay for mobile view */}
-          {isSidebarVisible && (
-            <div className="fixed inset-0 z-50 flex">
-              <Sidebar />
-              <div
-                className="flex-1 bg-black bg-opacity-50"
-                onClick={toggleSidebar}
-              />
-            </div>
-          )}
-
-          {/* Fixed Navbar */}
-          <div className="sticky top-0 z-40">
-            <Navbar onMenuClick={toggleSidebar} />
-          </div>
-
-          {/* Header */}
-          <Header />
-{/* Main scrollable content area */}
-<div className="flex-1 p-4 overflow-y-auto">
-            <Routes>
-              <Route path="/" element={<PCV />} />
-              {/* <Route path="/cv" element={<CV />} /> */}
-            </Routes>
-          </div>
+    <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto">
+      {isSidebarVisible && (
+        <div className="fixed inset-0 z-50 flex">
+          <Sidebar />
+          <div
+            className="flex-1 bg-black bg-opacity-50"
+            onClick={toggleSidebar}
+          />
         </div>
-        </ResetProvider>
-    </Router>
+      )}
+
+      <div className="sticky top-0 z-40">
+        <Navbar onMenuClick={toggleSidebar} />
+      </div>
+
+      <Header />
+
+      <div className="flex-1 p-4 overflow-y-auto">
+        <Routes>
+          <Route path="/" element={<APV />} />
+          {/* <Route path="/history" element={<TransactionHistory />} />
+          <Route path="/" element={<BranchRef />} /> Default to BranchRef */}
+        </Routes>
+      </div>
+    </div>
   );
 };
 
+const App = () => (
+  <Router>
+    <ResetProvider>
+      <AppContent />
+    </ResetProvider>
+  </Router>
+);
+
 export default App;
+
+
 
 
 

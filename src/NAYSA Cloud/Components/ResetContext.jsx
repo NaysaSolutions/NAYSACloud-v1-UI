@@ -1,23 +1,16 @@
-// src/context/ResetContext.js
 import React, { createContext, useContext, useState } from "react";
 
 const ResetContext = createContext();
 
-export const useReset = () => useContext(ResetContext);
-
 export const ResetProvider = ({ children }) => {
-  const [resetFlag, setResetFlag] = useState(false);
-
-  const triggerReset = () => {
-    setResetFlag(true);
-    setTimeout(() => setResetFlag(false), 100); // brief flag for reset signal
-  };
+  const [onSave, setOnSave] = useState(null);
+  const [onReset, setOnReset] = useState(null);
 
   return (
-    <ResetContext.Provider value={{ resetFlag, triggerReset }}>
+    <ResetContext.Provider value={{ onSave, setOnSave, onReset, setOnReset }}>
       {children}
     </ResetContext.Provider>
   );
 };
 
-export default ResetContext;
+export const useReset = () => useContext(ResetContext);
