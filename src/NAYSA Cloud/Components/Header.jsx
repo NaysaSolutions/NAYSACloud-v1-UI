@@ -22,8 +22,8 @@ const Header = () => {
   };
 
   return (
-    <div className="p-3 bg-white font-sans">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="fixed top-18 left-0 w-full h-[100px] z-30 p-3 bg-white font-sans">
+      <div className="fixed top-20 left-0 w-full h-[80px] z-30 bg-white font-sans p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4  shadow-md">
         
         {/* Header Tabs */}
         <div className="flex flex-wrap gap-4">
@@ -51,9 +51,13 @@ const Header = () => {
             <span className="font-sans font-medium tracking-wide text-sm sm:text-base">Transaction History</span>
           </button>
         </div>
+{/* 
+        <div className="flex flex-wrap gap-2 mt-2 text-center justify-center">
+        <span className="font-black text-2xl text-red-600">Posted Transaction</span>
+        </div> */}
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-2">
           <button
             onClick={handleSave}
             disabled={loading}
@@ -63,7 +67,7 @@ const Header = () => {
                 handleSave();
               }
             }}
-            className="bg-green-500 text-white px-3 py-2 text-sm rounded-lg hover:bg-green-600 focus:ring-2 focus:ring-blue-300"
+            className="bg-green-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-green-600 focus:ring-2 focus:ring-blue-300"
             aria-label="Save transaction"
           >
             <FontAwesomeIcon icon={faSave} className="mr-2" />

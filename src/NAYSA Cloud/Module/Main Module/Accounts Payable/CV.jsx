@@ -24,6 +24,9 @@ const { resetFlag } = useReset();
   // State to hold table rows for the detail section (e.g., invoice line items)
   const [detailRows, setDetailRows] = useState([]);
 
+  // State to hold table rows for the detail section (e.g., invoice line items)
+  const [detailRowsGL, setDetailRowsGL] = useState([]);
+
   // State to hold the actual detail data associated with each row (e.g., backend or form data)
   const [detailData, setDetailData] = useState([]);
 
@@ -102,6 +105,29 @@ const handleAddRow = () => {
   ]);
 };
 
+// Function to add a new row to the detail section with default empty values
+const handleAddRowGL = () => {
+  setDetailRowsGL([
+    ...detailRowsGL,
+    {
+      type: "",
+      rrNo: "",
+      category: "",
+      classification: "",
+      poNo: "",
+      invoiceNo: "",
+      invoiceDate: "",
+      origAmount: "",
+      currency: "",
+      invoiceAmount: "",
+      drAccount: "",
+      rcCode: "",
+      rcDescription: "",
+
+    }
+  ]);
+};
+
 // Opens the currency lookup modal
 const openCurrencyModal = () => {
   setCurrencyModalOpen(true);
@@ -147,12 +173,28 @@ const handleSelectBranch = (selectedBranch) => {
 };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="p-6 bg-gray-100 min-h-screen mt-14">
 
-<div className="text-center justify-center mb-4">
+{/* <div className="text-center justify-center mb-4">
 <h1 className=" font-black text-4xl mb-4 text-blue-600">CHECK VOUCHER</h1>
  <span className=" font-black text-2xl text-red-600">Posted Transaction</span>
- </div>
+ </div> */}
+
+{/* <div className="text-center justify-center mb-4">
+ <span className=" font-black text-2xl text-red-600">Posted Transaction</span>
+ </div> */}
+  {/* Header Section */}
+  <div className="global-div-header-ui mb-6 flex justify-between items-center">
+  {/* <h1 className="global-div-headertext-ui">CHECK VOUCHER TRANSACTION</h1> */}
+  {/* <h1 className="global-div-headertext-ui text-red-700">Posted Transaction</h1> */}
+  <h1 className="global-div-headertext-ui">Check Voucher Transaction</h1>
+  <h1 className="global-div-post-text-ui text-red-600 drop-shadow-[0_0_2px_#f87171]">
+  POSTED
+</h1>
+
+</div>
+
+        
  
       {/* Form Layout with Tabs */}
       <div className="bg-white shadow-md rounded-lg p-4">
@@ -546,7 +588,7 @@ const handleSelectBranch = (selectedBranch) => {
       <br />
 
       {/* Invoice Details Button */}
-      <div className="bg-white shadow-md rounded-lg p-4">
+      <div className="bg-white shadow-md rounded-lg p-4 mb-6">
       
       {/* <div className="flex items-center space-x-8 border-b-2 pb-2 mb-4">
     <button className="flex items-center text-blue-600 border-b-2 border-blue-600 pb-1">
@@ -565,12 +607,12 @@ const handleSelectBranch = (selectedBranch) => {
           >
             Invoice Details
           </button>
-          <button
+          {/* <button
             className={`py-2 px-4 ${GLactiveTab === 'gl' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
             onClick={() => setGLActiveTab('gl')}
           >
             General Ledger
-          </button>
+          </button> */}
         </div>
 
       {/* Invoice Details Table */}
@@ -780,6 +822,182 @@ const handleSelectBranch = (selectedBranch) => {
  {/* Add Button */}
   <button
     onClick={handleAddRow}
+    className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none"
+  >
+    {/* <FontAwesomeIcon icon={faPlus} className="mr-2" /> */}
+    Add
+  </button>
+
+
+      </div>
+
+
+
+      
+      {/* General Ledger Button */}
+      <div className="bg-white shadow-md rounded-lg p-4">
+      
+      {/* <div className="flex items-center space-x-8 border-b-2 pb-2 mb-4">
+    <button className="flex items-center text-blue-600 border-b-2 border-blue-600 pb-1">
+      <span className="font-semibold">Invoice Details</span>
+    </button>
+    <button className="flex items-center text-gray-900 border-b-4  pb-1">
+      <span className="font-semibold">General Ledger</span>
+    </button>
+  </div> */}
+
+  {/* Tab Navigation */}
+  <div className="flex border-b mb-4">
+    
+          {/* <button
+            className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
+            onClick={() => setGLActiveTab('invoice')}
+          >
+            Invoice Details
+          </button> */}
+          <button
+            className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
+            onClick={() => setGLActiveTab('invoice')}
+          >
+            General Ledger
+          </button>
+          
+        </div>
+
+
+      {/* Invoice Details Table */}
+      {/* Table */}
+  <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
+  <div className="max-h-[430px] overflow-y-auto relative"> 
+    <table className="min-w-full border-collapse">
+      <thead className="sticky top-0 bg-blue-300 z-10">
+        <tr>
+          <th className="px-3 py-4 text-center text-xs font-bold text-gray-900">LN</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Account Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">RC Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Name</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Name</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Debit</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Credit</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Ref No</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Remarks</th>
+          {/* <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Code</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Name</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Amount</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Name</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Amount</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Payment Terms</th>
+          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Due Date</th> */}
+        </tr>
+      </thead>
+      <tbody className="relative">
+        {detailRowsGL.map((row, index) => (
+          <tr key={index} className="hover:bg-blue-100 border">
+            <td className="border px-1 py-1 text-xs text-center">{index + 1}</td>
+            <td className="border px-1 py-1">
+            <input
+                type="text"
+                className="w-[100px] h-6 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.rrNo || ""}
+                onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-6 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.rrNo || ""}
+                onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.poNo || ""}
+                onChange={(e) => handleDetailChange(index, 'poNo', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.invoiceNo || ""}
+                onChange={(e) => handleDetailChange(index, 'invoiceNo', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.invoiceDate || ""}
+                onChange={(e) => handleDetailChange(index, 'invoiceDate', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.origAmount || ""}
+                onChange={(e) => handleDetailChange(index, 'origAmount', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[80px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.currency || ""}
+                onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="number"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.invoiceAmount || ""}
+                onChange={(e) => handleDetailChange(index, 'invoiceAmount', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="number"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.drAccount || ""}
+                onChange={(e) => handleDetailChange(index, 'drAccount', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.rcCode || ""}
+                onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
+              />
+            </td>
+            <td className="border px-1 py-1">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                value={row.rcDescription || ""}
+                onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
+              />
+            </td>
+            
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+ {/* Add Button */}
+  <button
+    onClick={handleAddRowGL}
     className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none"
   >
     {/* <FontAwesomeIcon icon={faPlus} className="mr-2" /> */}

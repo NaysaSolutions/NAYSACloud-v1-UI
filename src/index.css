@@ -24,3 +24,16 @@ body {
       @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0;
     }
   }
+
+  .global-div-header-ui {
+    /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
+    @apply bg-gradient-to-r from-blue-500 to-purple-300 p-6 rounded-lg text-gray-700 shadow-lg;
+  }
+
+  .global-div-headertext-ui {
+    @apply text-2xl sm:text-4xl font-semibold;
+  }
+
+  .global-div-post-text-ui {
+    @apply text-2xl sm:text-4xl font-extrabold;
+  }

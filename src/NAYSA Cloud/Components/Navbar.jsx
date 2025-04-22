@@ -20,7 +20,7 @@ const Navbar = ({ onMenuClick }) => {
 
     <div className="w-full bg-white h-16 flex items-center justify-between px-4 shadow-md">
       {/* Left side: Logo and Menu */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3 text-blue-900 font-bold">
         <div>
           <img 
             src="naysa_logo.png" 
