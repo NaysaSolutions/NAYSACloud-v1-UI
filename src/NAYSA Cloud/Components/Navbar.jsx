@@ -11,19 +11,16 @@ const Navbar = ({ onMenuClick }) => {
   };
 
   return (
+    <div>
+           {/* Top Blue Bar */}
+           <div className="flex justify-center items-center bg-blue-900 text-white p-3 fixed top-0 left-0 w-full h-[30px] z-30">
+        <span className="font-bold text-lg">NAYSA SOLUTIONS INC.</span>
+      </div>
+    <br />
 
-  
-  
-      
-    <div className="w-full bg-white h-20 flex items-center justify-between px-4 shadow-md mt-7">
-
-
-    <div className="flex justify-center items-center bg-blue-900 text-white p-3 fixed top-0 left-0 w-full h-[30px] z-30">
-      <span className="font-bold text-lg">NAYSA-SOLUTIONS INC.</span>
-    </div>
-
+    <div className="w-full bg-white h-16 flex items-center justify-between px-4 shadow-md">
       {/* Left side: Logo and Menu */}
-      <div className="flex items-center space-x-3 text-blue-900 font-bold text-lg">
+      <div className="flex items-center space-x-3">
         <div>
           <img 
             src="naysa_logo.png" 
@@ -36,9 +33,9 @@ const Navbar = ({ onMenuClick }) => {
 
       {/* Right side */}
       <div className="flex items-center space-x-5">
-        <BookOpen className="text-blue-800 w-5 h-5 cursor-pointer" />
+        <BookOpen className="text-blue-900 w-5 h-5 cursor-pointer" />
         <div className="relative">
-          <Bell className="text-blue-800 w-5 h-5 cursor-pointer" />
+          <Bell className="text-blue-900 w-5 h-5 cursor-pointer" />
           <span className="absolute top-0 right-0 bg-red-500 w-2 h-2 rounded-full" />
         </div>
         <div
@@ -62,6 +59,7 @@ const Navbar = ({ onMenuClick }) => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };
