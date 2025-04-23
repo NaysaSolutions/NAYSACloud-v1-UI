@@ -319,11 +319,8 @@ const handleSelectBranch = (selectedBranch) => {
                     Payee Name
                   </label>
                 </div>
-              </div>
 
-              {/* Column 3 */}
-              <div className="space-y-4 p-4">
-                <div className="relative">
+                {/* <div className="relative">
                   <input
                     type="text"
                     id="refAPV"
@@ -343,14 +340,41 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
-                </div>
+                </div> */}
+
                 <div className="relative">
-                  <input
-                    type="text"
-                    id="apType"
-                    placeholder=" "
+                  <select
+                    id="refAPV"
                     className="peer transaction-textbox-ui"
-                  />
+                    defaultValue=""
+                  >
+                    <option value="Y" disabled hidden></option>
+                    <option value="Y">Yes</option>
+                    <option value="N">No</option>
+                  </select>
+                  <label
+                    htmlFor="refAPV"
+                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                  >
+                    With Ref APV
+                  </label>
+                </div>
+
+              </div>
+
+              {/* Column 3 */}
+              <div className="space-y-4 p-4">
+                
+              <div className="relative">
+                  <select
+                    id="apType"
+                    className="peer transaction-textbox-ui"
+                    defaultValue=""
+                  >
+                    <option value="APV001" disabled hidden></option>
+                    <option value="APV001">Purchases</option>
+                    <option value="APV002">Non-Purchases</option>
+                  </select>
                   <label
                     htmlFor="apType"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
@@ -358,6 +382,7 @@ const handleSelectBranch = (selectedBranch) => {
                     AP Type
                   </label>
                 </div>
+
                 <div className="relative">
                   <input
                     type="text"
@@ -380,7 +405,7 @@ const handleSelectBranch = (selectedBranch) => {
                   <textarea
                     id="remarks"
                     placeholder=""
-                    rows={10} 
+                    rows={5} 
                     className="peer transaction-textbox-ui"
                   />
                   <label
@@ -436,12 +461,15 @@ const handleSelectBranch = (selectedBranch) => {
                 </div>
 
                 <div className="relative">
-                  <input
-                    type="text"
+                  <select
                     id="currName"
-                    placeholder=" "
                     className="peer transaction-textbox-ui"
-                  />
+                    defaultValue=""
+                  >
+                    <option value="CV001" disabled hidden></option>
+                    <option value="CV002">Check</option>
+                    <option value="CV003">Cash</option>
+                  </select>
                   <label
                     htmlFor="currName"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
@@ -449,6 +477,7 @@ const handleSelectBranch = (selectedBranch) => {
                     Payment Type
                   </label>
                 </div>
+
               </div>
 
               {/* Column 4 */}
@@ -467,13 +496,13 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Check No.
                   </label>
-                  <button
+                  {/* <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
+                  </button> */}
                 </div>
 
                 <div className="relative">
@@ -489,18 +518,18 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Check Date
                   </label>
-                  <button
+                  {/* <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
+                  </button> */}
                 </div>
 
                 <div className="relative">
                   <input
-                    type="text"
+                    type="number"
                     id="currName"
                     placeholder=" "
                     defaultValue="0.00"
@@ -510,7 +539,7 @@ const handleSelectBranch = (selectedBranch) => {
                     htmlFor="currName"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
-                    Check Amount(Orig)
+                    Check Amount (Original)
                   </label>
                 </div>
               </div>
@@ -542,7 +571,7 @@ const handleSelectBranch = (selectedBranch) => {
 
                 <div className="relative">
                   <input
-                    type="text"
+                    type="number"
                     id="currCode"
                     placeholder=" "
                     className="peer transaction-textbox-ui"
@@ -553,30 +582,28 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Currency Rate
                   </label>
-                  <button
+                  {/* <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
+                  </button> */}
                 </div>
 
                 <div className="relative">
-                  <select
+                  <input
+                    type="number"
                     id="currName"
+                    placeholder=" "
+                    defaultValue="0.00"
                     className="peer transaction-textbox-ui"
-                    defaultValue=""
-                  >
-                    <option value="APV001" disabled hidden></option>
-                    <option value="APV001">Purchases</option>
-                    <option value="APV002">Non-Purchases</option>
-                  </select>
+                  />
                   <label
                     htmlFor="currName"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
-                    AP Type
+                    Check Amount (Php)
                   </label>
                 </div>
 

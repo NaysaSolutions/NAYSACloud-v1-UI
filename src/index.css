@@ -27,7 +27,7 @@ body {
 
   .global-div-header-ui {
     /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
-    @apply bg-gradient-to-r from-blue-500 to-purple-300 p-6 rounded-lg text-gray-700 shadow-lg;
+    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-6 rounded-lg text-gray-700 shadow-lg;
   }
 
   .global-div-headertext-ui {
