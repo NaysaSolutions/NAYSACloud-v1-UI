@@ -27,13 +27,55 @@ body {
 
   .global-div-header-ui {
     /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
-    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-6 rounded-lg text-gray-700 shadow-lg;
+    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg;
   }
 
   .global-div-headertext-ui {
-    @apply text-2xl sm:text-4xl font-semibold;
+    @apply text-xl sm:text-2xl lg:text-4xl font-semibold;
   }
 
-  .global-div-post-text-ui {
-    @apply text-2xl sm:text-4xl font-extrabold;
+  .global-tran-headerstat-text-ui {
+    @apply text-lg sm:text-base lg:text-base font-semibold text-center text-gray-600;
   }
+
+  .global-tran-stat-text-ui {
+    /* @apply text-2xl sm:text-3xl font-extrabold text-center text-red-600 drop-shadow-[0_0_2px_#f87171]; */
+    @apply text-xl sm:text-2xl lg:text-3xl font-extrabold text-center;
+  }
+
+  .global-tran-stat-text-closed-ui {
+    @apply text-red-600;
+  }
+
+  .global-tran-stat-text-finalized-ui {
+    @apply text-blue-800 ;
+  }
+
+  .global-tran-stat-text-open-ui {
+    @apply text-gray-800;
+  }
+
+  .global-tran-th-ln-ui {
+    @apply px-3 py-3 text-center text-xs font-bold text-gray-900;
+  }
+
+  .global-tran-th-ui {
+    @apply px-1 py-3 text-center text-xs font-bold text-gray-900;
+  }
+
+  .global-tran-td-ui {
+    @apply border text-xs;
+  }
+
+  .global-tran-td-inputclass-ui {
+    @apply h-7 bg-transparent focus:outline-none focus:ring-0;
+  }
+
+  .global-tran-total-header-ui {
+    @apply text-sm font-bold text-blue-700;
+  }
+
+  .global-tran-total-value-ui {
+    @apply text-sm font-extrabold text-gray-900 text-right;
+  }
+

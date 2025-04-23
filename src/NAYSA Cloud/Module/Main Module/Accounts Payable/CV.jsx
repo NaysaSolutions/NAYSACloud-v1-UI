@@ -1,48 +1,52 @@
 import React, { useState, useEffect } from "react";
+import Swal from 'sweetalert2';
+
+// UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
+
+// Lookup/Modal
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
-import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
 import CurrLookupModal from "@/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
-import Swal from 'sweetalert2';
-// import './index.css';
+
+// Global
+import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
+import { docTypeNames } from '@/NAYSA Cloud/Global/doctype';
 
 const CV = () => {
 
-  // const [detailData, setDetailData] = useState([]);
-  // const [isFetchDisabled, setIsFetchDisabled] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSpecs, setCurrentSpecs] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState("");
-  const [activeTab, setActiveTab] = useState("basic"); // State for active tab
-  const [GLactiveTab, setGLActiveTab] = useState("invoice"); // State for active tab
+  const [activeTab, setActiveTab] = useState("basic");
+  const [GLactiveTab, setGLActiveTab] = useState("invoice");
 
 
-const { resetFlag } = useReset();
+  //Document Global Setup
+  const docType = 'CV'; 
+  const documentTitle = docTypeNames[docType] || 'Transaction';
 
-  // State to hold table rows for the detail section (e.g., invoice line items)
+  //Status Global Setup
+  const displayStatus = status || 'OPEN';
+  let statusColor = 'global-tran-stat-text-open-ui';
+  if (displayStatus === 'FINALIZED') {
+    statusColor = 'global-tran-stat-text-finalized-ui';
+  } else if (['CANCELLED', 'CLOSED'].includes(displayStatus)) {
+    statusColor = 'global-tran-stat-text-closed-ui';
+  }
+
+
+  const { resetFlag } = useReset();
+
   const [detailRows, setDetailRows] = useState([]);
-
-  // State to hold table rows for the detail section (e.g., invoice line items)
   const [detailRowsGL, setDetailRowsGL] = useState([]);
-
-  // State to hold the actual detail data associated with each row (e.g., backend or form data)
   const [detailData, setDetailData] = useState([]);
-
-  // State to enable or disable fetching data (can be used to prevent duplicate API calls)
   const [isFetchDisabled, setIsFetchDisabled] = useState(false);
-
-  // State to control visibility of the branch lookup modal
   const [showModal, setShowModal] = useState(false);
-
-  // State to store the list of fetched branches from the backend
   const [branches, setBranches] = useState([]);
-
-  // State to hold the name of the selected branch
   const [branchName, setBranchName] = useState("");
-
-  // State to identify the source or purpose of the modal trigger (e.g., which input field opened the modal)
   const [modalContext, setModalContext] = useState('');
 
   // Uncommented: State to control visibility of the Open Balance modal (currently not in use)
@@ -50,14 +54,8 @@ const { resetFlag } = useReset();
 
   // State to identify which context or component made a selection (useful when reusing modals)
   const [selectionContext, setSelectionContext] = useState('');
-
-  // State to control visibility of the currency lookup modal
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
-
-  // State to hold the selected currency code (defaulting to PHP)
-  const [currencyCode, setCurrencyCode] = useState("");
-
-  // State to hold the name of the selected currency (defaulting to Philippine Peso)
+  const [currencyCode, setCurrencyCode] = useState("PHP");
   const [currencyName, setCurrencyName] = useState("");
 
   const [header, setHeader] = useState({
@@ -79,30 +77,34 @@ const handleAddRow = () => {
   setDetailRows([
     ...detailRows,
     {
-      type: "",
+      apType: "",
       rrNo: "",
-      category: "",
-      classification: "",
       poNo: "",
       invoiceNo: "",
       invoiceDate: "",
-      origAmount: "",
-      currency: "",
-      invoiceAmount: "",
+      origAmount: "0.00",
+      currency: "PHP",
+      invoiceAmount: "0.00",
+      appliedAmount: "0.00",
+      unappliedAmount: "",
       drAccount: "",
       rcCode: "",
       rcDescription: "",
       slCode: "",
       vatCode: "",
       vatDescription: "",
-      vatAmount: "",
+      vatAmount: "0.00",
       ewtCode: "",
       ewtDescription: "",
-      ewtAmount: "",
-      terms: "",
-      dueDate: "",
+      ewtAmount: "0.00",
     }
   ]);
+};
+
+const handleDeleteRow = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows.splice(index, 1);
+  setDetailRows(updatedRows); // assuming you're using useState
 };
 
 // Function to add a new row to the detail section with default empty values
@@ -110,23 +112,28 @@ const handleAddRowGL = () => {
   setDetailRowsGL([
     ...detailRowsGL,
     {
-      type: "",
-      rrNo: "",
-      category: "",
-      classification: "",
-      poNo: "",
-      invoiceNo: "",
-      invoiceDate: "",
-      origAmount: "",
-      currency: "",
-      invoiceAmount: "",
-      drAccount: "",
+      acctCode: "",
       rcCode: "",
-      rcDescription: "",
-
+      slCode: "",
+      particulars: "",
+      vatCode: "",
+      vatDescription: "",
+      ewtCode: "",
+      ewtDescription: "",
+      debit: "0.00",
+      credit: "0.00",
+      slRefNo: "",
+      remarks: "",
     }
   ]);
 };
+
+const handleDeleteRowGL = (index) => {
+  const updatedRows = [...detailRowsGL];
+  updatedRows.splice(index, 1);
+  setDetailRowsGL(updatedRows); // assuming you're using useState
+};
+
 
 // Opens the currency lookup modal
 const openCurrencyModal = () => {
@@ -172,34 +179,36 @@ const handleSelectBranch = (selectedBranch) => {
   setSelectionContext('');    // Clear the context for future use
 };
 
+
+
+
   return (
-    <div className="p-6 bg-gray-100 min-h-screen mt-14">
+    <div className="p-6 bg-gray-100 min-h-screen mt-12">
 
-{/* <div className="text-center justify-center mb-4">
-<h1 className=" font-black text-4xl mb-4 text-blue-600">CHECK VOUCHER</h1>
- <span className=" font-black text-2xl text-red-600">Posted Transaction</span>
- </div> */}
 
-{/* <div className="text-center justify-center mb-4">
- <span className=" font-black text-2xl text-red-600">Posted Transaction</span>
- </div> */}
-  {/* Header Section */}
-  <div className="global-div-header-ui mb-6 flex justify-between items-center">
-  {/* <h1 className="global-div-headertext-ui">CHECK VOUCHER TRANSACTION</h1> */}
-  {/* <h1 className="global-div-headertext-ui text-red-700">Posted Transaction</h1> */}
-  <h1 className="global-div-headertext-ui">Check Voucher Transaction</h1>
-  <h1 className="global-div-post-text-ui text-red-600 drop-shadow-[0_0_2px_#f87171]">
-  POSTED
-</h1>
+      {/* Header Section */}
+      <div className="global-div-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
 
-</div>
+        <div className="text-center sm:text-left">
+          <h1 className="global-div-headertext-ui">{documentTitle}</h1>
+        </div>
 
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-center sm:items-start text-center sm:text-left">
+          <div>
+            <p className="global-tran-headerstat-text-ui">Transaction Status</p>
+              <h1 className={`global-tran-stat-text-ui ${statusColor}`}>
+              {displayStatus}
+            </h1>
+          </div>
+        </div>
+
+    </div> 
         
  
       {/* Form Layout with Tabs */}
-      <div className="bg-white shadow-md rounded-lg p-4">
+    <div className="bg-white shadow-md rounded-lg p-3">
         {/* Tab Navigation */}
-        <div className="flex border-b mb-4">
+        <div className="flex border-b text-sm sm:text-base lg:text-base">
           <button
             className={`py-2 px-4 ${activeTab === 'basic' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 font-medium'}`}
             onClick={() => setActiveTab('basic')}
@@ -319,28 +328,6 @@ const handleSelectBranch = (selectedBranch) => {
                     Payee Name
                   </label>
                 </div>
-
-                {/* <div className="relative">
-                  <input
-                    type="text"
-                    id="refAPV"
-                    placeholder=" "
-                    className="peer transaction-textbox-ui"
-                  />
-                  <label
-                    htmlFor="refAPV"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-                  >
-                    with Ref APV
-                  </label>
-                  <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
-                </div> */}
 
                 <div className="relative">
                   <select
@@ -469,6 +456,10 @@ const handleSelectBranch = (selectedBranch) => {
                     <option value="CV001" disabled hidden></option>
                     <option value="CV002">Check</option>
                     <option value="CV003">Cash</option>
+                    <option value="CV003">Wired</option>
+                    <option value="CV003">Authority to Debit</option>
+                    <option value="CV003">Bank Transfer</option>
+                    <option value="CV003">Gcash/Paymaya</option>
                   </select>
                   <label
                     htmlFor="currName"
@@ -496,13 +487,6 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Check No.
                   </label>
-                  {/* <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button> */}
                 </div>
 
                 <div className="relative">
@@ -518,13 +502,6 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Check Date
                   </label>
-                  {/* <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button> */}
                 </div>
 
                 <div className="relative">
@@ -533,7 +510,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="currName"
                     placeholder=" "
                     defaultValue="0.00"
-                    className="peer transaction-textbox-ui"
+                    className="peer transaction-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currName"
@@ -574,7 +551,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="number"
                     id="currCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer transaction-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currCode"
@@ -582,13 +559,6 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Currency Rate
                   </label>
-                  {/* <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button> */}
                 </div>
 
                 <div className="relative">
@@ -597,7 +567,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="currName"
                     placeholder=" "
                     defaultValue="0.00"
-                    className="peer transaction-textbox-ui"
+                    className="peer transaction-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currName"
@@ -627,7 +597,7 @@ const handleSelectBranch = (selectedBranch) => {
   </div> */}
 
   {/* Tab Navigation */}
-  <div className="flex border-b mb-4">
+  <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base">
           <button
             className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
             onClick={() => setGLActiveTab('invoice')}
@@ -644,201 +614,224 @@ const handleSelectBranch = (selectedBranch) => {
 
       {/* Invoice Details Table */}
       {/* Table */}
-  <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-  <div className="max-h-[430px] overflow-y-auto relative"> 
+  <div className="overflow-x-auto bg-white shadow-lg rounded-lg h-[360px]">
+  <div className="max-h-[360px] overflow-y-auto relative"> 
     <table className="min-w-full border-collapse">
       <thead className="sticky top-0 bg-blue-300 z-10">
         <tr>
-          <th className="px-3 py-4 text-center text-xs font-bold text-gray-900">LN</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Type</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">RR No.</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">PO/JO No.</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Invoice No.</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Invoice Date</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Original Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Currency</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Invoice Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">DR Account</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">RC Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">RC Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Payment Terms</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Due Date</th>
+          <th className="global-tran-th-ln-ui">LN</th>
+          <th className="global-tran-th-ui">AP Type</th>
+          <th className="global-tran-th-ui">RR No.</th>
+          <th className="global-tran-th-ui">PO/JO No.</th>
+          <th className="global-tran-th-ui">Invoice No.</th>
+          <th className="global-tran-th-ui">Invoice Date</th>
+          <th className="global-tran-th-ui">Original Amount</th>
+          <th className="global-tran-th-ui">Currency</th>
+          <th className="global-tran-th-ui">Invoice Amount</th>
+          <th className="global-tran-th-ui">Applied Amount</th>
+          <th className="global-tran-th-ui">Unapplied Amount</th>
+          <th className="global-tran-th-ui">DR Account</th>
+          <th className="global-tran-th-ui">RC Code</th>
+          <th className="global-tran-th-ui">RC Name</th>
+          <th className="global-tran-th-ui">SL Code</th>
+          <th className="global-tran-th-ui">VAT Code</th>
+          <th className="global-tran-th-ui">VAT Name</th>
+          <th className="global-tran-th-ui">VAT Amount</th>
+          <th className="global-tran-th-ui">ATC</th>
+          <th className="global-tran-th-ui">ATC Name</th>
+          <th className="global-tran-th-ui">ATC Amount</th>
+          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 z-30">Add</th>
+          <th className="global-tran-th-ui sticky right-0 bg-blue-300 z-30">Delete</th>
         </tr>
       </thead>
       <tbody className="relative">
         {detailRows.map((row, index) => (
           <tr key={index} className="hover:bg-blue-100 border">
-            <td className="border px-1 py-1 text-xs text-center">{index + 1}</td>
-            <td className="border px-1 py-1">
+
+            <td className="w-[50px] global-tran-td-ui text-center">{index + 1}</td>
+            <td className="global-tran-td-ui">
               <select
-                className="w-[50px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.type || ""}
-                onChange={(e) => handleDetailChange(index, 'type', e.target.value)}
+                className="w-[120px] global-tran-td-inputclass-ui"
+                value={row.aptype || ""}
+                onChange={(e) => handleDetailChange(index, 'apType', e.target.value)}
               >
-                <option value="FG">FG</option>
-                <option value="MS">MS</option>
-                <option value="RM">RM</option>
+                <option value="APV001">Purchases</option>
+                <option value="APV004">Liquidation</option>
+                <option value="APV005">Replenishment</option>
+                <option value="APV006">Reimbursement</option>
               </select>
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-6 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.rrNo || ""}
                 onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.poNo || ""}
                 onChange={(e) => handleDetailChange(index, 'poNo', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.invoiceNo || ""}
                 onChange={(e) => handleDetailChange(index, 'invoiceNo', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="date"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.invoiceDate || ""}
                 onChange={(e) => handleDetailChange(index, 'invoiceDate', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.origAmount || ""}
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.origAmount || "0.00"}
                 onChange={(e) => handleDetailChange(index, 'origAmount', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[80px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.currency || ""}
+                className="w-[80px] global-tran-td-inputclass-ui text-center"
+                value={row.currency || "PHP"}
                 onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.invoiceAmount || ""}
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.invoiceAmount || "0.00"}
                 onChange={(e) => handleDetailChange(index, 'invoiceAmount', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
+              <input
+                type="number"
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.appliedAmount || "0.00"}
+                onChange={(e) => handleDetailChange(index, 'appliedAmount', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="number"
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.unappliedAmount || "0.00"}
+                onChange={(e) => handleDetailChange(index, 'unappliedAmount', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.drAccount || ""}
                 onChange={(e) => handleDetailChange(index, 'drAccount', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.rcCode || ""}
                 onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.rcDescription || ""}
                 onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.slCode || ""}
                 onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.vatCode || ""}
                 onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.vatDescription || ""}
                 onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.vatAmount || ""}
+                className="w-[100px] global-tran-td-inputclass-ui text-right"
+                value={row.vatAmount || "0.00"}
                 onChange={(e) => handleDetailChange(index, 'vatAmount', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.ewtCode || ""}
                 onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.ewtDescription || ""}
                 onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.ewtAmount || ""}
+                className="w-[100px] global-tran-td-inputclass-ui text-right"
+                value={row.ewtAmount || "0.00"}
                 onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.terms || ""}
-                onChange={(e) => handleDetailChange(index, 'terms', e.target.value)}
-              />
+            <td className="global-tran-td-ui text-center sticky right-10">
+              <button
+                className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]"
+                onClick={() => handleAddRow(index)}
+                >
+                  {/* Add */}
+                   <FontAwesomeIcon icon={faPlus} />
+                </button>
             </td>
-            <td className="border px-1 py-1">
-              <input
-                type="date"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.dueDate || ""}
-                onChange={(e) => handleDetailChange(index, 'dueDate', e.target.value)}
-              />
+            <td className="global-tran-td-ui text-center sticky right-0">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]"
+                onClick={() => handleDeleteRow(index)}
+                >
+                  {/* Delete                  */}
+                  <FontAwesomeIcon icon={faMinus} />
+                </button>
             </td>
+
           </tr>
         ))}
       </tbody>
@@ -846,14 +839,47 @@ const handleSelectBranch = (selectedBranch) => {
   </div>
   </div>
 
- {/* Add Button */}
-  <button
-    onClick={handleAddRow}
-    className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none"
-  >
-    {/* <FontAwesomeIcon icon={faPlus} className="mr-2" /> */}
-    Add
-  </button>
+
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-8 gap-4 sm:gap-0">
+  {/* Add Button */}
+  <div className="flex justify-center sm:justify-start">
+    <button
+      onClick={handleAddRow}
+      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto"
+    >
+      Add
+    </button>
+  </div>
+
+  {/* Totals Section */}
+  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-8 p-2">
+    <div className="flex justify-between sm:items-center sm:gap-2">
+      <label htmlFor="TotalInvoice" className="global-tran-total-header-ui">
+        Total Invoice:
+      </label>
+      <label className="global-tran-total-value-ui">0.00</label>
+    </div>
+    <div className="flex justify-between sm:items-center sm:gap-2">
+      <label htmlFor="TotalVAT" className="global-tran-total-header-ui">
+        Total VAT:
+      </label>
+      <label className="global-tran-total-value-ui">0.00</label>
+    </div>
+    <div className="flex justify-between sm:items-center sm:gap-2">
+      <label htmlFor="TotalATC" className="global-tran-total-header-ui">
+        Total ATC:
+      </label>
+      <label className="global-tran-total-value-ui">0.00</label>
+    </div>
+    <div className="flex justify-between sm:items-center sm:gap-2">
+      <label htmlFor="TotalPayable" className="global-tran-total-header-ui">
+        Total Payable:
+      </label>
+      <label className="global-tran-total-value-ui">0.00</label>
+    </div>
+  </div>
+</div>
+
 
 
       </div>
@@ -874,7 +900,7 @@ const handleSelectBranch = (selectedBranch) => {
   </div> */}
 
   {/* Tab Navigation */}
-  <div className="flex border-b mb-4">
+  <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base">
     
           {/* <button
             className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
@@ -892,129 +918,151 @@ const handleSelectBranch = (selectedBranch) => {
         </div>
 
 
-      {/* Invoice Details Table */}
+      {/* GL Details Table */}
       {/* Table */}
-  <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-  <div className="max-h-[430px] overflow-y-auto relative"> 
+  <div className="overflow-x-auto bg-white shadow-lg rounded-lg h-[360px]">
+  <div className="max-h-[360px] overflow-y-auto relative"> 
     <table className="min-w-full border-collapse">
       <thead className="sticky top-0 bg-blue-300 z-10">
         <tr>
-          <th className="px-3 py-4 text-center text-xs font-bold text-gray-900">LN</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Account Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">RC Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Debit</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Credit</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Ref No</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Remarks</th>
-          {/* <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">SL Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Code</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">VAT Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Name</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">ATC Amount</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Payment Terms</th>
-          <th className="px-1 py-1 text-center text-xs font-bold text-gray-900">Due Date</th> */}
+          <th className="global-tran-th-ln-ui">LN</th>
+          <th className="global-tran-th-ui">Account Code</th>
+          <th className="global-tran-th-ui">RC Code</th>
+          <th className="global-tran-th-ui">SL Code</th>
+          <th className="global-tran-th-ui">Particulars</th>
+          <th className="global-tran-th-ui">VAT Code</th>
+          <th className="global-tran-th-ui">VAT Name</th>
+          <th className="global-tran-th-ui">ATC</th>
+          <th className="global-tran-th-ui">ATC Name</th>
+          <th className="global-tran-th-ui">Debit</th>
+          <th className="global-tran-th-ui">Credit</th>
+          <th className="global-tran-th-ui">SL Ref No</th>
+          <th className="global-tran-th-ui">Remarks</th>
+          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 z-30">Add</th>
+          <th className="global-tran-th-ui sticky right-0 bg-blue-300 z-30">Delete</th>
         </tr>
       </thead>
       <tbody className="relative">
         {detailRowsGL.map((row, index) => (
           <tr key={index} className="hover:bg-blue-100 border">
-            <td className="border px-1 py-1 text-xs text-center">{index + 1}</td>
-            <td className="border px-1 py-1">
+            
+            <td className="global-tran-td-ui text-xs text-center">{index + 1}</td>
+            <td className="global-tran-td-ui">
             <input
                 type="text"
-                className="w-[100px] h-6 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.rrNo || ""}
-                onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.acctCode || ""}
+                onChange={(e) => handleDetailChange(index, 'acctCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-6 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.rrNo || ""}
-                onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.poNo || ""}
-                onChange={(e) => handleDetailChange(index, 'poNo', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.invoiceNo || ""}
-                onChange={(e) => handleDetailChange(index, 'invoiceNo', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.invoiceDate || ""}
-                onChange={(e) => handleDetailChange(index, 'invoiceDate', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.origAmount || ""}
-                onChange={(e) => handleDetailChange(index, 'origAmount', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[80px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.currency || ""}
-                onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.invoiceAmount || ""}
-                onChange={(e) => handleDetailChange(index, 'invoiceAmount', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="number"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.drAccount || ""}
-                onChange={(e) => handleDetailChange(index, 'drAccount', e.target.value)}
-              />
-            </td>
-            <td className="border px-1 py-1">
-              <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
+                className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.rcCode || ""}
                 onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
               />
             </td>
-            <td className="border px-1 py-1">
+            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.rcDescription || ""}
-                onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.slCode || ""}
+                onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[150px] global-tran-td-inputclass-ui"
+                value={row.particulars || ""}
+                onChange={(e) => handleDetailChange(index, 'particulars', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.vatCode || ""}
+                onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.vatDescription || ""}
+                onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.ewtCode || ""}
+                onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[80px] global-tran-td-inputclass-ui"
+                value={row.ewtDescription || ""}
+                onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui text-right">
+              <input
+                type="number"
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.debit || "0.00"}
+                onChange={(e) => handleDetailChange(index, 'debit', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui text-right">
+              <input
+                type="number"
+                className="w-[120px] global-tran-td-inputclass-ui text-right"
+                value={row.credit || "0.00"}
+                onChange={(e) => handleDetailChange(index, 'credit', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.slRefNo || ""}
+                onChange={(e) => handleDetailChange(index, 'slRefNo', e.target.value)}
+              />
+            </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.remarks || ""}
+                onChange={(e) => handleDetailChange(index, 'remarks', e.target.value)}
               />
             </td>
             
+            <td className="global-tran-td-ui text-center sticky right-10">
+              <button
+                className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]"
+                onClick={() => handleAddRowGL(index)}
+                >
+                  {/* Add */}
+                   <FontAwesomeIcon icon={faPlus} />
+                </button>
+            </td>
+            <td className="global-tran-td-ui text-center sticky right-0">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]"
+                onClick={() => handleDeleteRowGL(index)}
+                >
+                  {/* Delete                  */}
+                  <FontAwesomeIcon icon={faMinus} />
+                </button>
+            </td>
+
           </tr>
         ))}
       </tbody>
@@ -1022,14 +1070,37 @@ const handleSelectBranch = (selectedBranch) => {
   </div>
   </div>
 
- {/* Add Button */}
-  <button
-    onClick={handleAddRowGL}
-    className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none"
-  >
-    {/* <FontAwesomeIcon icon={faPlus} className="mr-2" /> */}
-    Add
-  </button>
+
+
+
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-8 gap-4 sm:gap-0">
+  {/* Add Button */}
+  <div className="flex justify-center sm:justify-start">
+    <button
+      onClick={handleAddRowGL}
+      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto"
+    >
+      Add
+    </button>
+  </div>
+
+  {/* Totals Section */}
+  <div className="flex flex-wrap justify-center sm:justify-end items-center gap-x-10 gap-y-2">
+    <label htmlFor="TotalDebit" className="global-tran-total-header-ui">
+      Total Debit:
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-total-value-ui">
+      0.00
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-total-header-ui">
+      Total Credit:
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-total-value-ui">
+      0.00
+    </label>
+  </div>
+</div>
+
 
 
       </div>
