@@ -187,10 +187,10 @@ const handleSelectBranch = (selectedBranch) => {
 
 
       {/* Header Section */}
-      <div className="global-div-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
+      <div className="global-tran-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
 
         <div className="text-center sm:text-left">
-          <h1 className="global-div-headertext-ui">{documentTitle}</h1>
+          <h1 className="global-tran-headertext-ui">{documentTitle}</h1>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-center sm:items-start text-center sm:text-left">
@@ -234,7 +234,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="BranchCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui focus:border-blue-600 focus:outline-none focus:ring-0"
+                    className="peer global-tran-textbox-ui focus:border-blue-600 focus:outline-none focus:ring-0"
                     disabled
                   />
                   <label
@@ -257,7 +257,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -278,7 +278,7 @@ const handleSelectBranch = (selectedBranch) => {
                   <input
                     type="date"
                     id="APVDate"
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                     value={header.apv_date}
                   />
                   <label
@@ -297,7 +297,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="payeeCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="payeeCode"
@@ -319,7 +319,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="payeeName"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="payeeName"
@@ -332,7 +332,7 @@ const handleSelectBranch = (selectedBranch) => {
                 <div className="relative">
                   <select
                     id="refAPV"
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                     defaultValue=""
                   >
                     <option value="Y" disabled hidden></option>
@@ -355,7 +355,7 @@ const handleSelectBranch = (selectedBranch) => {
               <div className="relative">
                   <select
                     id="apType"
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                     defaultValue=""
                   >
                     <option value="APV001" disabled hidden></option>
@@ -375,7 +375,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="refDocNo"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="refDocNo"
@@ -393,7 +393,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="remarks"
                     placeholder=""
                     rows={5} 
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="remarks"
@@ -415,7 +415,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="currCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="currCode"
@@ -437,7 +437,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="currName"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="currName"
@@ -450,7 +450,7 @@ const handleSelectBranch = (selectedBranch) => {
                 <div className="relative">
                   <select
                     id="currName"
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                     defaultValue=""
                   >
                     <option value="CV001" disabled hidden></option>
@@ -479,7 +479,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -494,7 +494,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="currCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="currCode"
@@ -510,7 +510,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="currName"
                     placeholder=" "
                     defaultValue="0.00"
-                    className="peer transaction-textbox-ui text-right"
+                    className="peer global-tran-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currName"
@@ -529,7 +529,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="text"
                     id="APVNo"
                     placeholder=" "
-                    className="peer transaction-textbox-ui"
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="APVNo"
@@ -551,7 +551,7 @@ const handleSelectBranch = (selectedBranch) => {
                     type="number"
                     id="currCode"
                     placeholder=" "
-                    className="peer transaction-textbox-ui text-right"
+                    className="peer global-tran-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currCode"
@@ -567,7 +567,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="currName"
                     placeholder=" "
                     defaultValue="0.00"
-                    className="peer transaction-textbox-ui text-right"
+                    className="peer global-tran-textbox-ui text-right"
                   />
                   <label
                     htmlFor="currName"
