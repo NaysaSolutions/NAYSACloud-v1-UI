@@ -25,26 +25,35 @@ body {
 
   {
   .global-tran-textbox-ui {
-      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0;
+      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0 h-[40px];
     }
-  }
+
+  .global-tran-textbox-remarks-ui {
+      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0;
+    }
+    
+
+  .global-tran-searchbtn-ui {
+        @apply w-[40px] h-[40px];
+      }
+    }
 
   .global-tran-header-ui {
     /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
-    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg;
+    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-1 rounded-lg text-blue-900 shadow-lg lg:p-2;
   }
 
   .global-tran-headertext-ui {
-    @apply text-xl sm:text-2xl lg:text-4xl font-semibold;
+    @apply text-xl sm:text-2xl lg:text-3xl font-semibold pl-3;
   }
 
   .global-tran-headerstat-text-ui {
-    @apply text-lg sm:text-base lg:text-base font-semibold text-center text-gray-600;
+    @apply text-sm sm:text-xs lg:text-sm font-semibold text-center text-gray-600 ;
   }
 
   .global-tran-stat-text-ui {
     /* @apply text-2xl sm:text-3xl font-extrabold text-center text-red-600 drop-shadow-[0_0_2px_#f87171]; */
-    @apply text-xl sm:text-2xl lg:text-3xl font-extrabold text-center;
+    @apply text-base sm:text-sm lg:text-xl font-extrabold text-center;
   }
 
   .global-tran-stat-text-closed-ui {
@@ -60,19 +69,19 @@ body {
   }
 
   .global-tran-th-ln-ui {
-    @apply px-3 py-3 text-center text-xs font-bold text-gray-900;
+    @apply px-3 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900;
   }
 
   .global-tran-th-ui {
-    @apply px-1 py-3 text-center text-xs font-bold text-gray-900;
+    @apply px-1 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900;
   }
 
   .global-tran-td-ui {
-    @apply border text-xs;
+    @apply border text-[10px] sm:text-[10px] lg:text-xs;
   }
 
   .global-tran-td-inputclass-ui {
-    @apply h-7 bg-transparent focus:outline-none focus:ring-0;
+    @apply h-4 bg-transparent focus:outline-none focus:ring-0;
   }
 
   .global-tran-total-header-ui {

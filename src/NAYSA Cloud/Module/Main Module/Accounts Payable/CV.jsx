@@ -29,7 +29,7 @@ const CV = () => {
   const documentTitle = docTypeNames[docType] || 'Transaction';
 
   //Status Global Setup
-  const displayStatus = status || 'OPEN';
+  const displayStatus = status || 'FINALIZED';
   let statusColor = 'global-tran-stat-text-open-ui';
   if (displayStatus === 'FINALIZED') {
     statusColor = 'global-tran-stat-text-finalized-ui';
@@ -55,8 +55,9 @@ const CV = () => {
   // State to identify which context or component made a selection (useful when reusing modals)
   const [selectionContext, setSelectionContext] = useState('');
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
-  const [currencyCode, setCurrencyCode] = useState("PHP");
+  const [currencyCode, setCurrencyCode] = useState("");
   const [currencyName, setCurrencyName] = useState("");
+  const [currencyRate, setCurrencyRate] = useState("");
 
   const [header, setHeader] = useState({
     apv_date: "",
@@ -68,7 +69,7 @@ useEffect(() => {
     setCurrencyCode("");
     setCurrencyName("");
     setBranchName("");
-    console.log("Fields in APV reset!");
+    console.log("Fields in CV reset!");
   }
 }, [resetFlag]);
 
@@ -81,9 +82,9 @@ const handleAddRow = () => {
       rrNo: "",
       poNo: "",
       invoiceNo: "",
-      invoiceDate: "",
+      invoiceDate: header.apv_date,
       origAmount: "0.00",
-      currency: "PHP",
+      currency: currencyCode,
       invoiceAmount: "0.00",
       appliedAmount: "0.00",
       unappliedAmount: "",
@@ -145,6 +146,7 @@ const handleCurrencySelect = (selectedCurrency) => {
   if (selectedCurrency) {
     setCurrencyCode(selectedCurrency.currCode);
     setCurrencyName(selectedCurrency.currName);
+    setCurrencyRate(selectedCurrency.currRate);
   }
   setCurrencyModalOpen(false); // Close the modal after selection
 };
@@ -183,26 +185,26 @@ const handleSelectBranch = (selectedBranch) => {
 
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen mt-12">
+    <div className="p-6 bg-gray-100 min-h-screen mt-14 lg:mt-6">
 
+    {/* Header Section */}
+    <div className="global-tran-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4">
 
-      {/* Header Section */}
-      <div className="global-tran-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
+    <div className="text-center sm:text-left">
+      <h1 className="global-tran-headertext-ui">{documentTitle}</h1>
+    </div>
 
-        <div className="text-center sm:text-left">
-          <h1 className="global-tran-headertext-ui">{documentTitle}</h1>
-        </div>
+    <div className="flex flex-col sm:flex-row gap-y-1 sm:gap-x-5 items-center sm:items-start text-center sm:text-left pr-2 sm:pr-4">
+      <div>
+        <p className="global-tran-headerstat-text-ui">Transaction Status</p>
+        <h1 className={`global-tran-stat-text-ui ${statusColor}`}>
+          {displayStatus}
+        </h1>
+      </div>
+    </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-center sm:items-start text-center sm:text-left">
-          <div>
-            <p className="global-tran-headerstat-text-ui">Transaction Status</p>
-              <h1 className={`global-tran-stat-text-ui ${statusColor}`}>
-              {displayStatus}
-            </h1>
-          </div>
-        </div>
+    </div>
 
-    </div> 
         
  
       {/* Form Layout with Tabs */}
@@ -229,13 +231,15 @@ const handleSelectBranch = (selectedBranch) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3"> {/* Added gap-y-4 for vertical spacing */}
               {/* Column 1 */}
               <div className="space-y-4 p-4">
+                
                 <div className="relative">
                   <input
                     type="text"
                     id="BranchCode"
+                    value="Head Office"  // <-- bind input to state
+                    onChange={(e) => setBranchName(e.target.value)} // <-- update state when typed
                     placeholder=" "
-                    className="peer global-tran-textbox-ui focus:border-blue-600 focus:outline-none focus:ring-0"
-                    disabled
+                    className="peer global-tran-textbox-ui"
                   />
                   <label
                     htmlFor="BranchCode"
@@ -243,13 +247,14 @@ const handleSelectBranch = (selectedBranch) => {
                   >
                     Branch
                   </label>
-                  <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
+                   <button
+                                      onClick={handleBranchClick}
+                                      className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
+                                        isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
+                                      } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
+                                    >
+                                      <FontAwesomeIcon icon={faMagnifyingGlass} />
+                                    </button>
                 </div>
 
                 <div className="relative">
@@ -266,7 +271,7 @@ const handleSelectBranch = (selectedBranch) => {
                     CV No.
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
+                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
@@ -306,7 +311,7 @@ const handleSelectBranch = (selectedBranch) => {
                     Payee Code
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
+                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
@@ -393,7 +398,7 @@ const handleSelectBranch = (selectedBranch) => {
                     id="remarks"
                     placeholder=""
                     rows={5} 
-                    className="peer global-tran-textbox-ui"
+                    className="peer global-tran-textbox-remarks-ui"
                   />
                   <label
                     htmlFor="remarks"
@@ -413,18 +418,18 @@ const handleSelectBranch = (selectedBranch) => {
               <div className="relative">
                   <input
                     type="text"
-                    id="currCode"
+                    id="bankCode"
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
                   />
                   <label
-                    htmlFor="currCode"
+                    htmlFor="bankCode"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     Bank Name
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
+                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
                     } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
                   >
@@ -435,12 +440,12 @@ const handleSelectBranch = (selectedBranch) => {
                 <div className="relative">
                   <input
                     type="text"
-                    id="currName"
+                    id="bankAcct"
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
                   />
                   <label
-                    htmlFor="currName"
+                    htmlFor="bankAcct"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     Bank Account No.
@@ -491,13 +496,14 @@ const handleSelectBranch = (selectedBranch) => {
 
                 <div className="relative">
                   <input
-                    type="text"
-                    id="currCode"
+                    type="date"
+                    id="checkDate"
+                    value={header.apv_date}
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
                   />
                   <label
-                    htmlFor="currCode"
+                    htmlFor="checkDate"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     Check Date
@@ -527,34 +533,39 @@ const handleSelectBranch = (selectedBranch) => {
               <div className="relative">
                   <input
                     type="text"
-                    id="APVNo"
+                    id="currCode"
+                    value={currencyName}  // <-- bind input to state
+                    onChange={(e) => setCurrencyName(e.target.value)} // <-- update state when typed
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
                   />
                   <label
-                    htmlFor="APVNo"
+                    htmlFor="currCode"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     Currency
                   </label>
-                  <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
+                   <button
+                                      onClick={openCurrencyModal}
+                                      className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
+                                        isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
+                                      } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
+                                    >
+                                      <FontAwesomeIcon icon={faMagnifyingGlass} />
+                                    </button>
                 </div>
 
                 <div className="relative">
                   <input
                     type="number"
-                    id="currCode"
+                    id="currRate"
+                    value={currencyRate}  // <-- bind input to state
+                    onChange={(e) => setCurrencyRate(e.target.value)} // <-- update state when typed
                     placeholder=" "
                     className="peer global-tran-textbox-ui text-right"
                   />
                   <label
-                    htmlFor="currCode"
+                    htmlFor="currRate"
                     className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
                   >
                     Currency Rate
@@ -596,21 +607,53 @@ const handleSelectBranch = (selectedBranch) => {
     </button>
   </div> */}
 
-  {/* Tab Navigation */}
-  <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base">
+    {/* Tab Navigation */}
+    {/* <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base flex justify-between">
           <button
             className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
             onClick={() => setGLActiveTab('invoice')}
           >
             Invoice Details
           </button>
-          {/* <button
-            className={`py-2 px-4 ${GLactiveTab === 'gl' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
-            onClick={() => setGLActiveTab('gl')}
+
+          <button
+            // onClick={handleAddRow}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-1 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto mr-4"
           >
-            General Ledger
-          </button> */}
-        </div>
+            Get Multiple AP
+          </button>
+
+      </div> */}
+
+    {/* Tab Navigation */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b mb-4 text-sm sm:text-base lg:text-base gap-2 sm:gap-0">
+
+      {/* Tabs */}
+      <div className="flex flex-row sm:flex-row">
+        <button
+          className={`py-2 px-4 ${
+            GLactiveTab === 'invoice'
+              ? 'font-bold text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 font-medium'
+          }`}
+          onClick={() => setGLActiveTab('invoice')}
+        >
+          Invoice Details
+        </button>
+        {/* Add more tabs here if needed */}
+      </div>
+
+      {/* Action Button */}
+      <div className="flex justify-end">
+        <button
+          // onClick={handleAddRow}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg text-sm sm:text-base flex items-center justify-center focus:outline-none w-full sm:w-auto mr-2"
+        >
+          Get Multiple AP
+        </button>
+      </div>
+    </div>
+
 
       {/* Invoice Details Table */}
       {/* Table */}
@@ -1085,13 +1128,20 @@ const handleSelectBranch = (selectedBranch) => {
   </div>
 
   {/* Totals Section */}
-  <div className="flex flex-wrap justify-center sm:justify-end items-center gap-x-10 gap-y-2">
+{/* Totals Section */}
+  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-8 p-2">
+  {/* Total Debit */}
+  <div className="flex justify-between sm:items-center sm:gap-2">
     <label htmlFor="TotalDebit" className="global-tran-total-header-ui">
       Total Debit:
     </label>
-    <label htmlFor="TotalCredit" className="global-tran-total-value-ui">
+    <label htmlFor="TotalDebit" className="global-tran-total-value-ui">
       0.00
     </label>
+  </div>
+
+  {/* Total Credit */}
+  <div className="flex justify-between sm:items-center sm:gap-2">
     <label htmlFor="TotalCredit" className="global-tran-total-header-ui">
       Total Credit:
     </label>
@@ -1101,11 +1151,39 @@ const handleSelectBranch = (selectedBranch) => {
   </div>
 </div>
 
+</div>
+
 
 
       </div>
 
+<BranchLookupModal
+  isOpen={showModal}
+  branches={branches}
+  // params={
+  //   //add params here
+  // }
+  onClose={(selected) => {
+    if (selected) {
+      console.log(`Branch selected in: ${modalContext}`);
+      console.log('Selected branch:', selected);
+      
+      if (modalContext === 'apv_hd') {
+        setBranchName(selected.branchName || "");
+      } else if (modalContext === 'apv_dtl') {
+      }
+    }
+    setShowModal(false);
+    setModalContext(''); // Reset the context
+  }}
+/>
 
+{currencyModalOpen && (
+        <CurrLookupModal 
+          isOpen={currencyModalOpen}
+          onClose={handleCurrencySelect}
+        />
+      )}
 
     </div>
   );

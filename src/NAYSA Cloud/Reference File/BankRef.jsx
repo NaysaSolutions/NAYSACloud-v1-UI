@@ -2,6 +2,13 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from 'sweetalert2';
 
+import { useLocation, useNavigate } from "react-router-dom";
+
+// UI
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEdit, faMagnifyingGlass, faTrashAlt, faPlus,faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faList, faPen, faSave, faUndo, faPrint } from "@fortawesome/free-solid-svg-icons";
+
 // Global
 import { useReset } from "../Components/ResetContext";
 import { reftables } from '@/NAYSA Cloud/Global/reftable';
@@ -14,43 +21,102 @@ const BankRef = () => {
 
   const [isEditing, setIsEditing] = useState(false); // Controls if inputs are editable
   
-  const [branches, setBranches] = useState([]);
-  const [branchCode, setBranchCode] = useState('');
-  const [branchName, setBranchName] = useState('');
-  const [branchID, setbranchId] = useState('');
+  const [bankTypes, setBankTypes] = useState([]);
+  const [bankTypeCode, setBankTypeCode] = useState('');
+  const [bankTypeName, setBankTypeName] = useState('');
+  const [reportName, setReportName] = useState('');
   const [active, setActive] = useState('');
   const [saving, setSaving] = useState(false); // Initializes saving state
   const { setOnSave, setOnReset } = useReset();
 
+  // const fetchBranches = async () => {
+  //   try {
+  //     const response = await axios.post("http://localhost:8000/api/branch");
+  //     console.log("Fetched branches:", response.data);
+  //     const resultString = response.data?.data?.[0]?.result;
+  //     if (resultString) {
+  //       const parsedBranches = JSON.parse(resultString);
+  //       setBranches(parsedBranches);
+  //     } else {
+  //       console.error("No result string found in response");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching branches:", error);
+  //   }
+  // };
+
   const fetchBranches = async () => {
     try {
       const response = await axios.post("http://localhost:8000/api/branch");
-      console.log("Fetched branches:", response.data);
       const resultString = response.data?.data?.[0]?.result;
+  
       if (resultString) {
         const parsedBranches = JSON.parse(resultString);
-        setBranches(parsedBranches);
+        if (parsedBranches.length > 0) {
+          setBankTypes(parsedBranches);
+        } else {
+          // If API returns empty, load these sample records
+          setBankTypes([
+            { bankTypeCode: "AUB", bankTypeName: "ASIA UNITED BANK", reportName: "AUB" },
+            { bankTypeCode: "BDO", bankTypeName: "BANCO DE ORO", reportName: "BDO" },
+            { bankTypeCode: "BPI", bankTypeName: "BANK OF THE PHILIPPINE ISLANDS", reportName: "BPI" },
+            { bankTypeCode: "LANDBANK", bankTypeName: "LAND BANK OF THE PHILIPPINES", reportName: "LANDBANK" },
+            { bankTypeCode: "METROBANK", bankTypeName: "METROPOLITAN BANK", reportName: "METROBANK" },
+            { bankTypeCode: "RCBC", bankTypeName: "RIZAL COMMERCIAL BANKING CORP", reportName: "RCBC" },
+            { bankTypeCode: "UCPB", bankTypeName: "UNITED COCONUT PLANTERS BANK", reportName: "UCPB" },
+            { bankTypeCode: "CHINABANK", bankTypeName: "CHINA BANKING CORPORATION", reportName: "CHINABANK" },
+            { bankTypeCode: "PNB", bankTypeName: "PHILIPPINE NATIONAL BANK", reportName: "PNB" },
+            { bankTypeCode: "EWB", bankTypeName: "EASTWEST BANK", reportName: "EWB" },
+            { bankTypeCode: "PB", bankTypeName: "PBCOM", reportName: "PB" }
+          ]);
+        }
       } else {
-        console.error("No result string found in response");
+        // If result string is null
+        setBankTypes([
+          { bankTypeCode: "AUB", bankTypeName: "ASIA UNITED BANK", reportName: "AUB" },
+          { bankTypeCode: "BDO", bankTypeName: "BANCO DE ORO", reportName: "BDO" },
+        ]);
       }
     } catch (error) {
       console.error("Error fetching branches:", error);
+  
+      // If API fails, load fallback data
+      setBankTypes([
+        { bankTypeCode: "AUB", bankTypeName: "ASIA UNITED BANK", reportName: "AUB" },
+            { bankTypeCode: "BDO", bankTypeName: "BANCO DE ORO", reportName: "BDO" },
+            { bankTypeCode: "BPI", bankTypeName: "BANK OF THE PHILIPPINE ISLANDS", reportName: "BPI" },
+            { bankTypeCode: "LANDBANK", bankTypeName: "LAND BANK OF THE PHILIPPINES", reportName: "LANDBANK" },
+            { bankTypeCode: "METROBANK", bankTypeName: "METROPOLITAN BANK", reportName: "METROBANK" },
+            { bankTypeCode: "RCBC", bankTypeName: "RIZAL COMMERCIAL BANKING CORP", reportName: "RCBC" },
+            { bankTypeCode: "UCPB", bankTypeName: "UNITED COCONUT PLANTERS BANK", reportName: "UCPB" },
+            { bankTypeCode: "CHINABANK", bankTypeName: "CHINA BANKING CORPORATION", reportName: "CHINABANK" },
+            { bankTypeCode: "PNB", bankTypeName: "PHILIPPINE NATIONAL BANK", reportName: "PNB" },
+            { bankTypeCode: "EWB", bankTypeName: "EASTWEST BANK", reportName: "EWB" },
+            { bankTypeCode: "PB", bankTypeName: "PBCOM", reportName: "PB" }
+      ]);
     }
   };
+  
+  
 
   useEffect(() => {
     fetchBranches();
   }, []);
 
 
+  const handleDeleteRow = (index) => {
+    const updatedRows = [...detailRows];
+    updatedRows.splice(index, 1);
+    setDetailRows(updatedRows); // assuming you're using useState
+  };
+
 const handleSaveBranch = async () => {
   setSaving(true);
 
   // Log individual values to verify state
-  console.log('branchCode:', branchCode);
-  console.log('branchName:', branchName);
-  console.log('branchAddr1:', branchAddr1);
-  console.log('branchTin:', branchTin);
+  console.log('bankType:', bankType);
+  console.log('bankTypeName:', bankTypeName);
+  console.log('reportName:', reportName);
 
   // Validate required fields before sending
   if (!branchCode || !branchName || !branchAddr1 || !branchTin) {
@@ -121,15 +187,15 @@ const handleSaveBranch = async () => {
 
 
 const resetForm = () => {
-  setBranchCode('');
-  setBranchName('');
-  setbranchId('');
-  setActive('');
+  setBankTypeCode('');
+  setBankTypeName('');
+  setReportName('');
+  // setActive('');
 };
 
 
   return (
-    <div className="p-4 bg-gray-200 min-h-screen font-roboto">
+    <div className="p-4 bg-gray-100 min-h-screen font-roboto">
 
       <div className="mx-auto">
 
@@ -140,12 +206,52 @@ const resetForm = () => {
         <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
         </div>
 
+        
+          {/* Submit Button */}
+          <div className="flex gap-2 justify-center">
+            {/* <button
+              onClick={() => setIsEditing(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              Add
+            </button> */}
+
+            <button
+              onClick={handleSaveBranch}
+              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
+              disabled={!isEditing}
+            >
+              <FontAwesomeIcon icon={faSave} />
+              Save
+            </button>
+
+            <button
+              onClick={resetForm}
+              className="bg-gray-500 text-white px-4 py-2 rounded flex items-center gap-2"
+              disabled={!isEditing}
+            >
+              <FontAwesomeIcon icon={faUndo} />
+              Reset
+            </button>
+
+            <button
+              onClick={resetForm}
+              className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2"
+              disabled={!isEditing}
+            >
+              <FontAwesomeIcon icon={faPrint} />
+              Export
+            </button>
+          </div>
+
+
     </div> 
 
     <div className="mt-6 flex flex-col md:flex-row gap-4">
 
         {/* Form Section */}
-        <div className="mt-2 bg-white p-4 sm:p-6 shadow-md rounded-lg w-full md:w-1/2 min-w-[200px]">
+        <div className="mt-2 bg-white p-4 sm:p-6 shadow-md rounded-lg w-full md:w-1/2 min-w-[100px]">
         {saving && <div>Loading...</div>} {/* Show loading spinner or message */}
           <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
 
@@ -155,7 +261,7 @@ const resetForm = () => {
               <div className="relative">
                 <input
                   type="text"
-                  id="branchCode"
+                  id="bankTypeCode"
                   placeholder=" "
                   className={`peer global-tran-textbox-ui
                     ${isEditing 
@@ -163,13 +269,13 @@ const resetForm = () => {
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   
-                  value={branchCode}
-                  onChange={(e) => setBranchCode(e.target.value)}
+                  value={bankTypeCode}
+                  onChange={(e) => setBankTypeCode(e.target.value)}
                   disabled={!isEditing}
                   maxLength={10} // Limit to 10 characters
                 />
                 <label
-                  htmlFor="branchCode"
+                  htmlFor="bankTypeCode"
                   className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
                                 bg-gray-100 px-2 text-sm text-gray-600 transition-all 
                                 peer-placeholder-shown:top-1/2 
@@ -181,7 +287,7 @@ const resetForm = () => {
                                 peer-focus:text-blue-600' 
                     ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
-                  Branch Code
+                  Bank Type (Required)
                 </label>
               </div>
 
@@ -189,19 +295,19 @@ const resetForm = () => {
               <div className="relative">
                 <input
                   type="text"
-                  id="branchId"
+                  id="bankTypeName"
                   placeholder=" "
                   className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                  value={branchID}
-                  onChange={(e) => setbranchId(e.target.value)}
+                  value={bankTypeName}
+                  onChange={(e) => setBankTypeName(e.target.value)}
                   disabled={!isEditing}  
                 />
                 <label
-                  htmlFor="branchId"
+                  htmlFor="bankTypeName"
                   className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
                                 bg-gray-100 px-2 text-sm text-gray-600 transition-all 
                                 peer-placeholder-shown:top-1/2 
@@ -213,7 +319,8 @@ const resetForm = () => {
                                 peer-focus:text-blue-600'
                     ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
-                  Branch ID
+                  Bank Name 
+                  <span classname="text-red-500"> (Required)</span>
                 </label>
               </div>
 
@@ -221,7 +328,7 @@ const resetForm = () => {
               <div className="relative">
                 <input
                   type="text"
-                  id="branchName"
+                  id="reportName"
                   placeholder=" "
                   className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
                     ${isEditing 
@@ -229,12 +336,12 @@ const resetForm = () => {
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   
-                  value={branchName}
-                  onChange={(e) => setBranchName(e.target.value)}
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
                   disabled={!isEditing}                
                 />
                 <label
-                  htmlFor="branchName"
+                  htmlFor="reportName"
                   className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
                                 bg-gray-100 px-2 text-sm text-gray-600 transition-all 
                                 peer-placeholder-shown:top-1/2 
@@ -246,79 +353,118 @@ const resetForm = () => {
                                 peer-focus:text-blue-600'
                     ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
-                  Branch Name
+                  Report Name
                 </label>
               </div>
             </div>
 
           </div>
 
-          {/* Submit Button */}
-          <div className="mt-6 flex gap-2 justify-center">
+         {/* Submit Button */}
+         {/* <div className="mt- flex gap-2 justify-center mt-4">
           <button
-    onClick={() => setIsEditing(true)}
-    className="bg-blue-500 text-white px-4 py-2 rounded"
-  >
-    Add
-  </button>
+              onClick={() => setIsEditing(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Add
+            </button>
 
-  <button
-    onClick={handleSaveBranch}
-    className="bg-blue-500 text-white px-4 py-2 rounded"
-    disabled={!isEditing}
-  >
-    Save
-  </button>
+            <button
+              onClick={handleSaveBranch}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+              disabled={!isEditing}
+            >
+              Save
+            </button>
 
-  <button
-    onClick={resetForm}
-    className="bg-gray-400 text-white px-4 py-2 rounded"
-    disabled={!isEditing}
-  >
-    Reset
-  </button>
+            <button
+              onClick={resetForm}
+              className="bg-gray-500 text-white px-4 py-2 rounded"
+              disabled={!isEditing}
+            >
+              Reset
+            </button>
 
-          </div>
+            <button
+              onClick={resetForm}
+              className="bg-green-600 text-white px-4 py-2 rounded"
+              disabled={!isEditing}
+            >
+              Export
+            </button>
+
+          </div> */}
+
+
+
+
         </div>
 
+
         {/* Branch Table */}
-<div className="bg-white p-4 sm:p-6 shadow-md rounded-lg w-full md:w-1/2 overflow-x-auto mt-2 min-w-[500px]">
+<div className="bg-white p-4 sm:p-6 shadow-md rounded-lg w-full md:w-1/2 overflow-x-auto mt-2 min-w-[800px]">
   <h2 className="text-lg font-semibold mb-4"></h2>
   <p className="text-red-500 text-center"></p>
+
+
   <div className="overflow-x-auto w-full">
-    <div className="min-w-[700px]">
-    <table className="w-full text-sm text-center border border-gray-200 rounded-lg shadow-md">
-                <thead className="text-gray-700 bg-gray-100">
+    <div className="min-w-[600px]">
+    <table className="min-w-full border-collapse text-sm">
+                <thead className="sticky top-0 bg-blue-300 z-10">
                   <tr>
                     {[
-                      { key: "branchCode", label: "Branch Code" },
-                      { key: "branchID", label: "Branch ID" },
-                      { key: "branchName", label: "Branch Name" },
-                      { key: "active", label: "Active" },
+                      { key: "bankTypeCode", label: "Bank Type" },
+                      { key: "bankTypeName", label: "Bank Name" },
+                      { key: "reportName", label: "Report Name" },
+                      { key: "edit", label: "Edit" },
+                      { key: "delete", label: "Delete" },
+                      // { key: "active", label: "Active" },
                     ].map(({ key, label }) => (
                       <th
                         key={key}
-                        className="px-4 py-2 border cursor-pointer whitespace-nowrap"
+                        className="px-2 py-2 border cursor-pointer whitespace-nowrap"
                       >
                         {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
-  {branches.length > 0 ? (
-    branches.map((branch, index) => (
-      <tr key={index}>
-        <td className="px-4 py-2 border">{branch.branchCode}</td>
-        <td className="px-4 py-2 border">{branch.branchID || "-"}</td>
-        <td className="px-4 py-2 border">{branch.branchName}</td>
-        <td className="px-4 py-2 border">{branch.active}</td>
+                <tbody className="relative">
+  {bankTypes.length > 0 ? (
+    bankTypes.map((banktype, index) => (
+      <tr key={index} className="hover:bg-blue-100 border">
+        <td className="px-2 py-2 border">{banktype.bankTypeCode}</td>
+        <td className="px-2 py-2 border">{banktype.bankTypeName || "-"}</td>
+        <td className="px-2 py-2 border">{banktype.reportName}</td>
+        {/* <td className="px-4 py-2 border">{branch.active}</td> */}
+
+
+        <td className="global-tran-td-ui text-center sticky right-0 w-[50px]">
+              <button
+                className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]"
+                onClick={() => handleDeleteRow(index)}
+                >
+                  {/* Delete                  */}
+                  <FontAwesomeIcon icon={faEdit} />
+                </button>
+            </td>
+
+            <td className="global-tran-td-ui text-center sticky right-0 w-[50px]">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]"
+                onClick={() => handleDeleteRow(index)}
+                >
+                  {/* Delete                  */}
+                  <FontAwesomeIcon icon={faTrashAlt} />
+                </button>
+            </td>
+
       </tr>
     ))
   ) : (
     <tr>
-      <td colSpan="7" className="px-4 py-2 border text-center">
-        No branches found
+      <td colSpan="7" className="px-2 py-2 border text-center">
+        No Bank Type Codes found
       </td>
     </tr>
   )}

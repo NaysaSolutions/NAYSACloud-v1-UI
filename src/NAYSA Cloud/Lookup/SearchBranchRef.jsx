@@ -34,10 +34,23 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
         } else {
           alert(result.message || "Failed to fetch Branch");
         }
+
+
       })
       .catch((err) => {
         console.error("Failed to fetch Branch:", err);
         alert(`Error: ${err.message}`);
+
+        
+        // Fallback sample data
+        const fallbackData = [
+          { id: 1, branchCode: "00000", branchName: "Head Office" },
+          { id: 2, branchCode: "00001", branchName: "Cebu" },
+          { id: 3, branchCode: "00002", branchName: "Davao" }
+        ];
+        setBranches(fallbackData);
+        setFiltered(fallbackData);
+        
       })
       .finally(() => {
         setLoading(false);

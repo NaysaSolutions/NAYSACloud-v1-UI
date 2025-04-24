@@ -113,12 +113,15 @@ const AppContent = () => {
       <div className="sticky top-0 z-40">
         <Navbar onMenuClick={toggleSidebar} />
       </div>
+      
+      <div className="sticky top-0 z-40 shadow-md">
+        <Header />
+      </div>
 
-      {/* <Header /> */}
 
       <div className="flex-1 p-4 overflow-y-auto">
         <Routes>
-          <Route path="/" element={<BankRef />} />
+          <Route path="/" element={<CV />} />
           {/* <Route path="/history" element={<TransactionHistory />} />
           <Route path="/" element={<BranchRef />} /> Default to BranchRef */}
         </Routes>
