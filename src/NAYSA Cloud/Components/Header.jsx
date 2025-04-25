@@ -66,12 +66,13 @@ const Header = ({ docType, pdfLink, videoLink }) => {
   // }, []);
 
   return (
-    <div className="fixed top-0 left-0 w-full z-30 bg-white shadow-md">
+    <div className="fixed top-0 left-0 w-full z-30 bg-white shadow-md dark:bg-black">
       <div className="flex flex-col bg-white gap-4 shadow-md fixed top-20 left-0 border w-full px-2 py-2
                       sm:top-20 sm:px-2 sm:py-2
                       md:top-20 md:px-2 md:py-2 md:flex-row
                       lg:top-20 lg:px-4 lg:py-2
-                      lg:flex-row lg:items-center lg:justify-between">
+                      lg:flex-row lg:items-center lg:justify-between
+                      dark:bg-black dark:border-gray-600">
         
         {/* Header Tabs */}
         <div className="flex flex-wrap sm:flex-row justify-center md:justify-start gap-4 w-full">
@@ -79,8 +80,8 @@ const Header = ({ docType, pdfLink, videoLink }) => {
           <button
             className={`flex items-center ${
               location.pathname === "/"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-blue-600"
+                ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-300 dark:hover:text-blue-500"
+                : "text-gray-600 hover:text-blue-600 dark:text-blue-300 dark:hover:text-blue-500"
             }`}
             onClick={() => navigate("/")}
           >
@@ -93,10 +94,10 @@ const Header = ({ docType, pdfLink, videoLink }) => {
           <button
             className={`flex items-center ${
               location.pathname === "/history"
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-blue-600"
+                ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-600 border-blue-800"
+                : "text-gray-600 hover:text-blue-600 dark:text-gray-400 border-blue-800"
             }`}
-            onClick={() => navigate("/history")}
+            // onClick={() => navigate("/history")}
           >
             <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
               <span className="font-bold text-xs md:text-sm sm:text-sm lg:text-base tracking-wide">
@@ -118,7 +119,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
                 handleSave();
               }
             }}
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
             aria-label="Save transaction"
           >
             {loading ? (
@@ -131,7 +132,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
 
           <button
             onClick={handleReset}
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faUndo} className="mr-1" />
             Reset
@@ -139,14 +140,14 @@ const Header = ({ docType, pdfLink, videoLink }) => {
 
           <button
             onClick={handleReset}
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faCopy} className="mr-1" />
           Copy
           </button>
 
           <button
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faPrint} className="mr-1" />
             Print
@@ -154,7 +155,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
           </button>
 
           <button
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faPrint} className="mr-1 " />
             BIR Form
@@ -162,7 +163,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="w-1/6 w-[30px] mr-8 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="w-1/6 w-[30px] mr-8 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             {/* Guide */}
@@ -206,7 +207,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
                 handleCancel();
               }
             }}
-            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 dark:bg-red-900 dark:hover:bg-red-800"
             aria-label="Cancel transaction"
           >
             {cancelLoading ? (

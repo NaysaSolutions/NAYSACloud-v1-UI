@@ -187,17 +187,13 @@ const handleSelectBranch = (selectedBranch) => {
 };
 
 
+return (
 
-
-  return (
-
-
-    
     <div className="global-tran-main-div-ui">
 
       {/* Transaction Toolbar Section */}
 
-      <div className="sticky top-0 z-40 shadow-md"><Header docType = {docType} pdfLink={pdfLink} videoLink={videoLink}/></div>
+      <div className="global-tran-headerToolbar-ui"><Header docType = {docType} pdfLink={pdfLink} videoLink={videoLink}/></div>
 
 
       {/* Header Section */}
@@ -220,18 +216,22 @@ const handleSelectBranch = (selectedBranch) => {
         
  
       {/* Form Layout with Tabs */}
+      <div className="global-tran-header-div-ui">
 
-      <div className="bg-white shadow-md rounded-lg p-2">
         {/* Tab Navigation */}
-        <div className="flex border-b text-sm sm:text-base lg:text-base mb-4">
+        <div className="global-tran-header-tab-div-ui">
           <button
-            className={`py-2 px-4 ${activeTab === 'basic' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 font-medium'}`}
+            className={`global-tran-tab-padding-ui ${
+                        activeTab === 'basic' 
+                        ? 'global-tran-tab-text_active-ui' 
+                        : 'global-tran-tab-text_inactive-ui'
+                      }`}
             onClick={() => setActiveTab('basic')}
           >
             Basic Information
           </button>
           <button
-            className={`py-2 px-4 ${activeTab === 'check' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 font-medium'}`}
+            className={`global-tran-tab-padding-ui ${activeTab === 'check' ? 'global-tran-tab-text_active-ui' : 'global-tran-tab-text_inactive-ui'}`}
             onClick={() => setActiveTab('check')}
           >
             Check Information
@@ -243,7 +243,7 @@ const handleSelectBranch = (selectedBranch) => {
           {activeTab === 'basic' ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-y-2"> {/* Added gap-y-4 for vertical spacing */}
               {/* Column 1 */}
-              <div className="space-y-4 p-2">
+              <div className="global-tran-textbox-group-div-ui">
                 
                 <div className="relative">
                   <input
@@ -261,13 +261,15 @@ const handleSelectBranch = (selectedBranch) => {
                     Branch
                   </label>
                    <button
-                                      onClick={handleBranchClick}
-                                      className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
-                                        isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                                      } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                                    >
-                                      <FontAwesomeIcon icon={faMagnifyingGlass} />
-                                    </button>
+                    onClick={handleBranchClick}
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled 
+                        ? "global-tran-textbox-button-search-disabled-ui" 
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                    </button>
                 </div>
 
                 <div className="relative">
@@ -284,10 +286,12 @@ const handleSelectBranch = (selectedBranch) => {
                     CV No.
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled 
+                        ? "global-tran-textbox-button-search-disabled-ui" 
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
@@ -309,7 +313,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 2 */}
-              <div className="space-y-4 p-2">
+              <div className="global-tran-textbox-group-div-ui">
                 <div className="relative">
                   <input
                     type="text"
@@ -321,13 +325,16 @@ const handleSelectBranch = (selectedBranch) => {
                     htmlFor="payeeCode"
                     className="global-tran-floating-label"
                   >
-                    Payee Code
+                    <span className="text-red-600 font-extrabold"> * </span>
+                    Payee Code 
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled 
+                        ? "global-tran-textbox-button-search-disabled-ui" 
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
@@ -343,6 +350,7 @@ const handleSelectBranch = (selectedBranch) => {
                     htmlFor="payeeName"
                     className="global-tran-floating-label"
                   >
+                    <span className="text-red-600 font-extrabold"> * </span>
                     Payee Name
                   </label>
                 </div>
@@ -368,7 +376,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 3 */}
-              <div className="space-y-4 p-2">
+              <div className="global-tran-textbox-group-div-ui">
                 
               <div className="relative">
                   <select
@@ -425,7 +433,7 @@ const handleSelectBranch = (selectedBranch) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3">
               {/* Column 3 */}
-              <div className="space-y-4 p-4">
+              <div className="global-tran-textbox-group-div-ui">
               <div className="relative">
                   <input
                     type="text"
@@ -440,10 +448,12 @@ const handleSelectBranch = (selectedBranch) => {
                     Bank Name
                   </label>
                   <button
-                    className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled 
+                        ? "global-tran-textbox-button-search-disabled-ui" 
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
@@ -488,7 +498,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 4 */}
-              <div className="space-y-4 p-4">
+              <div className="global-tran-textbox-group-div-ui">
 
               <div className="relative">
                   <input
@@ -539,7 +549,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 5 */}
-              <div className="space-y-4 p-4">
+              <div className="global-tran-textbox-group-div-ui">
 
               <div className="relative">
                   <input
@@ -557,13 +567,15 @@ const handleSelectBranch = (selectedBranch) => {
                     Currency
                   </label>
                    <button
-                                      onClick={openCurrencyModal}
-                                      className={`absolute inset-y-0 right-0 global-tran-searchbtn-ui ${
-                                        isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                                      } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                                    >
-                                      <FontAwesomeIcon icon={faMagnifyingGlass} />
-                                    </button>
+                    onClick={openCurrencyModal}
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled 
+                        ? "global-tran-textbox-button-search-disabled-ui" 
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                    </button>
                 </div>
 
                 <div className="relative">
@@ -607,58 +619,30 @@ const handleSelectBranch = (selectedBranch) => {
       <br />
 
       {/* Invoice Details Button */}
-      <div className="bg-white shadow-md rounded-lg p-4 mb-6">
+      <div className="global-tran-tab-div-ui">
       
-      {/* <div className="flex items-center space-x-8 border-b-2 pb-2 mb-4">
-    <button className="flex items-center text-blue-600 border-b-2 border-blue-600 pb-1">
-      <span className="font-semibold">Invoice Details</span>
-    </button>
-    <button className="flex items-center text-gray-900 border-b-4  pb-1">
-      <span className="font-semibold">General Ledger</span>
-    </button>
-  </div> */}
-
-    {/* Tab Navigation */}
-    {/* <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base flex justify-between">
-          <button
-            className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
-            onClick={() => setGLActiveTab('invoice')}
-          >
-            Invoice Details
-          </button>
-
-          <button
-            // onClick={handleAddRow}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-1 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto mr-4"
-          >
-            Get Multiple AP
-          </button>
-
-      </div> */}
-
-    {/* Tab Navigation */}
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b mb-4 text-sm sm:text-base lg:text-base gap-2 sm:gap-0">
+      {/* Tab Navigation */}
+      <div className="global-tran-tab-nav-ui">
 
       {/* Tabs */}
       <div className="flex flex-row sm:flex-row">
         <button
-          className={`py-2 px-4 ${
+          className={`global-tran-tab-padding-ui ${
             GLactiveTab === 'invoice'
-              ? 'font-bold text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 font-medium'
+              ? 'global-tran-tab-text_active-ui'
+              : 'global-tran-tab-text_inactive-ui'
           }`}
           onClick={() => setGLActiveTab('invoice')}
         >
           Invoice Details
         </button>
-        {/* Add more tabs here if needed */}
       </div>
 
       {/* Action Button */}
       <div className="flex justify-end">
         <button
           // onClick={handleAddRow}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg text-sm sm:text-base flex items-center justify-center focus:outline-none w-full sm:w-auto mr-2"
+          className="global-tran-button-lookup"
         >
           Get Multiple AP
         </button>
@@ -667,43 +651,43 @@ const handleSelectBranch = (selectedBranch) => {
     </div>
 
 
-      {/* Invoice Details Table */}
-      {/* Table */}
-  <div className="overflow-x-auto bg-white shadow-lg rounded-lg h-[360px]">
-  <div className="max-h-[360px] overflow-y-auto relative"> 
-    <table className="min-w-full border-collapse">
-      <thead className="sticky top-0 bg-blue-300 z-10">
-        <tr>
-          <th className="global-tran-th-ln-ui">LN</th>
-          <th className="global-tran-th-ui">AP Type</th>
-          <th className="global-tran-th-ui">RR No.</th>
-          <th className="global-tran-th-ui">PO/JO No.</th>
-          <th className="global-tran-th-ui">Invoice No.</th>
-          <th className="global-tran-th-ui">Invoice Date</th>
-          <th className="global-tran-th-ui">Original Amount</th>
-          <th className="global-tran-th-ui">Currency</th>
-          <th className="global-tran-th-ui">Invoice Amount</th>
-          <th className="global-tran-th-ui">Applied Amount</th>
-          <th className="global-tran-th-ui">Unapplied Amount</th>
-          <th className="global-tran-th-ui">DR Account</th>
-          <th className="global-tran-th-ui">RC Code</th>
-          <th className="global-tran-th-ui">RC Name</th>
-          <th className="global-tran-th-ui">SL Code</th>
-          <th className="global-tran-th-ui">VAT Code</th>
-          <th className="global-tran-th-ui">VAT Name</th>
-          <th className="global-tran-th-ui">VAT Amount</th>
-          <th className="global-tran-th-ui">ATC</th>
-          <th className="global-tran-th-ui">ATC Name</th>
-          <th className="global-tran-th-ui">ATC Amount</th>
-          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 z-30">Add</th>
-          <th className="global-tran-th-ui sticky right-0 bg-blue-300 z-30">Delete</th>
-        </tr>
-      </thead>
-      <tbody className="relative">
-        {detailRows.map((row, index) => (
-          <tr key={index} className="hover:bg-blue-100 border">
+  {/* Invoice Details Table */}
+  <div className="global-tran-table-main-div-ui">
+    <div className="global-tran-table-main-sub-div-ui"> 
+      <table className="min-w-full border-collapse">
 
-            <td className="w-[50px] global-tran-td-ui text-center">{index + 1}</td>
+        <thead className="global-tran-thead-div-ui">
+          <tr>
+            <th className="global-tran-th-ui">LN</th>
+            <th className="global-tran-th-ui">AP Type</th>
+            <th className="global-tran-th-ui">RR No.</th>
+            <th className="global-tran-th-ui">PO/JO No.</th>
+            <th className="global-tran-th-ui">Invoice No.</th>
+            <th className="global-tran-th-ui">Invoice Date</th>
+            <th className="global-tran-th-ui">Original Amount</th>
+            <th className="global-tran-th-ui">Currency</th>
+            <th className="global-tran-th-ui">Invoice Amount</th>
+            <th className="global-tran-th-ui">Applied Amount</th>
+            <th className="global-tran-th-ui">Unapplied Amount</th>
+            <th className="global-tran-th-ui">DR Account</th>
+            <th className="global-tran-th-ui">RC Code</th>
+            <th className="global-tran-th-ui">RC Name</th>
+            <th className="global-tran-th-ui">SL Code</th>
+            <th className="global-tran-th-ui">VAT Code</th>
+            <th className="global-tran-th-ui">VAT Name</th>
+            <th className="global-tran-th-ui">VAT Amount</th>
+            <th className="global-tran-th-ui">ATC</th>
+            <th className="global-tran-th-ui">ATC Name</th>
+            <th className="global-tran-th-ui">ATC Amount</th>
+            <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
+            <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
+          </tr>
+        </thead>
+
+        <tbody className="relative">{detailRows.map((row, index) => (
+          <tr key={index} className="global-tran-tr-ui">
+
+            <td className="global-tran-td-ui text-center">{index + 1}</td>
             <td className="global-tran-td-ui">
               <select
                 className="w-[120px] global-tran-td-inputclass-ui"
@@ -868,9 +852,9 @@ const handleSelectBranch = (selectedBranch) => {
                 onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
               />
             </td>
-            <td className="global-tran-td-ui text-center sticky right-10">
+            <td className="global-tran-td-ui text-center sticky right-12">
               <button
-                className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]"
+                className="global-tran-td-button-add-ui"
                 onClick={() => handleAddRow(index)}
                 >
                   {/* Add */}
@@ -879,7 +863,7 @@ const handleSelectBranch = (selectedBranch) => {
             </td>
             <td className="global-tran-td-ui text-center sticky right-0">
               <button
-                className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]"
+                className="global-tran-td-button-delete-ui"
                 onClick={() => handleDeleteRow(index)}
                 >
                   {/* Delete                  */}
@@ -889,285 +873,296 @@ const handleSelectBranch = (selectedBranch) => {
 
           </tr>
         ))}
-      </tbody>
-    </table>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
   </div>
+
+  {/* Invoice Details Footer */}
+  <div className="global-tran-tab-footer-main-div-ui">
+
+    {/* Add Button */}
+    <div className="global-tran-tab-footer-button-div-ui">
+      <button
+        onClick={handleAddRow}
+        className="global-tran-tab-footer-button-add-ui"
+      >
+        Add
+      </button>
+    </div>
+
+    {/* Totals Section */}
+    <div className="global-tran-tab-footer-total-main-div-ui">
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalInvoice" className="global-tran-tab-footer-total-label-ui">
+          Total Invoice Amount:
+        </label>
+        <label className="global-tran-tab-footer-total-value-ui">0.00</label>
+      </div>
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalVAT" className="global-tran-tab-footer-total-label-ui">
+          Total VAT Amount:
+        </label>
+        <label className="global-tran-tab-footer-total-value-ui">0.00</label>
+      </div>
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalATC" className="global-tran-tab-footer-total-label-ui">
+          Total ATC Amount:
+        </label>
+        <label className="global-tran-tab-footer-total-value-ui">0.00</label>
+      </div>
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalPayable" className="global-tran-tab-footer-total-label-ui">
+          Total Payment Amount:
+        </label>
+        <label className="global-tran-tab-footer-total-value-ui">0.00</label>
+      </div>
+    </div>
   </div>
 
 
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-8 gap-4 sm:gap-0">
-  {/* Add Button */}
-  <div className="flex justify-center sm:justify-start">
-    <button
-      onClick={handleAddRow}
-      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto"
-    >
-      Add
-    </button>
-  </div>
 
-  {/* Totals Section */}
-  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-8 p-2">
-    <div className="flex justify-between sm:items-center sm:gap-2">
-      <label htmlFor="TotalInvoice" className="global-tran-total-header-ui">
-        Total Invoice:
-      </label>
-      <label className="global-tran-total-value-ui">0.00</label>
-    </div>
-    <div className="flex justify-between sm:items-center sm:gap-2">
-      <label htmlFor="TotalVAT" className="global-tran-total-header-ui">
-        Total VAT:
-      </label>
-      <label className="global-tran-total-value-ui">0.00</label>
-    </div>
-    <div className="flex justify-between sm:items-center sm:gap-2">
-      <label htmlFor="TotalATC" className="global-tran-total-header-ui">
-        Total ATC:
-      </label>
-      <label className="global-tran-total-value-ui">0.00</label>
-    </div>
-    <div className="flex justify-between sm:items-center sm:gap-2">
-      <label htmlFor="TotalPayable" className="global-tran-total-header-ui">
-        Total Payable:
-      </label>
-      <label className="global-tran-total-value-ui">0.00</label>
-    </div>
-  </div>
 </div>
 
 
 
+      
+    {/* General Ledger Button */}
+    <div className="global-tran-tab-div-ui">
+
+      {/* Tab Navigation */}
+      <div className="global-tran-tab-nav-ui">
+
+      {/* Tabs */}
+      <div className="flex flex-row sm:flex-row">
+        <button
+          className={`global-tran-tab-padding-ui ${
+            GLactiveTab === 'invoice'
+              ? 'global-tran-tab-text_active-ui'
+              : 'global-tran-tab-text_inactive-ui'
+          }`}
+          onClick={() => setGLActiveTab('invoice')}
+        >
+          General Ledger
+        </button>
       </div>
 
+      {/* Action Button */}
+      <div className="flex justify-end">
+        <button
+          // onClick={handleAddRow}
+          className="global-tran-button-lookup"
+        >
+          Generate GL Entries
+        </button>
+        
+      </div>
+    </div>
 
+    {/* GL Details Table */}
+    <div className="global-tran-table-main-div-ui">
+    <div className="global-tran-table-main-sub-div-ui"> 
+      <table className="min-w-full border-collapse">
 
-      
-      {/* General Ledger Button */}
-      <div className="bg-white shadow-md rounded-lg p-4">
-      
-      {/* <div className="flex items-center space-x-8 border-b-2 pb-2 mb-4">
-    <button className="flex items-center text-blue-600 border-b-2 border-blue-600 pb-1">
-      <span className="font-semibold">Invoice Details</span>
-    </button>
-    <button className="flex items-center text-gray-900 border-b-4  pb-1">
-      <span className="font-semibold">General Ledger</span>
-    </button>
-  </div> */}
-
-  {/* Tab Navigation */}
-  <div className="flex border-b mb-4 text-sm sm:text-base lg:text-base">
-    
-          {/* <button
-            className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
-            onClick={() => setGLActiveTab('invoice')}
-          >
-            Invoice Details
-          </button> */}
-          <button
-            className={`py-2 px-4 ${GLactiveTab === 'invoice' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 font-medium'}`}
-            onClick={() => setGLActiveTab('invoice')}
-          >
-            General Ledger
-          </button>
-          
-        </div>
-
-
-      {/* GL Details Table */}
-      {/* Table */}
-  <div className="overflow-x-auto bg-white shadow-lg rounded-lg h-[360px]">
-  <div className="max-h-[360px] overflow-y-auto relative"> 
-    <table className="min-w-full border-collapse">
-      <thead className="sticky top-0 bg-blue-300 z-10">
-        <tr>
-          <th className="global-tran-th-ln-ui">LN</th>
-          <th className="global-tran-th-ui">Account Code</th>
-          <th className="global-tran-th-ui">RC Code</th>
-          <th className="global-tran-th-ui">SL Code</th>
-          <th className="global-tran-th-ui">Particulars</th>
-          <th className="global-tran-th-ui">VAT Code</th>
-          <th className="global-tran-th-ui">VAT Name</th>
-          <th className="global-tran-th-ui">ATC</th>
-          <th className="global-tran-th-ui">ATC Name</th>
-          <th className="global-tran-th-ui">Debit</th>
-          <th className="global-tran-th-ui">Credit</th>
-          <th className="global-tran-th-ui">SL Ref No</th>
-          <th className="global-tran-th-ui">Remarks</th>
-          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 z-30">Add</th>
-          <th className="global-tran-th-ui sticky right-0 bg-blue-300 z-30">Delete</th>
-        </tr>
-      </thead>
-      <tbody className="relative">
-        {detailRowsGL.map((row, index) => (
-          <tr key={index} className="hover:bg-blue-100 border">
-            
-            <td className="global-tran-td-ui text-xs text-center">{index + 1}</td>
-            <td className="global-tran-td-ui">
-            <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.acctCode || ""}
-                onChange={(e) => handleDetailChange(index, 'acctCode', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.rcCode || ""}
-                onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.slCode || ""}
-                onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[150px] global-tran-td-inputclass-ui"
-                value={row.particulars || ""}
-                onChange={(e) => handleDetailChange(index, 'particulars', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.vatCode || ""}
-                onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.vatDescription || ""}
-                onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.ewtCode || ""}
-                onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[80px] global-tran-td-inputclass-ui"
-                value={row.ewtDescription || ""}
-                onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui text-right">
-              <input
-                type="number"
-                className="w-[120px] global-tran-td-inputclass-ui text-right"
-                value={row.debit || "0.00"}
-                onChange={(e) => handleDetailChange(index, 'debit', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui text-right">
-              <input
-                type="number"
-                className="w-[120px] global-tran-td-inputclass-ui text-right"
-                value={row.credit || "0.00"}
-                onChange={(e) => handleDetailChange(index, 'credit', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.slRefNo || ""}
-                onChange={(e) => handleDetailChange(index, 'slRefNo', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.remarks || ""}
-                onChange={(e) => handleDetailChange(index, 'remarks', e.target.value)}
-              />
-            </td>
-            
-            <td className="global-tran-td-ui text-center sticky right-10">
-              <button
-                className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]"
-                onClick={() => handleAddRowGL(index)}
-                >
-                  {/* Add */}
-                   <FontAwesomeIcon icon={faPlus} />
-                </button>
-            </td>
-            <td className="global-tran-td-ui text-center sticky right-0">
-              <button
-                className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]"
-                onClick={() => handleDeleteRowGL(index)}
-                >
-                  {/* Delete                  */}
-                  <FontAwesomeIcon icon={faMinus} />
-                </button>
-            </td>
-
+        <thead className="global-tran-thead-div-ui">
+          <tr>
+            <th className="global-tran-th-ui">LN</th>
+            <th className="global-tran-th-ui">Account Code</th>
+            <th className="global-tran-th-ui">RC Code</th>
+            <th className="global-tran-th-ui">SL Code</th>
+            <th className="global-tran-th-ui">Particulars</th>
+            <th className="global-tran-th-ui">VAT Code</th>
+            <th className="global-tran-th-ui">VAT Name</th>
+            <th className="global-tran-th-ui">ATC</th>
+            <th className="global-tran-th-ui">ATC Name</th>
+            <th className="global-tran-th-ui">Debit</th>
+            <th className="global-tran-th-ui">Credit</th>
+            <th className="global-tran-th-ui">SL Ref. No.</th>
+            <th className="global-tran-th-ui">Remarks</th>
+            <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
+            <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-  </div>
+        </thead>
+        <tbody className="relative">
+          {detailRowsGL.map((row, index) => (
+            <tr key={index} className="global-tran-tr-ui">
+              
+              <td className="global-tran-td-ui text-center">{index + 1}</td>
+              <td className="global-tran-td-ui">
+              <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.acctCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'acctCode', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.rcCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.slCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[150px] global-tran-td-inputclass-ui"
+                  value={row.particulars || ""}
+                  onChange={(e) => handleDetailChange(index, 'particulars', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.vatCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.vatDescription || ""}
+                  onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.ewtCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[80px] global-tran-td-inputclass-ui"
+                  value={row.ewtDescription || ""}
+                  onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.debit || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'debit', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.credit || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'credit', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.slRefNo || ""}
+                  onChange={(e) => handleDetailChange(index, 'slRefNo', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.remarks || ""}
+                  onChange={(e) => handleDetailChange(index, 'remarks', e.target.value)}
+                />
+              </td>
+              
+              <td className="global-tran-td-ui text-center sticky right-10">
+                <button
+                  className="global-tran-td-button-add-ui"
+                  onClick={() => handleAddRowGL(index)}
+                  >
+                    {/* Add */}
+                    <FontAwesomeIcon icon={faPlus} />
+                  </button>
+              </td>
+              <td className="global-tran-td-ui text-center sticky right-0">
+                <button
+                  className="global-tran-td-button-delete-ui"
+                  onClick={() => handleDeleteRowGL(index)}
+                  >
+                    {/* Delete                  */}
+                    <FontAwesomeIcon icon={faMinus} />
+                  </button>
+              </td>
+
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    </div>
 
 
 
 
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-8 gap-4 sm:gap-0">
-  {/* Add Button */}
-  <div className="flex justify-center sm:justify-start">
-    <button
-      onClick={handleAddRowGL}
-      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-2 text-sm rounded-lg flex items-center justify-center focus:outline-none w-full sm:w-auto"
-    >
-      Add
-    </button>
-  </div>
+    <div className="global-tran-tab-footer-main-div-ui">
 
-  {/* Totals Section */}
-{/* Totals Section */}
-  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-8 p-2">
-  {/* Total Debit */}
-  <div className="flex justify-between sm:items-center sm:gap-2">
-    <label htmlFor="TotalDebit" className="global-tran-total-header-ui">
-      Total Debit:
-    </label>
-    <label htmlFor="TotalDebit" className="global-tran-total-value-ui">
-      0.00
-    </label>
-  </div>
-
-  {/* Total Credit */}
-  <div className="flex justify-between sm:items-center sm:gap-2">
-    <label htmlFor="TotalCredit" className="global-tran-total-header-ui">
-      Total Credit:
-    </label>
-    <label htmlFor="TotalCredit" className="global-tran-total-value-ui">
-      0.00
-    </label>
-  </div>
-</div>
-
-</div>
-
-
-
+      {/* Add Button */}
+      <div className="global-tran-tab-footer-button-div-ui">
+        <button
+          onClick={handleAddRowGL}
+          className="global-tran-tab-footer-button-add-ui"
+        >
+          Add
+        </button>
       </div>
+
+      
+
+      {/* Totals Section */}
+      <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit */}
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+          Total Debit:
+        </label>
+        <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+          0.00
+        </label>
+      </div>
+
+      {/* Total Credit */}
+      <div className="global-tran-tab-footer-total-div-ui">
+        <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+          Total Credit:
+        </label>
+        <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+          0.00
+        </label>
+      </div>
+    </div>
+
+    </div>
+
+
+
+</div>
+
+
 
 <BranchLookupModal
   isOpen={showModal}

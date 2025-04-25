@@ -1,5 +1,6 @@
 // tailwind.config.js
 export default {
+  darkMode: 'class', // Enables toggling via a CSS class
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx,html}",

@@ -99,7 +99,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto">
+    <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
       {isSidebarVisible && (
         <div className="fixed inset-0 z-50 flex">
           <Sidebar />
