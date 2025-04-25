@@ -13,6 +13,9 @@ import CurrLookupModal from "@/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
 // Global
 import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
 import { docTypeNames } from '@/NAYSA Cloud/Global/doctype';
+import { docTypeVideoGuide } from '@/NAYSA Cloud/Global/doctype';
+import { docTypePDFGuide } from '@/NAYSA Cloud/Global/doctype';
+import Header from '@/NAYSA Cloud/Components/Header';
 
 const CV = () => {
 
@@ -26,6 +29,8 @@ const CV = () => {
 
   //Document Global Setup
   const docType = 'CV'; 
+  const pdfLink = docTypePDFGuide[docType];
+  const videoLink = docTypeVideoGuide[docType];
   const documentTitle = docTypeNames[docType] || 'Transaction';
 
   //Status Global Setup
@@ -186,7 +191,14 @@ const handleSelectBranch = (selectedBranch) => {
 
   return (
 
+
+    
     <div className="global-tran-main-div-ui">
+
+      {/* Transaction Toolbar Section */}
+
+      <div className="sticky top-0 z-40 shadow-md"><Header docType = {docType} pdfLink={pdfLink} videoLink={videoLink}/></div>
+
 
       {/* Header Section */}
 
@@ -650,6 +662,7 @@ const handleSelectBranch = (selectedBranch) => {
         >
           Get Multiple AP
         </button>
+        
       </div>
     </div>
 

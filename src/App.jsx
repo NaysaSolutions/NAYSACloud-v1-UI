@@ -114,9 +114,9 @@ const AppContent = () => {
         <Navbar onMenuClick={toggleSidebar} />
       </div>
       
-      <div className="sticky top-0 z-40 shadow-md">
+      {/* <div className="sticky top-0 z-40 shadow-md">
         <Header />
-      </div>
+      </div> */}
 
 
       <div className="flex-1 p-4 overflow-y-auto">

@@ -20,3 +20,47 @@ export const docTypeNames = {
 
 
   };
+
+  export const docTypeVideoGuide = {
+    
+    // General Ledger Module
+    JV: "Journal Voucher Transaction",
+    PCV: "Petty Cash Voucher Transaction",
+
+    // Accounts Payable Module
+    APV: "Accounts Payable Voucher Transaction",
+    APDM: "AP Debit Memo Voucher Transaction",
+    APCM: "AP Credit Memo Voucher Transaction",
+    CV: "https://youtu.be/x8CsG1pHSM8?si=zqipBKREBOeCxuYi",
+
+    // Accounts Receivable Module
+    SI: "Sales Invoice Transaction",
+    SVI: "Service Invoice Transaction",
+    ARDM: "AR Debit Memo Voucher Transaction",
+    ARCM: "AR Credit Memo Voucher Transaction",
+    CR: "Collection Receipt Transaction",
+    SOA: "Statement of Account Transaction",
+
+  };
+
+  export const docTypePDFGuide = {
+    
+    // General Ledger Module
+    JV: "Journal Voucher Transaction",
+    PCV: "Petty Cash Voucher Transaction",
+
+    // Accounts Payable Module
+    APV: "Accounts Payable Voucher Transaction",
+    APDM: "AP Debit Memo Voucher Transaction",
+    APCM: "AP Credit Memo Voucher Transaction",
+    CV: "/public/NAYSA AP Check Voucher.pdf",
+
+    // Accounts Receivable Module
+    SI: "Sales Invoice Transaction",
+    SVI: "Service Invoice Transaction",
+    ARDM: "AR Debit Memo Voucher Transaction",
+    ARCM: "AR Credit Memo Voucher Transaction",
+    CR: "Collection Receipt Transaction",
+    SOA: "Statement of Account Transaction",
+
+  };

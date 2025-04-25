@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faList, faPen, faSave, faUndo, faPrint, faCancel, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faList, faPen, faSave, faUndo, faPrint, faCancel, faCopy, faInfoCircle, faVideo, faFilePdf, faSpinner  } from "@fortawesome/free-solid-svg-icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext";
 
-const Header = () => {
-  const location = useLocation();
+
+const Header = ({ docType, pdfLink, videoLink }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { triggerReset } = useReset();
   const [loading, setLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleSave = () => {
     setLoading(true);
@@ -21,9 +24,49 @@ const Header = () => {
     triggerReset();
   };
 
+  const handleCancel = () => {
+    setCancelLoading(true);
+    console.log("Cancel button clicked");
+    setTimeout(() => setCancelLoading(false), 2000);
+  };
+
+  const handlePDFGuide = () => {
+    window.open(pdfLink, '_blank');
+    setIsOpen(false);
+  };
+
+  const handleVideoGuide = () => {
+    window.open(videoLink, '_blank');
+    setIsOpen(false);
+  };
+
+  // const handlePDFGuide = () => {
+  //   window.open('/public/NAYSA AP Check Voucher.pdf', '_blank');
+  //   setIsOpen(false);
+  // };
+
+  // const handleVideoGuide = () => {
+  //   window.open('https://youtu.be/x8CsG1pHSM8?si=zqipBKREBOeCxuYi', '_blank'); // YouTube or any other platform
+  //   setIsOpen(false);
+  // };
+
+     // 🔁 Close on outside click
+  // const dropdownRef = useRef(null);
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+  //       setIsOpen(false);
+  //     }
+  //   };
+
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
+
   return (
     <div className="fixed top-0 left-0 w-full z-30 bg-white shadow-md">
-      {/* <div className="fixed top-20 left-0 w-full h-[80px] z-30 bg-white font-sans p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4  shadow-md"> */}
       <div className="flex flex-col bg-white gap-4 shadow-md fixed top-20 left-0 border w-full px-2 py-2
                       sm:top-20 sm:px-2 sm:py-2
                       md:top-20 md:px-2 md:py-2 md:flex-row
@@ -66,8 +109,7 @@ const Header = () => {
         {/* Action Buttons */}
       
        <div className="flex justify-center flex-row gap-2 w-full lg:justify-end">
-       {/* <div className="flex sm:flex-row md:flex-wrap lg:flex-wrap justify-end gap-2 w-full overflow-x-auto"> */}
-          <button
+        <button
             onClick={handleSave}
             disabled={loading}
             onKeyDown={(e) => {
@@ -79,8 +121,12 @@ const Header = () => {
             className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
             aria-label="Save transaction"
           >
-            <FontAwesomeIcon icon={faSave} className="mr-1" />
-            {loading ? "Saving..." : "Save"}
+            {loading ? (
+                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
+              ) : (
+                <FontAwesomeIcon icon={faSave} className="mr-1" />
+              )}
+              Save
           </button>
 
           <button
@@ -104,6 +150,7 @@ const Header = () => {
           >
             <FontAwesomeIcon icon={faPrint} className="mr-1" />
             Print
+           
           </button>
 
           <button
@@ -114,10 +161,60 @@ const Header = () => {
           </button>
 
           <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-1/6 w-[30px] mr-8 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
+            {/* Guide */}
+          </button>
+          {isOpen && (
+        <div className="absolute z-10 mt-1 w-40 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
+          <div className="py-1">
+            <button
+              onClick={handlePDFGuide}
+              className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" />
+              PDF Guide
+            </button>
+            <button
+              onClick={handleVideoGuide}
+              className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-500" />
+              Video Guide
+            </button>
+                </div>
+                </div>
+            )}
+
+
+          {/* <button
             className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-red-500 text-white  hover:bg-red-600 "
           >
             <FontAwesomeIcon icon={faCancel} className="mr-1" />
             Cancel
+          </button> */}
+
+
+          <button
+            onClick={handleCancel}
+            disabled={cancelLoading}
+            onKeyDown={(e) => {
+              if (e.ctrlKey && e.key === "s" && !cancelLoading) {
+                e.preventDefault();
+                handleCancel();
+              }
+            }}
+            className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-1 py-1 sm:px-2 sm:py-1 md:px-1 md:py-1 lg:px-1 lg:py-1 lg:text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+            aria-label="Cancel transaction"
+          >
+            {cancelLoading ? (
+                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
+              ) : (
+                <FontAwesomeIcon icon={faCancel} className="mr-1" />
+              )}
+              Cancel
           </button>
         </div> 
       </div>
