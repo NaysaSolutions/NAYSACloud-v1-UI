@@ -23,36 +23,42 @@ body {
   
   /* TRANSACTIONS */
 
-  {
-  .global-tran-textbox-ui {
-      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0 h-[40px];
-    }
+{
 
-  .global-tran-textbox-remarks-ui {
-      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0;
-    }
-    
 
-  .global-tran-searchbtn-ui {
-        @apply w-[40px] h-[40px];
-      }
-    }
+  .global-tran-main-div-ui {
+    @apply p-2 bg-gray-100 min-h-screen mt-20 md:mt-6 lg:mt-10;
+  }
+  
+  
+
+
 
   .global-tran-header-ui {
-    /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
-    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-1 rounded-lg text-blue-900 shadow-lg lg:p-2;
+    @apply bg-gradient-to-r from-blue-400 to-purple-300 p-1 rounded-lg text-blue-900 shadow-lg 
+            lg:p-2 mb-4 flex flex-col 
+            sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4;
+  }
+
+
+  .global-tran-headertext-div-ui {
+    @apply text-center sm:text-left;
   }
 
   .global-tran-headertext-ui {
-    @apply text-xl sm:text-2xl lg:text-3xl font-semibold pl-3;
+    @apply text-xl sm:text-xl lg:text-3xl font-semibold pl-3;
   }
 
+  .global-tran-headerstat-div-ui {
+    @apply flex flex-col sm:flex-row gap-y-1 sm:gap-x-5 items-center sm:items-start text-center sm:text-left pr-2 sm:pr-4;
+  }
+  
   .global-tran-headerstat-text-ui {
     @apply text-sm sm:text-xs lg:text-sm font-semibold text-center text-gray-600 ;
+
   }
 
   .global-tran-stat-text-ui {
-    /* @apply text-2xl sm:text-3xl font-extrabold text-center text-red-600 drop-shadow-[0_0_2px_#f87171]; */
     @apply text-base sm:text-sm lg:text-xl font-extrabold text-center;
   }
 
@@ -67,6 +73,42 @@ body {
   .global-tran-stat-text-open-ui {
     @apply text-gray-800;
   }
+
+
+
+
+
+
+
+  .global-tran-textbox-ui {
+      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
+      px-2 pb-2 pt-2 text-xs text-black 
+      focus:border-blue-600 focus:outline-none focus:ring-0 
+      h-[30px] sm:h-[30px] lg:h-[40px];
+    }
+
+  .global-tran-textbox-remarks-ui {
+      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0;
+    }
+    
+
+  .global-tran-searchbtn-ui {
+        @apply w-[40px] h-[30px] sm:h-[30px] lg:h-[40px];
+      }
+    
+  .global-tran-floating-label {
+    @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-xs text-gray-600 transition-all
+            peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100
+            peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600;
+  }
+
+  .global-tran-floating-label-remarks {
+    @apply absolute left-4 top-4 z-10 origin-[0] scale-75 transform bg-white px-1 text-xs text-gray-600 transition-all 
+    peer-placeholder-shown:top-4 peer-placeholder-shown:scale-100 
+    peer-focus:top-0 peer-focus:scale-75 peer-focus:text-blue-600;
+  }
+
+
 
   .global-tran-th-ln-ui {
     @apply px-3 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900;
@@ -112,3 +154,7 @@ body {
     .global-ref-headertext-ui {
       @apply text-xl sm:text-xl lg:text-2xl font-semibold;
     }
+
+
+
+  }

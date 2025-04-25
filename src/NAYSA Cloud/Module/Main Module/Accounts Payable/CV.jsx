@@ -185,32 +185,33 @@ const handleSelectBranch = (selectedBranch) => {
 
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen mt-14 lg:mt-6">
 
-    {/* Header Section */}
-    <div className="global-tran-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4">
+    <div className="global-tran-main-div-ui">
 
-    <div className="text-center sm:text-left">
-      <h1 className="global-tran-headertext-ui">{documentTitle}</h1>
-    </div>
+      {/* Header Section */}
 
-    <div className="flex flex-col sm:flex-row gap-y-1 sm:gap-x-5 items-center sm:items-start text-center sm:text-left pr-2 sm:pr-4">
-      <div>
-        <p className="global-tran-headerstat-text-ui">Transaction Status</p>
-        <h1 className={`global-tran-stat-text-ui ${statusColor}`}>
-          {displayStatus}
-        </h1>
+      <div className="global-tran-header-ui">
+
+        <div className="global-tran-headertext-div-ui">
+          <h1 className="global-tran-headertext-ui">{documentTitle}</h1>
+        </div>
+
+        <div className="global-tran-headerstat-div-ui">
+          <div>
+            <p className="global-tran-headerstat-text-ui">Transaction Status</p>
+            <h1 className={`global-tran-stat-text-ui ${statusColor}`}>{displayStatus}</h1>
+          </div>
+        </div>
+
       </div>
-    </div>
-
-    </div>
 
         
  
       {/* Form Layout with Tabs */}
-    <div className="bg-white shadow-md rounded-lg p-3">
+
+      <div className="bg-white shadow-md rounded-lg p-2">
         {/* Tab Navigation */}
-        <div className="flex border-b text-sm sm:text-base lg:text-base">
+        <div className="flex border-b text-sm sm:text-base lg:text-base mb-4">
           <button
             className={`py-2 px-4 ${activeTab === 'basic' ? 'font-bold text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 font-medium'}`}
             onClick={() => setActiveTab('basic')}
@@ -226,11 +227,11 @@ const handleSelectBranch = (selectedBranch) => {
         </div>
 
         {/* Tab Content */}
-        <div className="p-2">
+        <div>
           {activeTab === 'basic' ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3"> {/* Added gap-y-4 for vertical spacing */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-y-2"> {/* Added gap-y-4 for vertical spacing */}
               {/* Column 1 */}
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-2">
                 
                 <div className="relative">
                   <input
@@ -243,7 +244,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="BranchCode"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Branch
                   </label>
@@ -266,7 +267,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="APVNo"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     CV No.
                   </label>
@@ -288,7 +289,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="APVDate"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     CV Date
                   </label>
@@ -296,7 +297,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 2 */}
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-2">
                 <div className="relative">
                   <input
                     type="text"
@@ -306,7 +307,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="payeeCode"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Payee Code
                   </label>
@@ -328,7 +329,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="payeeName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Payee Name
                   </label>
@@ -346,7 +347,7 @@ const handleSelectBranch = (selectedBranch) => {
                   </select>
                   <label
                     htmlFor="refAPV"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     With Ref APV
                   </label>
@@ -355,7 +356,7 @@ const handleSelectBranch = (selectedBranch) => {
               </div>
 
               {/* Column 3 */}
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-2">
                 
               <div className="relative">
                   <select
@@ -369,7 +370,7 @@ const handleSelectBranch = (selectedBranch) => {
                   </select>
                   <label
                     htmlFor="apType"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     AP Type
                   </label>
@@ -384,7 +385,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="refDocNo"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Ref Doc No.
                   </label>
@@ -393,7 +394,7 @@ const handleSelectBranch = (selectedBranch) => {
 
               {/* Column 4 - Remarks */}
               <div className="col-span-full"> 
-                <div className="relative w-full p-3">
+                <div className="relative w-full p-2">
                   <textarea
                     id="remarks"
                     placeholder=""
@@ -402,9 +403,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="remarks"
-                    className="absolute left-6 top-4 z-10 origin-[0] scale-75 transform bg-white px-1 text-sm text-gray-600 transition-all 
-                      peer-placeholder-shown:top-6 peer-placeholder-shown:scale-100 
-                      peer-focus:top-1 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label-remarks"
                   >
                     Remarks
                   </label>
@@ -424,7 +423,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="bankCode"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Bank Name
                   </label>
@@ -446,7 +445,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="bankAcct"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Bank Account No.
                   </label>
@@ -468,7 +467,7 @@ const handleSelectBranch = (selectedBranch) => {
                   </select>
                   <label
                     htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Payment Type
                   </label>
@@ -488,7 +487,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="APVNo"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Check No.
                   </label>
@@ -504,7 +503,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="checkDate"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Check Date
                   </label>
@@ -520,7 +519,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Check Amount (Original)
                   </label>
@@ -541,7 +540,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="currCode"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Currency
                   </label>
@@ -566,7 +565,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="currRate"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Currency Rate
                   </label>
@@ -582,7 +581,7 @@ const handleSelectBranch = (selectedBranch) => {
                   />
                   <label
                     htmlFor="currName"
-                    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+                    className="global-tran-floating-label"
                   >
                     Check Amount (Php)
                   </label>
