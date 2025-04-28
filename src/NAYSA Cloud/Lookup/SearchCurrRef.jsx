@@ -13,7 +13,7 @@ const CurrLookupModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       setLoading(true);
   
-      axios.post("http://127.0.0.1:8000/api/lookupCurr", {
+      axios.get("http://127.0.0.1:8000/api/lookupCurr", {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,

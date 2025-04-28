@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import { faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 // Lookup/Modal
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
@@ -15,6 +15,8 @@ import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
 import { docTypeNames } from '@/NAYSA Cloud/Global/doctype';
 import { docTypeVideoGuide } from '@/NAYSA Cloud/Global/doctype';
 import { docTypePDFGuide } from '@/NAYSA Cloud/Global/doctype';
+
+// Header
 import Header from '@/NAYSA Cloud/Components/Header';
 
 const CV = () => {
@@ -325,7 +327,7 @@ return (
                     htmlFor="payeeCode"
                     className="global-tran-floating-label"
                   >
-                    <span className="text-red-600 font-extrabold"> * </span>
+                    <span className="global-tran-asterisk-ui"> * </span>
                     Payee Code 
                   </label>
                   <button
@@ -350,7 +352,7 @@ return (
                     htmlFor="payeeName"
                     className="global-tran-floating-label"
                   >
-                    <span className="text-red-600 font-extrabold"> * </span>
+                    <span className="global-tran-asterisk-ui"> * </span>
                     Payee Name
                   </label>
                 </div>
@@ -619,7 +621,7 @@ return (
       <br />
 
       {/* Invoice Details Button */}
-      <div className="global-tran-tab-div-ui">
+      <div id="cv_dtl" className="global-tran-tab-div-ui">
       
       {/* Tab Navigation */}
       <div className="global-tran-tab-nav-ui">
@@ -891,7 +893,7 @@ return (
         onClick={handleAddRow}
         className="global-tran-tab-footer-button-add-ui"
       >
-        Add
+          <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
       </button>
     </div>
 
@@ -955,7 +957,7 @@ return (
       <div className="flex justify-end">
         <button
           // onClick={handleAddRow}
-          className="global-tran-button-lookup"
+          className="global-tran-button-generateGL"
         >
           Generate GL Entries
         </button>
@@ -1126,7 +1128,7 @@ return (
           onClick={handleAddRowGL}
           className="global-tran-tab-footer-button-add-ui"
         >
-          Add
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
         </button>
       </div>
 

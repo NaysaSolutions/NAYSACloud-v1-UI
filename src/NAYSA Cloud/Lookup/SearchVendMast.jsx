@@ -141,107 +141,107 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[100vh] overflow-auto relative">
+    <div className="global-lookup-main-div-ui">
+      <div className="global-lookup-div-ui max-w-6xl max-h-[100vh]">
         <button
           onClick={() => onClose(null)}
-          className="absolute top-3 right-3 text-red-500 hover:text-red-700"
+          className="global-lookup-button-close-ui"
         >
           <FontAwesomeIcon icon={faTimes} size="lg" />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4 uppercase">Select Payee</h2>
+        <h2 className="global-lookup-headertext-ui">Select Payee</h2>
 
         {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="global-lookup-loading-main-div-ui">
+            <div className="global-lookup-loading-sub-div-ui"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto max-h-[70vh] rounded scroll-y-auto">
-            <table className="min-w-full border-collapse text-sm text-left border border-gray-200">
-              <thead className="text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
-                <tr>
-                  <th className="px-2 py-2 border cursor-pointer" onClick={() => handleSort('vendCode')}>
+          <div className="global-lookup-table-main-div-ui max-h-[70vh] scroll-y-auto">
+            <table className="global-lookup-table-div-ui">
+              <thead className="global-lookup-thead-div-ui">
+              <tr classname="global-lookup-tr-ui">
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('vendCode')}>
                     Payee Code {renderSortIcon('vendCode')}
                   </th>
-                  <th className="px-8 py-2 border cursor-pointer" onClick={() => handleSort('vendName')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('vendName')}>
                     Payee Name {renderSortIcon('vendName')}
                   </th>
-                  <th className="px-4 py-2 border text-center cursor-pointer" onClick={() => handleSort('source')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('source')}>
                     Source {renderSortIcon('source')}
                   </th>
-                  <th className="px-4 py-2 border text-center cursor-pointer" onClick={() => handleSort('vendTin')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('vendTin')}>
                     TIN {renderSortIcon('vendTin')}
                   </th>
-                  <th className="px-2 py-2 border text-center cursor-pointer" onClick={() => handleSort('atcCode')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('atcCode')}>
                     ATC {renderSortIcon('atcCode')}
                   </th>
-                  <th className="px-2 py-2 border text-center cursor-pointer" onClick={() => handleSort('vatCode')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('vatCode')}>
                     VAT {renderSortIcon('vatCode')}
                   </th>
-                  <th className="px-10 py-2 border text-center cursor-pointer" onClick={() => handleSort('addr')}>
+                  <th className="global-lookup-th-ui" onClick={() => handleSort('addr')}>
                     Address {renderSortIcon('addr')}
                   </th>
-                  <th className="px-4 py-2 border">Action</th>
+                  <th className="global-lookup-th-ui">Action</th>
                 </tr>
-                <tr className="bg-white">
-                  <th className="border px-4 py-1">
+                <tr classname="global-lookup-tr-ui">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.vendCode}
                       onChange={(e) => handleFilterChange(e, 'vendCode')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.vendName}
                       onChange={(e) => handleFilterChange(e, 'vendName')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.source}
                       onChange={(e) => handleFilterChange(e, 'source')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.vendTin}
                       onChange={(e) => handleFilterChange(e, 'vendTin')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.atcCode}
                       onChange={(e) => handleFilterChange(e, 'atcCode')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.vatCode}
                       onChange={(e) => handleFilterChange(e, 'vatCode')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="global-lookup-th-ui">
                     <input
                       type="text"
                       value={filters.addr}
                       onChange={(e) => handleFilterChange(e, 'addr')}
-                      className="w-full border px-2 py-1 rounded text-sm"
+                      className="global-lookup-filter-text-ui"
                     />
                   </th>
-                  <th className="border px-4 py-1"></th>
+                  <th className="global-lookup-th-ui"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -254,18 +254,18 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
                   </tr>
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((payee, index) => (
-                    <tr key={index} className="bg-white hover:bg-gray-100 transition">
-                      <td className="px-4 py-2 border">{payee.vendCode}</td>
-                      <td className="px-4 py-2 border">{payee.vendName}</td>
-                      <td className="px-4 py-2 border">{payee.source}</td>
-                      <td className="px-4 py-2 border">{payee.vendTin}</td>
-                      <td className="px-4 py-2 border">{payee.atcCode}</td>
-                      <td className="px-4 py-2 border">{payee.vatCode}</td>
-                      <td className="px-4 py-2 border">{payee.addr}</td>
-                      <td className="border px-4 py-2">
+                    <tr key={index} className="global-lookup-tr-ui">
+                      <td className="global-lookup-td-ui">{payee.vendCode}</td>
+                      <td className="global-lookup-td-ui">{payee.vendName}</td>
+                      <td className="global-lookup-td-ui">{payee.source}</td>
+                      <td className="global-lookup-td-ui">{payee.vendTin}</td>
+                      <td className="global-lookup-td-ui">{payee.atcCode}</td>
+                      <td className="global-lookup-td-ui">{payee.vatCode}</td>
+                      <td className="global-lookup-td-ui whitespace-normal">{payee.addr}</td>
+                      <td className="global-lookup-td-ui">
                         <button
                           onClick={() => handleApply(payee)}
-                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                          className="global-lookup-apply-button-ui"
                         >
                           Apply
                         </button>
@@ -274,7 +274,7 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="3" className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan="3" className="global-lookup-td-ui">
                       No matching payees found.
                     </td>
                   </tr>
@@ -284,21 +284,21 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
           </div>
         )}
 
-        <div className="sticky bottom-0 bg-white z-20 flex justify-between items-center p-3">
+        <div className="global-lookup-footer-div-ui">
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50"
+            className="global-lookup-footer-button-prevnext-ui"
           >
             Previous
           </button>
-          <div className="text-sm text-gray-700">
+          <div className="global-lookup-count-ui">
             {startItem}-{endItem} of {totalItems}
           </div>
           <button
             onClick={handleNextPage}
             disabled={filtered.length <= currentPage * itemsPerPage}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50"
+            className="global-lookup-footer-button-prevnext-ui"
           >
             Next
           </button>
