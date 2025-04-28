@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
+
 
 const VATLookupModal = ({ isOpen, onClose, customParam }) => {
   const [vat, setVATs] = useState([]);
@@ -13,20 +14,17 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
     if (isOpen) {
       setLoading(true);
   
-      axios.post("http://127.0.0.1:8000/api/lookupVat", {
+      const params = {
         PARAMS: JSON.stringify({
-          search: "InputGoods",
+          search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
+          pageSize: 10,
+        }),
+      };
+
+
+      fetchData("/lookupVat", params)
+      .then((result) => {
         if (result.success) {
           const atcData = JSON.parse(result.data[0].result);
           setVATs(atcData);
@@ -42,7 +40,7 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
       .finally(() => {
         setLoading(false);
       });
-    }
+  }
   }, [isOpen]);
   
 

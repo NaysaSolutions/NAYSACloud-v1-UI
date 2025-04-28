@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
 
 const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
   const [atc, setATCs] = useState([]);
@@ -13,18 +14,16 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
     if (isOpen) {
       setLoading(true);
   
-      axios.post("http://127.0.0.1:8000/api/lookupATC", {
+      const params = {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
+          pageSize: 10,
+        }),
+      };
+
+
+      fetchData("/lookupATC", params)
       .then((response) => {
         const result = response.data;
         if (result.success) {
@@ -34,15 +33,17 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
         } else {
           alert(result.message || "Failed to fetch ATC");
         }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch ATC:", err);
-        alert(`Error: ${err.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+        })
+        .catch((err) => {
+          console.error("Failed to fetch ATC:", err);
+          alert(`Error: ${err.message}`);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
+
+
   }, [isOpen]);
   
 

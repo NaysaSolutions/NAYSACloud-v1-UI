@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
+
 
 const CustomerMastLookupModal = ({ isOpen, onClose, customParam  }) => {
   const [customers, setCustomers] = useState([]);
@@ -13,7 +14,6 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam  }) => {
     if (isOpen) {
       setLoading(true);
 
-
       switch (customParam) {
         case "apv_hd":
           customParam = "APGL";
@@ -23,23 +23,16 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam  }) => {
       }
 
 
-      axios.post("http://127.0.0.1:8000/api/lookupCustomer", {
+      const params = {
         PARAMS: JSON.stringify({
-          search: customParam || "ActiveAll",
+          search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
+          pageSize: 10,
+        }),
+      };
 
-       // console.log(result);
-
+      fetchData("/lookupCustomer", params)
+      .then((result) => {
         if (result.success) {
           const resultData = JSON.parse(result.data[0].result);
           setCustomers(resultData);
@@ -49,13 +42,13 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam  }) => {
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch Chart of Customer:", err);
+        console.error("Failed to fetch Customer:", err);
         alert(`Error: ${err.message}`);
       })
       .finally(() => {
         setLoading(false);
       });
-    }
+  }
   }, [isOpen]);
   
 

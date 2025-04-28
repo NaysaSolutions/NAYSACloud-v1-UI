@@ -1,191 +1,364 @@
-// Importing React and its hooks (useState, useEffect) for managing component state and lifecycle
 import React, { useState, useEffect } from "react";
-
-// Importing FontAwesomeIcon component to use icons in the UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
-// Importing specific solid icons from FontAwesome used in the component (e.g., search, add, delete, open folder)
-import { faMagnifyingGlass, faPlus, faTrashAlt, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
-
-// Importing the Branch Lookup Modal component for selecting or searching branch references
-import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef.jsx";
-
-// Importing a custom hook or context for resetting forms or states across components
-import { useReset } from "@/NAYSA Cloud/Components/ResetContext.jsx";
-
-// Importing the Currency Lookup Modal component for selecting or searching currency references
-import CurrLookupModal from "@/NAYSA Cloud/Lookup/SearchCurrRef.jsx";
-
-// Importing (currently commented out) the Open Balance Query Modal component, likely for future use
-// import OpenBalanceModal from "./openBalanceQueryModal";
-
+import { faMagnifyingGlass, faPlus, faSpinner, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
+import BranchLookupModal from "../../../Lookup/SearchBranchRef";
+import { useReset } from "../../../Components/ResetContext";
+import CurrLookupModal from "../../../Lookup/SearchCurrRef.jsx";
+import PayeeMastLookupModal from "../../../Lookup/SearchVendMast";
+import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
+import axios from 'axios';
 
 const APV = () => {
-  // Accessing the reset flag from custom ResetContext (likely used to trigger form resets)
   const { resetFlag } = useReset();
+  const [documentName, setdocumentName] = useState("")
+  const [documentSeries, setdocumentSeries] = useState("Auto")
+  const [documentDocLen, setdocumentDocLen] = useState(8)
+  const [documentDetail1, setdocumentDetail1] = useState([]);
+  const [documentDetail2, setdocumentDetail2] = useState([]);
+  const [documentID, setdocumentID] = useState(null)
+  const [documentNo, setdocumentNo] = useState("")
 
-  // State to hold table rows for the detail section (e.g., invoice line items)
+
   const [detailRows, setDetailRows] = useState([]);
-
-  // State to hold the actual detail data associated with each row (e.g., backend or form data)
   const [detailData, setDetailData] = useState([]);
-
-  // State to enable or disable fetching data (can be used to prevent duplicate API calls)
-  const [isFetchDisabled, setIsFetchDisabled] = useState(false);
-
-  // State to control visibility of the branch lookup modal
+  const [isFetchDisabled, setIsFetchDisabled] = useState(false); 
+  const [branchModalOpen, setBranchModalOpen] = useState(false);
+  const [payeeModalOpen, setpayeeModalOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  // State to store the list of fetched branches from the backend
-  const [branches, setBranches] = useState([]);
-
-  // State to hold the name of the selected branch
+  const [vendName, setvendName] = useState(null);
+  const [vendCode, setvendCode] = useState(null);  
+  const [branches, setbranches] = useState([]);
+  const [branchCode, setBranchCode] = useState("");
   const [branchName, setBranchName] = useState("");
-
-  // State to identify the source or purpose of the modal trigger (e.g., which input field opened the modal)
   const [modalContext, setModalContext] = useState('');
-
-  // Uncommented: State to control visibility of the Open Balance modal (currently not in use)
-  // const [showOpenBalanceModal, setShowOpenBalanceModal] = useState(false);
-
-  // State to identify which context or component made a selection (useful when reusing modals)
   const [selectionContext, setSelectionContext] = useState('');
-
-  // State to control visibility of the currency lookup modal
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
-
-  // State to hold the selected currency code (defaulting to PHP)
   const [currencyCode, setCurrencyCode] = useState("");
+  const [currencyName, setCurrencyName] = useState("Philippine Peso");
+  const [currencyRate, setCurrencyRate] = useState("1.000000");
+  const [apAccountName, setApAccountName] = useState("");
+  const [apAccountCode, setApAccountCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const [header, setHeader] = useState({
+    apv_date: "",
+  });
 
-  // State to hold the name of the selected currency (defaulting to Philippine Peso)
-  const [currencyName, setCurrencyName] = useState("");
+  useEffect(() => {
 
-
-
- // State for the APV header fields, starting with the APV date (can be expanded later)
-const [header, setHeader] = useState({
-  apv_date: "",
-});
-
-// useEffect to listen for resetFlag changes and clear specific fields when triggered
-useEffect(() => {
-  if (resetFlag) {
-    setCurrencyCode("");
-    setCurrencyName("");
-    setBranchName("");
-    console.log("Fields in APV reset!");
-  }
-}, [resetFlag]);
-
-// Function to add a new row to the detail section with default empty values
-const handleAddRow = () => {
-  setDetailRows([
-    ...detailRows,
-    {
-      type: "",
-      rrNo: "",
-      category: "",
-      classification: "",
-      poNo: "",
-      invoiceNo: "",
-      invoiceDate: "",
-      origAmount: "",
-      currency: "",
-      invoiceAmount: "",
-      drAccount: "",
-      rcCode: "",
-      rcDescription: "",
-      slCode: "",
-      vatCode: "",
-      vatDescription: "",
-      vatAmount: "",
-      ewtCode: "",
-      ewtDescription: "",
-      ewtAmount: "",
-      terms: "",
-      dueDate: "",
+    if (resetFlag) {
+      setCurrencyCode("");
+      setCurrencyName("");
+      setBranchName("");
+      
+      const today = new Date().toISOString().split("T")[0];
+      setHeader((prev) => ({ ...prev, apv_date: today }));
+      console.log("Fields in APV reset!");
     }
-  ]);
-};
 
-// Opens the currency lookup modal
-const openCurrencyModal = () => {
-  setCurrencyModalOpen(true);
-};
+     getDocumentControl();
+     
+  
+    let timer;
+    if (isLoading) {
+      timer = setTimeout(() => setShowSpinner(true), 200);
+    } else {
+      setShowSpinner(false);
+    }
+  
+    return () => clearTimeout(timer);
+  }, [resetFlag, isLoading]);
 
-// Handles selection of a currency from the modal
-const handleCurrencySelect = (selectedCurrency) => {
-  if (selectedCurrency) {
-    setCurrencyCode(selectedCurrency.currCode);
-    setCurrencyName(selectedCurrency.currName);
-  }
-  setCurrencyModalOpen(false); // Close the modal after selection
-};
+  useEffect(() => {
+    if (vendName?.currCode && detailRows.length > 0) {
+      const updatedRows = detailRows.map(row => ({
+        ...row,
+        currency: vendName.currCode
+      }));
+      setDetailRows(updatedRows);
+    }
+  }, [vendName?.currCode]);
 
-// Set the default APV date to today when component is first mounted
-useEffect(() => {
-  const today = new Date().toISOString().split("T")[0];
-  setHeader((prev) => ({ ...prev, apv_date: today }));
-}, []);
+  const LoadingSpinner = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
+        <p>Please wait...</p>
+      </div>
+    </div>
+  );
 
-// When the branch lookup button is clicked, determine the source context and show the modal
-const handleBranchClick = (e) => {
-  const parentDiv = e.currentTarget.closest('div[id]');
-  const contextId = parentDiv?.id || 'unknown';
-  setModalContext(contextId);
-  setShowModal(true); // Open the branch modal (which will fetch data on its own)
-};
 
-// Handles selection of a branch from the modal
-const handleSelectBranch = (selectedBranch) => {
-  console.log("Selected branch for context:", selectionContext);
-  console.log("Selected branch:", selectedBranch);
 
-  if (selectedBranch) {
-    // If the selection context is the header section, set the branch name
-    if (selectionContext === 'apv_hd') {
-      setBranchName(selectedBranch.branchName || "");
+  const getDocumentControl = async () => {
+    try {
+      const response = await fetchData("getHSDoc", { DOC_ID: "APV" });
+      if (response.success)  {
+        const result = JSON.parse(response.data[0].result);
+
+          setdocumentName(result[0]?.docName);
+          setdocumentSeries(result[0]?.docName);
+          setdocumentDocLen(result[0]?.docName);
+     
+      }
+    } catch (err) {
+      console.error("Document Control API error:", err);
     }
   }
 
-  setShowModal(false);        // Close the branch modal
-  setSelectionContext('');    // Clear the context for future use
-};
 
-  // const handleDeleteRow = (index) => {
-  //   const updatedData = detailData.filter((_, i) => i !== index);
-  //   setDetailData(updatedData);
-  // };
 
-  // const handleOpenBalanceClick = () => {
-  //   setShowOpenBalanceModal(true);
-  // };
+  // const getDocumentSavedData = async () => {
+  //   try {
+  //     const docPayload = {
+  //       json_data: {
+  //         "apvNo": documentNo,
+  //         "branchCode": branchCode
+  //       }};  
+  //     const response = await postRequest("getAPV", JSON.stringify(docPayload)); 
+  //     if (response.success) {
 
-  // const handleCloseOpenBalanceModal = () => {
-  //   setShowOpenBalanceModal(false);
-  // };
+  //       console.log(response)
+
+  //       const result = JSON.parse(response.data[0].result);    
+        
+  //       setdocumentDetail1(result.dt1);
+  //       setdocumentDetail2(result.dt2);
+        
+  //     }
+  //   } catch (err) {
+  //     console.error("Document Retrieval API error:", err);
+  //   }
+  // }
+
+
+  const handleAddRow = async () => {
+    try {
+      const items = await handleFetchDetail(vendCode);
+      console.log("Fetched items:", items); // check this in devtools
+  
+      // Fix: if it's not an array, wrap it in one
+      const itemList = Array.isArray(items) ? items : [items];
+
+  
+      const newRows = itemList.map(item => ({
+        lnNo: "",
+        invType: "FG",
+        rrNo: "",
+        poNo: "",
+        siNo: "",
+        siDate: new Date().toISOString().split('T')[0],
+        amount: item.origAmount || "0.00",
+        currency: vendName?.currCode || "", 
+        siAmount: "0.00",
+        debitAcct: "",
+        rcCode: "",
+        rcName: "",
+        slCode: "",
+        vatCode: item.vatCode || "",
+        vatName:  item.vatName,
+        vatAmount: "0.00",
+        atcCode: item.atcCode || "",
+        atcName: item.atcName,
+        atcAmount: "0.00",
+        paytermCode: item.paytermCode,
+        dueDate: new Date().toISOString().split('T')[0],
+      }));
+  
+      setDetailRows(prev => [...prev, ...newRows]);
+  
+      setTimeout(() => {
+        const tableContainer = document.querySelector('.max-h-[430px]');
+        if (tableContainer) {
+          tableContainer.scrollTop = tableContainer.scrollHeight;
+        }
+      }, 100);
+  
+    } catch (error) {
+      console.error("Error adding new row:", error);
+      alert("Failed to add new row. Please select a Payee first.");
+    }
+  };
+  
+
+  
+  const openCurrencyModal = () => {
+    setCurrencyModalOpen(true);
+  };
+
+  const handleSelectCurrency = async (currencyCode) => {
+    if (!currencyCode) return;
+  
+    try {
+      // Use fetchData for GET
+      const currResponse = await fetchData("getCurr", { CURR_CODE: currencyCode });
+  
+      if (currResponse.success) {
+        const currData = JSON.parse(currResponse.data[0].result);
+        let rate = '1.000000';
+  
+        if (currencyCode.toUpperCase() !== 'PHP') {
+          const forexPayload = {
+            json_data: {
+              docDate: header.apv_date,
+              currCode: currencyCode,
+            },
+          };
+  
+          try {
+            // Use postRequest for POST
+            const forexResponse = await postRequest("getDForex", JSON.stringify(forexPayload));
+  
+            if (forexResponse.success) {
+              const rawResult = forexResponse.data[0].result;
+              if (rawResult) {
+                const forexData = JSON.parse(rawResult);
+                rate = forexData.currRate ? parseFloat(forexData.currRate).toFixed(6) : '1.000000';
+              }
+            }
+          } catch (forexError) {
+            console.error("Forex API error:", forexError);
+          }
+        }
+  
+        setCurrencyCode(currencyCode);
+        setCurrencyName(currData[0]?.currName);
+        setCurrencyRate(rate);
+      }
+    } catch (currError) {
+      console.error("Currency API error:", currError);
+    }
+  };
+
+  const handleFetchDetail = async (vendCode) => {
+    console.log("vendCode:", vendCode);
+    if (!vendCode) return [];
+  
+    try {
+      const vendPayload = {
+        json_data: {
+          vendCode: vendCode,
+        },
+      };
+  
+      const vendResponse = await postRequest("addAPVDetail", JSON.stringify(vendPayload));
+      const rawResult = vendResponse.data[0]?.result;
+  
+      // Parse the string result into an actual JS object
+      const parsed = JSON.parse(rawResult);
+      return parsed;
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return [];
+    }
+  };
+  
+
+
+
+  
+
+  const handleSelectAPAccount = async (accountCode) => {
+    if (accountCode) {
+      try {
+        const coaResponse = await axios.get("http://127.0.0.1:8000/api/getCOA", { 
+          params: { ACCT_CODE: accountCode }
+        });
+
+        if (coaResponse.data.success) {
+          const coaData = JSON.parse(coaResponse.data.data[0].result);
+          setApAccountName(coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "");
+          setApAccountCode(coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "");
+        }
+      } catch (error) {
+        console.error("COA API error:", error);
+      }
+    }
+  };
+
+  const handleClosePayeeModal = async (selectedData) => {
+    if (!selectedData) {
+      setpayeeModalOpen(false);
+      return;
+    }
+  
+    setpayeeModalOpen(false);
+    setIsLoading(true);
+  
+    try {
+      // Set basic payee info first
+      const payeeDetails = {
+        vendCode: selectedData.vendCode,
+        vendName: selectedData.vendName,
+        currCode: selectedData.currCode, 
+        acctCode: selectedData.acctCode   
+      };
+      setvendName(payeeDetails);
+
+      setvendCode(selectedData.vendCode)
+  
+      if (!selectedData.currCode) {
+        const vendPayload = { VEND_CODE: selectedData.vendCode };
+        const vendResponse = await axios.post("http://127.0.0.1:8000/api/getVendMast", vendPayload);
+  
+        if (vendResponse.data.success) {
+          const vendData = JSON.parse(vendResponse.data.data[0].result);
+          payeeDetails.currCode = vendData[0]?.currCode;
+          payeeDetails.acctCode = vendData[0]?.acctCode;
+          setvendName(payeeDetails);
+        }
+      }
+  
+      // Update currency and account
+      await Promise.all([
+        handleSelectCurrency(payeeDetails.currCode),
+        handleSelectAPAccount(payeeDetails.acctCode)
+      ]);
+  
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  
+
+
+  const handleCloseBranchModal = (selectedBranch) => {
+    if (selectedBranch) {
+      setBranchCode(selectedBranch.branchCode);
+      setBranchName(selectedBranch.branchName);
+    }
+    setBranchModalOpen(false);
+  };
+
+
+
+  const handleCloseCurrencyModal = (selectedCurrency) => {
+    if (selectedCurrency) {
+      handleSelectCurrency(selectedCurrency.currCode)
+    }
+    setCurrencyModalOpen(false);
+  };
+
+
+
+
 
   return (
-     // Main container for the APV form with padding, background color, and custom font
-  <div className="p-4 bg-white min-h-screen ">
+    <div className="p-4 bg-white min-h-screen">
+      {/* Loading spinner overlay */}
+      {showSpinner && <LoadingSpinner />}
 {/* Page title and subheading */} 
 
 <div className="text-center justify-center m-0 h-16 mt-10">
-<h1 className="font-sans font-medium text-2xl mt-[-10px] text-blue-500 tracking-wide">
+<h1 className="font-sans font-medium text-2xl mt-[-40px] text-blue-500 tracking-wide">
   Accounts Payable Voucher
 </h1>
 
-{/* <h1 className="font-serif font-medium text-2xl mt-[-10px] text-blue-500 tracking-wide">
-  ACCOUNTS PAYABLE VOUCHER
-</h1>
-
-<h1 className="font-mono font-light text-2xl mt-[-10px] text-blue-500 tracking-wide">
-  ACCOUNTS PAYABLE VOUCHER
-</h1>
-
-<h1 className="font-sans font-medium text-2xl mt-[-10px] text-blue-500 tracking-wide">
-  ACCOUNTS PAYABLE VOUCHER
-</h1> */}
 
       <span className=" font-sans font-medium text-md mb-[-20px] text-red-600 tracking-wide">POSTED TRANSACTION</span>
     </div>
@@ -216,7 +389,7 @@ const handleSelectBranch = (selectedBranch) => {
             {/* Button to open branch lookup modal */}
             <button
             type="button"
-            onClick={handleBranchClick} // Just pass the event directly now
+            onClick={() => setBranchModalOpen(true)}
             className="absolute inset-y-0 right-0 w-[40px] h-[48px] bg-blue-600 hover:bg-blue-700 text-white rounded-r-lg flex items-center justify-center focus:outline-none"
           >
             <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -228,6 +401,7 @@ const handleSelectBranch = (selectedBranch) => {
             <input
               type="text"
               id="APVNo"
+              value={documentNo}
               placeholder=" "
               className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
             />
@@ -255,6 +429,9 @@ const handleSelectBranch = (selectedBranch) => {
               id="APVDate"
               className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
               value={header.apv_date}
+              onChange={(e) =>
+                setHeader((prev) => ({ ...prev, apv_date: e.target.value }))
+              }
             />
             <label
               htmlFor="APVDate"
@@ -269,26 +446,31 @@ const handleSelectBranch = (selectedBranch) => {
         <div className="space-y-5">
         {/* Payee Code Input with optional lookup */}
         <div className="relative w-[270px] mx-auto">
-            <input
-              type="text"
-              id="payeeCode"
-              placeholder=" "
-              className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-            />
-            <label
-              htmlFor="payeeCode"
-              className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-            >
-              Payee Code
-            </label>
-            <button
-                    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
-                      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
-                    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
-          </div>
+  <input
+    type="text"
+    id="payeeCode"
+    value={vendName?.vendCode || ''}
+    readOnly
+    placeholder=" "
+    className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+  />
+  <label
+    htmlFor="payeeCode"
+    className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+  >
+    Payee Code
+  </label>
+  <button
+    type="button"
+    onClick={() => setpayeeModalOpen(true)}
+    className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
+      isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
+    } text-white rounded-r-lg flex items-center justify-center focus:outline-none`}
+  >
+    <FontAwesomeIcon icon={faMagnifyingGlass} />
+  </button>
+</div>
+
           
           {/* Payee Name Display */}
           <div className="relative w-[270px] mx-auto">
@@ -296,6 +478,7 @@ const handleSelectBranch = (selectedBranch) => {
               type="text"
               id="payeeName"
               placeholder=" "
+              value={vendName?.vendName || ''}
               className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
             />
             <label
@@ -308,18 +491,32 @@ const handleSelectBranch = (selectedBranch) => {
 
           {/* AP Account Code Input */}
           <div className="relative w-[270px] mx-auto">
-            <input
-              type="text"
-              id="APVNo"
-              placeholder=" "
-              className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
-            />
-            <label
-              htmlFor="acctCode"
-              className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
-            >
-              AP Account
-            </label>
+
+ 
+  {/* AP Account Code Input */}
+ <input
+  type="hidden"
+  id="apAccountCode"
+  placeholder=""
+  readOnly
+  value={apAccountCode || ""}
+/>
+
+
+<input
+      type="text"
+      id="apAccountName"  // Changed from APVNo to match the field
+      value={apAccountName || ""}
+      placeholder=""
+      readOnly
+      className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+/>
+<label
+  htmlFor="apAccountName"  // Changed to match input id
+  className="absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600"
+>
+  AP Account
+</label>
             <button
                     className={`absolute inset-y-0 right-0 w-[40px] h-[48px] ${
                       isFetchDisabled ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
@@ -338,7 +535,7 @@ const handleSelectBranch = (selectedBranch) => {
               type="text"
               id="currCode"
               placeholder=" "
-              value={currencyCode}
+              value={currencyName}
               readOnly
               className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
             />
@@ -362,10 +559,10 @@ const handleSelectBranch = (selectedBranch) => {
           <input
   type="text"
   id="currName"
-  value={currencyName}
-  readOnly
+  value={currencyRate}
+  onChange={(e) => setCurrencyRate(e.target.value)}                  
   placeholder=" "
-  className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0"
+  className="peer block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0 text-right"
 />
             <label
               htmlFor="currName"
@@ -523,7 +720,7 @@ const handleSelectBranch = (selectedBranch) => {
             <td className="border px-1 py-1">
               <select
                 className="w-[50px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.type || ""}
+                value={row.invType || ""}
                 // onChange={(e) => handleDetailChange(index, 'type', e.target.value)}
               >
                 <option value="FG">FG</option>
@@ -551,7 +748,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.invoiceNo || ""}
+                value={row.siNo || ""}
                 onChange={(e) => handleDetailChange(index, 'invoiceNo', e.target.value)}
               />
             </td>
@@ -559,7 +756,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="date"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.invoiceDate || ""}
+                value={row.siDate || ""}
                 onChange={(e) => handleDetailChange(index, 'invoiceDate', e.target.value)}
               />
             </td>
@@ -567,7 +764,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="number"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.origAmount || ""}
+                value={row.amount || ""}
                 onChange={(e) => handleDetailChange(index, 'origAmount', e.target.value)}
               />
             </td>
@@ -575,15 +772,16 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[80px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.currency || ""}
-                onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
+                value={vendName?.currCode ? `${vendName.currCode}` : "PHP"}
+                readOnly
+                // onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
               />
             </td>
             <td className="border px-1 py-1">
               <input
                 type="number"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.invoiceAmount || ""}
+                value={row.siAmount || ""}
                 onChange={(e) => handleDetailChange(index, 'invoiceAmount', e.target.value)}
               />
             </td>
@@ -591,7 +789,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.drAccount || ""}
+                value={row.debitAcct || ""}
                 onChange={(e) => handleDetailChange(index, 'drAccount', e.target.value)}
               />
             </td>
@@ -607,7 +805,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.rcDescription || ""}
+                value={row.rcName || ""}
                 onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
               />
             </td>
@@ -631,7 +829,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.vatDescription || ""}
+                value={row.vatName || ""}
                 onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
               />
             </td>
@@ -647,7 +845,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.ewtCode || ""}
+                value={row.atcCode || ""}
                 onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
               />
             </td>
@@ -655,7 +853,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.ewtDescription || ""}
+                value={row.atcName || ""}
                 onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
               />
             </td>
@@ -663,7 +861,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="number"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.ewtAmount || ""}
+                value={row.atcAmount || ""}
                 onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
               />
             </td>
@@ -671,7 +869,7 @@ const handleSelectBranch = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent focus:outline-none focus:ring-0"
-                value={row.terms || ""}
+                value={row.paytermCode || ""}
                 onChange={(e) => handleDetailChange(index, 'terms', e.target.value)}
               />
             </td>
@@ -698,7 +896,11 @@ const handleSelectBranch = (selectedBranch) => {
     <FontAwesomeIcon icon={faPlus} className="mr-2" />
     Add
   </button>
-</div>      <BranchLookupModal
+</div>
+
+
+{/* 
+<BranchLookupModal
   isOpen={showModal}
   branches={branches}
   // params={
@@ -717,14 +919,37 @@ const handleSelectBranch = (selectedBranch) => {
     setShowModal(false);
     setModalContext(''); // Reset the context
   }}
-/>
+/> */}
+
+
+{branchModalOpen && (
+        <BranchLookupModal 
+          isOpen={branchModalOpen}
+          onClose={handleCloseBranchModal}
+        />
+      )}
+
 
 {currencyModalOpen && (
         <CurrLookupModal 
           isOpen={currencyModalOpen}
-          onClose={handleCurrencySelect}
+          onClose={handleCloseCurrencyModal}
         />
       )}
+
+{payeeModalOpen && (
+  <PayeeMastLookupModal
+    isOpen={payeeModalOpen}
+    onClose={handleClosePayeeModal}
+    customParam="apv_hd"
+  />
+)}
+
+{showSpinner && <LoadingSpinner />}
+
+
+
+
 
 {/* <OpenBalanceModal
   isOpen={showOpenBalanceModal}

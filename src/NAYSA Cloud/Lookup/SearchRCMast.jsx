@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
+
 
 const RCLookupModal = ({ isOpen, onClose, customParam }) => {
   const [rc, setRCs] = useState([]);
@@ -23,20 +24,16 @@ const RCLookupModal = ({ isOpen, onClose, customParam }) => {
           break;
       }
 
-      axios.post("http://127.0.0.1:8000/api/lookupRCMast", {
+      const params = {
         PARAMS: JSON.stringify({
-          search: customParam || "ActiveAll",
+          search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
+          pageSize: 10,
+        }),
+      };
+
+      fetchData("/lookupRCMast", params)
+      .then((result) => {
         if (result.success) {
           const rcData = JSON.parse(result.data[0].result);
           setRCs(rcData);
@@ -52,7 +49,7 @@ const RCLookupModal = ({ isOpen, onClose, customParam }) => {
       .finally(() => {
         setLoading(false);
       });
-    }
+  } 
   }, [isOpen]);
   
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
+
 
 const BillTermLookupModal = ({ isOpen, onClose }) => {
   const [billterm, setBillterms] = useState([]);
@@ -13,20 +14,16 @@ const BillTermLookupModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       setLoading(true);
   
-      axios.post("http://127.0.0.1:8000/api/lookupBillterm", {
+      const params = {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
+          pageSize: 10,
+        }),
+      };
+
+      fetchData("/lookupBillterm", params)
+      .then((result) => {
         if (result.success) {
           const resultData = JSON.parse(result.data[0].result);
           setBillterms(resultData);
@@ -42,7 +39,7 @@ const BillTermLookupModal = ({ isOpen, onClose }) => {
       .finally(() => {
         setLoading(false);
       });
-    }
+  }
   }, [isOpen]);
   
 

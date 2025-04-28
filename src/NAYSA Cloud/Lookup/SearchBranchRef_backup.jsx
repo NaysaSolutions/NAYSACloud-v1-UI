@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import {fetchData} from '../Configuration/BaseURL'
 
 const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   const [branches, setBranches] = useState([]);
@@ -12,39 +12,52 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-
-      let adjustedParam = customParam;
-      if (customParam === "apv_hd") {
-        adjustedParam = "APGL";
-      }
-
-      const params = {
+  
+      axios.post("http://127.0.0.1:8000/api/lookupBranch", {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
-          pageSize: 10,
-        }),
-      };
+          pageSize: 10
+        })
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        }
+      })
+      .then((response) => {
+        const result = response.data;
+        if (result.success) {
+          const branchData = JSON.parse(result.data[0].result);
+          setBranches(branchData);
+          setFiltered(branchData);
+        } else {
+          alert(result.message || "Failed to fetch Branch");
+        }
 
-      fetchData("/lookupBranch", params)
-        .then((result) => {
-          if (result.success) {
-            const branchData = JSON.parse(result.data[0].result);
-            setBranches(branchData);
-            setFiltered(branchData);
-          } else {
-            alert(result.message || "Failed to fetch Branch");
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch Branch:", err);
-          alert(`Error: ${err.message}`);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+
+      })
+      .catch((err) => {
+        console.error("Failed to fetch Branch:", err);
+        alert(`Error: ${err.message}`);
+
+        
+        // Fallback sample data
+        const fallbackData = [
+          { id: 1, branchCode: "00000", branchName: "Head Office" },
+          { id: 2, branchCode: "00001", branchName: "Cebu" },
+          { id: 3, branchCode: "00002", branchName: "Davao" }
+        ];
+        setBranches(fallbackData);
+        setFiltered(fallbackData);
+        
+      })
+      .finally(() => {
+        setLoading(false);
+      });
     }
-  }, [isOpen, customParam]);
+  }, [isOpen]);
+  
 
   useEffect(() => {
     const newFiltered = branches.filter(branch =>
@@ -55,6 +68,8 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   }, [filters, branches]);
 
   const handleApply = (branch) => {
+
+    
     onClose(branch);
   };
 
@@ -111,36 +126,37 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan="3" className="py-10 text-center">
-                      <div className="w-8 h-8 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      <div className="text-sm text-gray-500 mt-2">Loading branches...</div>
-                    </td>
-                  </tr>
-                ) : filtered.length > 0 ? (
-                  filtered.map((branch, index) => (
-                    <tr key={index} className="bg-white hover:bg-gray-100 transition">
-                      <td className="px-4 py-2 border">{branch.branchCode}</td>
-                      <td className="px-4 py-2 border">{branch.branchName}</td>
-                      <td className="border px-4 py-2">
-                        <button
-                          onClick={() => handleApply(branch)}
-                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                        >
-                          Apply
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" className="px-4 py-6 text-center text-gray-500">
-                      No matching branches found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+  {loading ? (
+    <tr>
+      <td colSpan="3" className="py-10 text-center">
+        <div className="w-8 h-8 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-sm text-gray-500 mt-2">Loading branches...</div>
+      </td>
+    </tr>
+  ) : filtered.length > 0 ? (
+    filtered.map((branch, index) => (
+      <tr key={index} className="bg-white hover:bg-gray-100 transition">
+        <td className="px-4 py-2 border">{branch.branchCode}</td>
+        <td className="px-4 py-2 border">{branch.branchName}</td>
+        <td className="border px-4 py-2">
+          <button
+            onClick={() => handleApply(branch)}
+            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+          >
+            Apply
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="3" className="px-4 py-6 text-center text-gray-500">
+        No matching branches found.
+      </td>
+    </tr>
+  )}
+</tbody>
+
             </table>
             <div className="p-3 text-sm text-gray-600">
               Showing <strong>{filtered.length}</strong> of {branches.length} entries

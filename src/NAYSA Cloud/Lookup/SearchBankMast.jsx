@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import {fetchData} from '../Configuration/BaseURL';
 
 const BankMastLookupModal = ({ isOpen, onClose}) => {
   const [bamast, setBamast] = useState([]);
@@ -14,38 +14,33 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
       setLoading(true);
 
 
-      axios.post("http://127.0.0.1:8000/api/lookupBank", {
+      const params = {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
-          pageSize: 10
+          pageSize: 10,
+        }),
+      };
+
+      fetchData("/lookupBank", params)
+        .then((result) => {
+          if (result.success) {
+            const bankData = JSON.parse(result.data[0].result);
+            setBamast(bankData);
+            setFiltered(bankData);
+          } else {
+            alert(result.message || "Failed to fetch Bank");
+          }
         })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
-
-        if (result.success) {
-          const bankData = JSON.parse(result.data[0].result);
-
-          setBamast(bankData);
-          setFiltered(bankData);
-        } else {
-          alert(result.message || "Failed to fetch Bank");
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch Bank:", err);
-        alert(`Error: ${err.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+        .catch((err) => {
+          console.error("Failed to fetch lookup Bank:", err);
+          alert(`Error: ${err.message}`);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
+
   }, [isOpen]);
   
 
