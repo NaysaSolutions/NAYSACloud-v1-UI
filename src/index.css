@@ -130,6 +130,15 @@ body {
             sm:text-xs flex items-center justify-center focus:outline-none w-full sm:w-auto mr-2
             dark:bg-blue-900 dark:hover:bg-blue-800;
   }
+
+  .global-tran-spinner-main-div-ui {
+    @apply fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50;
+  }
+
+  .global-tran-spinner-sub-div-ui {
+    @apply bg-white p-6 rounded-lg shadow-lg flex flex-col items-center 
+            dark:bg-black dark:text-white;
+  }
   
 
 
@@ -278,24 +287,145 @@ body {
   }
   
 
+
+
+
+
   /* REFERENCE FILES & MASTERDATA */
+
+  .global-ref-main-div-ui {
+    @apply p-2 bg-gray-100 min-h-screen
+    dark:bg-black;
+  }
+
+  .global-tran-tab-div-ui {
+    @apply mt-6 bg-white p-4 sm:p-6 shadow-md rounded-lg
+    dark:bg-gray-800;
+  }
 
     .global-ref-textbox-ui {
         @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2.5 pb-2.5 pt-4 text-sm text-black focus:border-blue-600 focus:outline-none focus:ring-0;
       }
-/*   
-    .global-ref-textboxeffect-ui {
-        @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform bg-white px-2 text-sm text-gray-600 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:text-blue-600
-      } */
 
     .global-ref-header-ui {
-      /* @apply bg-gradient-to-r from-blue-400 to-purple-500 p-6 rounded-lg text-white shadow-lg; */
-      @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg;
+      @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg
+      dark:from-blue-900 dark:to-purple-900 dark:text-white;
     }
   
     .global-ref-headertext-ui {
       @apply text-xl sm:text-xl lg:text-2xl font-semibold;
     }
+
+    
+  /* REFERENCE FILES TABLE UI */
+
+  .global-ref-table-main-div-ui {
+    @apply bg-white
+    /* h-[360px] */
+    dark:bg-black;
+  }
+
+  .global-ref-table-main-sub-div-ui {
+    @apply max-h-[560px] overflow-y-auto relative rounded-lg
+    dark:bg-black;
+  }
+
+  .global-ref-table-div-ui {
+    @apply min-w-full border-collapse;
+  }
+
+  .global-ref-thead-div-ui {
+    @apply sticky top-0 bg-blue-300 z-10
+    dark:bg-blue-900 dark:text-white;
+  }
+
+  .global-ref-th-ui {
+    @apply px-2 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900 cursor-pointer whitespace-nowrap
+    dark:text-gray-300;
+  }
+
+  .global-ref-tr-ui {
+    @apply hover:bg-blue-200 border
+    dark:text-black dark:hover:bg-blue-700;
+  }
+
+  .global-ref-td-ui {
+    @apply border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal p-2
+    dark:text-white;
+  }
+
+  .global-ref-td-inputclass-ui {
+    @apply h-4 bg-transparent focus:outline-none focus:ring-0 whitespace-normal;
+  }
+
+  .global-ref-td-button-add-ui {
+    @apply bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]
+    dark:bg-black dark:hover:bg-blue-900;
+  }
+
+  .global-ref-td-button-delete-ui {
+    @apply bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]
+    dark:bg-black dark:hover:bg-red-900;
+  }
+
+
+  
+  /* REFERENCE FILES TEXTBOX AND TEXT BUTTON UI */
+
+  .global-ref-textbox-group-div-ui {
+    @apply space-y-4 p-2;
+  }
+
+.global-ref-textbox-ui {
+    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
+    px-2 pb-2 pt-2 text-xs text-black 
+    focus:border-blue-600 focus:outline-none focus:ring-0 
+    h-[30px] sm:h-[30px] lg:h-[40px]
+    dark:bg-gray-600 dark:text-white;
+  }
+
+.global-ref-textbox-remarks-ui {
+    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0
+    dark:bg-gray-600 dark:text-white;
+  }
+  
+.global-ref-textbox-button-search-padding-ui {
+      @apply w-[40px] h-[30px] sm:h-[30px] lg:h-[40px] absolute inset-y-0 right-0;
+    }
+
+.global-ref-textbox-button-search-enabled-ui {
+      @apply bg-blue-600 hover:bg-blue-700
+      dark:bg-blue-900 dark:hover:bg-blue-800;
+    }
+    
+.global-ref-textbox-button-search-disabled-ui {
+  @apply bg-blue-400
+  dark:bg-blue-800;
+}
+
+.global-ref-textbox-button-search-ui {
+  @apply text-white rounded-r-lg flex items-center justify-center focus:outline-none;
+}
+  
+.global-ref-floating-label {
+  @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+  bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+  peer-placeholder-shown:top-1/2 
+  peer-placeholder-shown:-translate-y-1/2 
+  peer-placeholder-shown:scale-100 
+  peer-focus:top-2 
+  peer-focus:-translate-y-4 
+  peer-focus:scale-75 
+  peer-focus:text-blue-600
+          dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
+}
+
+
+.global-ref-asterisk-ui {
+  @apply text-red-600 font-extrabold;
+}
+
+
 
 
   /* MODAL / LOOKUP */
@@ -376,7 +506,7 @@ body {
   }
 
   .global-lookup-count-ui {
-    @apply p-2 text-xs text-gray-700
+    @apply p-2 text-xs text-gray-800
     dark:text-gray-300
   }
 
@@ -384,7 +514,6 @@ body {
     @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50
   }
 
-  
   .global-lookup-div-ui {
     @apply bg-white rounded-lg p-4 w-full overflow-auto relative
     dark:bg-gray-800;

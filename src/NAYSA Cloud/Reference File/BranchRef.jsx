@@ -1,9 +1,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from 'sweetalert2';
+
+// UI
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEdit, faMagnifyingGlass, faTrashAlt, faPlus,faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faList, faPen, faSave, faUndo, faPrint } from "@fortawesome/free-solid-svg-icons";
+
+// Global
 import { useReset } from "../Components/ResetContext";
+import { reftables } from '@/NAYSA Cloud/Global/reftable';
 
 const BranchRef = () => {
+
+  //Document Global Setup
+  const docType = 'Branch'; 
+  const documentTitle = reftables[docType] || 'Transaction';
 
   const [isEditing, setIsEditing] = useState(false); // Controls if inputs are editable
   
@@ -27,7 +39,7 @@ const BranchRef = () => {
 
   const fetchBranches = async () => {
     try {
-      const response = await axios.post("http://localhost:8000/api/branch");
+      const response = await axios.get("http://localhost:8000/api/branch");
       console.log("Fetched branches:", response.data);
       const resultString = response.data?.data?.[0]?.result;
       if (resultString) {
@@ -152,29 +164,78 @@ const resetForm = () => {
 
 
   return (
-    <div className="p-4 bg-gray-200 min-h-screen font-roboto">
+    <div className="global-ref-main-div-ui">
 
       <div className="mx-auto">
 
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-400 to-purple-400 p-4 sm:p-6 rounded-lg text-white shadow-lg">
-          <h1 className="text-lg sm:text-2xl font-semibold">Branch</h1>
-        </div>
+        {/* Header Section
+        <div className="global-ref-header-ui">
+          <h1 className="global-ref-headertext-ui">Branch</h1>
+        </div> */}
+
+          {/* Header Section */}
+              <div className="global-ref-header-ui mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
+        
+                <div className="text-center sm:text-left">
+                <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
+                </div>
+        
+                
+                  {/* Submit Button */}
+                  <div className="flex gap-2 justify-center flex-row">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-4"
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      Add
+                    </button>
+        
+                    <button
+                      onClick={handleSaveBranch}
+                      className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-4"
+                      disabled={!isEditing}
+                    >
+                      <FontAwesomeIcon icon={faSave} />
+                      Save
+                    </button>
+        
+                    <button
+                      onClick={resetForm}
+                      className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-4"
+                      disabled={!isEditing}
+                    >
+                      <FontAwesomeIcon icon={faUndo} />
+                      Reset
+                    </button>
+        
+                    <button
+                      onClick={resetForm}
+                      className="bg-green-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-green-700 text-sm md:text-base md:px-4"
+                      disabled={!isEditing}
+                    >
+                      <FontAwesomeIcon icon={faPrint} />
+                      Export
+                    </button>
+                  </div>
+        
+        
+            </div> 
 
         {/* Form Section */}
-        <div className="mt-6 bg-white p-4 sm:p-6 shadow-md rounded-lg">
+        <div className="global-tran-tab-div-ui">
         {saving && <div>Loading...</div>} {/* Show loading spinner or message */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
             {/* Column 1 */}
-            <div className="space-y-4">
+            <div className="global-ref-textbox-group-div-ui">
               {/* Branch Code */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="branchCode"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -187,24 +248,30 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="branchCode"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400 ' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Branch Code
                 </label>
               </div>
 
               {/* Branch ID */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="branchId"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -215,24 +282,30 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="branchId"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Branch ID
                 </label>
               </div>
 
               {/* Branch Name */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="branchName"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -244,32 +317,38 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="branchName"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Branch Name
                 </label>
               </div>
             </div>
 
             {/* Column 2 */}
-            <div className="space-y-4">
+            <div className="global-ref-textbox-group-div-ui">
 
                {/* Branch Type */}
-               <div className="relative w-[270px]">
+               <div className="relative">
                 <select
                   id="branchType"
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   
-                  value={main}
+                  // value={""}
                   onChange={(e) => setMain(e.target.value)}
                   disabled={!isEditing}
                 >
@@ -279,13 +358,19 @@ const resetForm = () => {
                 </select>
                 <label
                   htmlFor="branchType"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Branch Type
                 </label>
                 <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
@@ -303,12 +388,12 @@ const resetForm = () => {
               
 
               {/* Address */}
-              <div className="relative w-[270px] ">
+              <div className="relative">
                 <input
                   type="text"
                   id="address"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -320,13 +405,19 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="address"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Address
                 </label>
               </div>
@@ -360,12 +451,12 @@ const resetForm = () => {
               </div> */}
 
               {/* Zip Code */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="zipCode"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -376,29 +467,35 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="zipCode"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Zip Code
                 </label>
               </div>
             </div>
 
             {/* Column 3 */}
-            <div className="space-y-4">
+            <div className="global-ref-textbox-group-div-ui">
               
 
               {/* TIN */}
-              <div className="relative w-[270px]">
+              <div className="relative">
               <input
   type="text"
   id="tin"
   placeholder=" "
-  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+  className={`peer global-ref-textbox-ui
     ${isEditing 
       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -416,24 +513,30 @@ const resetForm = () => {
 
                 <label
                   htmlFor="tin"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Tax Identification Number (TIN)
                 </label>
               </div>
 
               {/* Telephone No. */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="telNo"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -444,24 +547,30 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="zipCode"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+  bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+  peer-placeholder-shown:top-1/2 
+  peer-placeholder-shown:-translate-y-1/2 
+  peer-placeholder-shown:scale-100 
+  peer-focus:top-2 
+  peer-focus:-translate-y-4 
+  peer-focus:scale-75 
+  peer-focus:text-blue-600' 
+  dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
+                  <span className="global-ref-asterisk-ui"> * </span>
                   Telephone No.
                 </label>
               </div>
 
               {/* Fax No. */}
-              <div className="relative w-[270px]">
+              <div className="relative">
                 <input
                   type="text"
                   id="faxNo"
                   placeholder=" "
-                  className={`peer block w-full appearance-none rounded-lg px-2.5 pb-2.5 pt-4 text-sm focus:outline-none focus:ring-0
+                  className={`peer global-ref-textbox-ui
                     ${isEditing 
                       ? 'bg-white border border-gray-400 focus:border-blue-600 text-black' 
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
@@ -472,12 +581,17 @@ const resetForm = () => {
                 />
                 <label
                   htmlFor="zipCode"
-                  className={`absolute start-2 top-1 z-10 origin-[0] scale-75 transform px-1 
-                    bg-gray-100 text-sm text-gray-500 duration-300 
-                    peer-placeholder-shown:translate-y-4 peer-placeholder-shown:scale-100 
-                    peer-focus:top-1 peer-focus:translate-y-0 peer-focus:scale-75 
-                    peer-focus:px-1 peer-focus:text-blue-600 
-                    ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
+                  className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600' 
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white
+                  ${!isEditing ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-500'}`}
                 >
                   Fax No.
                 </label>
@@ -486,7 +600,7 @@ const resetForm = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button
           <div className="mt-6 flex gap-2 justify-center">
           <button
     onClick={() => setIsEditing(true)}
@@ -511,17 +625,17 @@ const resetForm = () => {
     Reset
   </button>
 
-          </div>
+          </div> */}
+
+
         </div>
 
         {/* Branch Table */}
-<div className="mt-6 bg-white p-4 sm:p-6 shadow-md rounded-lg">
-  <h2 className="text-lg font-semibold mb-4"></h2>
-  <p className="text-red-500 text-center"></p>
-  <div className="overflow-x-auto w-full">
-    <div className="min-w-[700px]">
-    <table className="w-full text-sm text-center border border-gray-200 rounded-lg shadow-md">
-                <thead className="text-gray-700 bg-gray-100">
+<div className="global-ref-table-main-div-ui">
+  <div className="global-ref-table-main-sub-div-ui">
+    <div className="global-ref-table-div-ui">
+    <table className="global-ref-table-div-ui">
+                <thead className="global-ref-thead-div-ui">
                   <tr>
                     {[
                       { key: "branchCode", label: "Branch Code" },
@@ -538,7 +652,7 @@ const resetForm = () => {
                     ].map(({ key, label }) => (
                       <th
                         key={key}
-                        className="px-4 py-2 border cursor-pointer whitespace-nowrap"
+                        className="global-ref-th-ui"
                       >
                         {label}
                       </th>
@@ -548,18 +662,18 @@ const resetForm = () => {
                 <tbody>
   {branches.length > 0 ? (
     branches.map((branch, index) => (
-      <tr key={index}>
-        <td className="px-4 py-2 border">{branch.branchCode}</td>
-        <td className="px-4 py-2 border">{branch.branchID || "-"}</td>
-        <td className="px-4 py-2 border">{branch.branchName}</td>
-        <td className="px-4 py-2 border">{branch.main}</td>
-        <td className="px-4 py-2 border">{branch.branchAddr1 || "-"}</td>
-        <td className="px-4 py-2 border">{branch.country || "-"}</td>
-        <td className="px-4 py-2 border">{branch.branchTin}</td>
-        <td className="px-4 py-2 border">{branch.telNo || "-"}</td>
-        <td className="px-4 py-2 border">{branch.faxNo || "-"}</td>
-        <td className="px-4 py-2 border">{branch.zipCode || "-"}</td>
-        <td className="px-4 py-2 border">{branch.active}</td>
+      <tr key={index} className="global-tran-tr-ui">
+        <td className="global-ref-td-ui">{branch.branchCode}</td>
+        <td className="global-ref-td-ui">{branch.branchID || "-"}</td>
+        <td className="global-ref-td-ui">{branch.branchName}</td>
+        <td className="global-ref-td-ui">{branch.main}</td>
+        <td className="global-ref-td-ui">{branch.branchAddr1 || "-"}</td>
+        <td className="global-ref-td-ui">{branch.country || "-"}</td>
+        <td className="global-ref-td-ui">{branch.branchTin}</td>
+        <td className="global-ref-td-ui">{branch.telNo || "-"}</td>
+        <td className="global-ref-td-ui">{branch.faxNo || "-"}</td>
+        <td className="global-ref-td-ui">{branch.zipCode || "-"}</td>
+        <td className="global-ref-td-ui">{branch.active}</td>
       </tr>
     ))
   ) : (
