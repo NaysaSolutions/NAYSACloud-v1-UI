@@ -112,8 +112,8 @@ const APV = () => {
   }, [vendName?.currCode]);
 
   const LoadingSpinner = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+    <div className="global-tran-spinner-main-div-ui">
+      <div className="global-tran-spinner-sub-div-ui">
         <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
         <p>Please wait...</p>
       </div>
