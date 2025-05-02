@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext";
 
 
-const Header = ({ docType, pdfLink, videoLink }) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { triggerReset } = useReset();
@@ -16,13 +16,22 @@ const Header = ({ docType, pdfLink, videoLink }) => {
   const handleSave = () => {
     setLoading(true);
     console.log("Save button clicked");
+    if (onSave) {
+      onSave(); // Call the save handler from parent
+    }
     setTimeout(() => setLoading(false), 2000);
   };
 
   const handleReset = () => {
-    console.log("Reset clicked");
-    triggerReset();
+    console.log("Reset button clicked");
+    if (onReset) {
+      onReset(); // Call the reset handler from parent
+    }
+    triggerReset(); // Keep the existing context reset if needed
   };
+
+  
+
 
   const handleCancel = () => {
     setCancelLoading(true);
@@ -38,6 +47,13 @@ const Header = ({ docType, pdfLink, videoLink }) => {
   const handleVideoGuide = () => {
     window.open(videoLink, '_blank');
     setIsOpen(false);
+  };
+
+  const handlePrint = () => {
+    console.log("Print button clicked with data:", printData);
+    if (onPrint) {
+      onPrint(printData);
+    }
   };
 
   // const handlePDFGuide = () => {
@@ -94,7 +110,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
           <button
             className={`flex items-center ${
               location.pathname === "/history"
-                ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-600 border-blue-800"
+                ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-600"
                 : "text-gray-600 hover:text-blue-600 dark:text-gray-400 border-blue-800"
             }`}
             // onClick={() => navigate("/history")}
@@ -147,6 +163,7 @@ const Header = ({ docType, pdfLink, videoLink }) => {
           </button>
 
           <button
+            onClick={handlePrint}
             className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faPrint} className="mr-1" />
