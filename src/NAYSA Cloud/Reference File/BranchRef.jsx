@@ -4,12 +4,19 @@ import Swal from 'sweetalert2';
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faMagnifyingGlass, faTrashAlt, faPlus,faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faMagnifyingGlass, faTrashAlt, faPlus,faMinus,faTrash, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { faList, faPen, faSave, faUndo, faPrint } from "@fortawesome/free-solid-svg-icons";
 
 // Global
 import { useReset } from "../Components/ResetContext";
 import { reftables } from '@/NAYSA Cloud/Global/reftable';
+
+// Exports
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+// import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
 
 const BranchRef = () => {
 
@@ -17,7 +24,7 @@ const BranchRef = () => {
   const docType = 'Branch'; 
   const documentTitle = reftables[docType] || 'Transaction';
 
-  const [isEditing, setIsEditing] = useState(false); // Controls if inputs are editable
+  const [isEditing, setIsEditing] = useState(true); // Controls if inputs are editable
   
   const [branches, setBranches] = useState([]);
   const [branchCode, setBranchCode] = useState('');
@@ -36,6 +43,7 @@ const BranchRef = () => {
   const [active, setActive] = useState('');
   const [saving, setSaving] = useState(false); // Initializes saving state
   const { setOnSave, setOnReset } = useReset();
+  const [isOpen, setIsOpen] = useState(false);
 
   const fetchBranches = async () => {
     try {
@@ -144,6 +152,123 @@ const handleSaveBranch = async () => {
   }
 };
 
+const handleDeleteBranch = (index) => {
+  const updatedRows = [...branches];
+  updatedRows.splice(index, 1);
+  setBranches(updatedRows); // assuming you're using useState
+};
+
+const handleExport = (type) => {
+  // console.log(branches);
+
+
+  if (!branches.length) {
+    console.error("No data to export!");
+    return;
+  }
+
+  const headerStyle = {
+    font: { bold: true, color: { rgb: "FFFFFF" } }, // Bold font and white text color
+    fill: { fgColor: { rgb: "0000FF" } }, // Blue background color
+    alignment: { horizontal: "center", vertical: "center" }, // Centered text alignment
+};
+
+  const headers = [
+    
+    // { v: "Branch Code", s: headerStyle },  // Apply header style
+    // { v: "Branch Name", s: headerStyle },  // Apply header style
+    // { v: "Branch Type", s: headerStyle },  // Apply header style
+    // { v: "Branch Address 1", s: headerStyle },  // Apply header style
+    // { v: "Branch Address 2", s: headerStyle },  // Apply header style
+    // { v: "Branch Address 3", s: headerStyle },  // Apply header style
+    // { v: "Branch TIN", s: headerStyle },  // Apply header style
+    // { v: "Telephone No", s: headerStyle },  // Apply header style
+    // { v: "Fax No", s: headerStyle },  // Apply header style
+    // { v: "Zip Code", s: headerStyle },  // Apply header style
+    // { v: "Active", s: headerStyle },  // Apply header style
+
+    "Branch Code",
+    "Branch Name",
+    "Branch Type",
+    "Branch Address 1",
+    "Branch Address 2",
+    "Branch Address 3",
+    "Branch TIN",
+    "Telephone No",
+    "Fax No",
+    "Zip Code",
+    "Active"
+  ];
+
+  // const headers = branches.length > 0 ? Object.keys(branches[0]) : [];
+
+  const rows = branches.map(branch => [
+    branch.branchCode || "",
+    branch.branchName || "",
+    branch.branchType || "",
+    branch.branchAddr1 || "",
+    branch.branchAddr2 || "",
+    branch.branchAddr3 || "",
+    branch.country || "",
+    branch.branchTin || "",
+    branch.telNo || "",
+    branch.faxNo || "",
+    branch.zipCode || "",
+    branch.active || "",
+  ]);
+
+  if (type === 'csv' || type === 'excel') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    XLSX.utils.book_append_sheet(wb, ws, "Branches");
+
+    if (type === 'csv') {
+      XLSX.writeFile(wb, "branches.csv", { bookType: 'csv' });
+    } else {
+      XLSX.writeFile(wb, "branches.xlsx", { bookType: 'xlsx' });
+    }
+  } else if (type === 'pdf') {
+    const doc = new jsPDF({
+      orientation: 'landscape',  // <- This helps wide tables
+      unit: 'pt',
+      format: 'A4'
+    });
+
+    doc.setFontSize(15);
+    doc.text("Branch Codes", 40, 40);
+
+    // doc.autoTable({
+    //   head: [headers],
+    //   body: rows,
+    //   startY: 60,
+    //   margin: { top: 50 },
+    //   styles: { fontSize: 8 },
+    //   headStyles: { fillColor: [22, 160, 133] }, // green header
+    // });
+
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 60,
+      margin: { top: 50 },
+      styles: { fontSize: 8 ,
+        textColor: [0, 0, 0], // black text
+
+      },
+      headStyles: { fillColor: [0, 200, 255]
+      },
+      alternateRowStyles: {
+        fillColor: [255, 255, 255], // Light gray for alternate rows
+      },
+      theme: 'grid'
+      , // Ensures there are grid lines around cells
+    });
+    
+    doc.save('branches.pdf');
+  }
+};
+
+
 
 const resetForm = () => {
   setBranchCode('');
@@ -160,6 +285,8 @@ const resetForm = () => {
   setFaxNo('');
   setZipCode('');
   setActive('');
+
+  fetchBranches();
 };
 
 
@@ -183,13 +310,13 @@ const resetForm = () => {
                 
                   {/* Submit Button */}
                   <div className="flex gap-2 justify-center flex-row">
-                    <button
+                    {/* <button
                       onClick={() => setIsEditing(true)}
                       className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-4"
                     >
                       <FontAwesomeIcon icon={faPlus} />
                       Add
-                    </button>
+                    </button> */}
         
                     <button
                       onClick={handleSaveBranch}
@@ -210,13 +337,45 @@ const resetForm = () => {
                     </button>
         
                     <button
-                      onClick={resetForm}
+                      onClick={handleExport}
                       className="bg-green-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-green-700 text-sm md:text-base md:px-4"
-                      disabled={!isEditing}
+                      // disabled={!isEditing}
                     >
                       <FontAwesomeIcon icon={faPrint} />
                       Export
                     </button>
+                    <button
+                                onClick={() => setIsOpen(!isOpen)}
+                                className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-2"
+                              >
+                                <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
+                                {/* Guide */}
+                              </button>
+
+                    <button
+    onClick={() => handleExport('csv')}
+    className="bg-green-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-green-700 text-sm md:text-base md:px-4"
+  >
+    <FontAwesomeIcon icon={faPrint} />
+    Export CSV
+  </button>
+
+  <button
+    onClick={() => handleExport('excel')}
+    className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm md:text-base md:px-4"
+  >
+    <FontAwesomeIcon icon={faPrint} />
+    Export Excel
+  </button>
+
+  <button
+    onClick={() => handleExport('pdf')}
+    className="bg-red-600 text-white px-3 py-2 rounded flex items-center gap-2 hover:bg-red-700 text-sm md:text-base md:px-4"
+  >
+    <FontAwesomeIcon icon={faPrint} />
+    Export PDF
+  </button>
+
                   </div>
         
         
@@ -348,7 +507,8 @@ const resetForm = () => {
                       : 'bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   
-                  // value={""}
+                  // value={"Main"}
+                  defaultValue={'M'}
                   onChange={(e) => setMain(e.target.value)}
                   disabled={!isEditing}
                 >
@@ -649,6 +809,8 @@ className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 trans
                       { key: "zipCode", label: "Zip Code" },
                       { key: "main", label: "Main" },
                       { key: "active", label: "Active" },
+                      { key: "edit", label: "Edit" },
+                      { key: "delete", label: "Delete" },
                     ].map(({ key, label }) => (
                       <th
                         key={key}
@@ -674,6 +836,24 @@ className={`absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 trans
         <td className="global-ref-td-ui">{branch.faxNo || "-"}</td>
         <td className="global-ref-td-ui">{branch.zipCode || "-"}</td>
         <td className="global-ref-td-ui">{branch.active}</td>
+        <td className="global-ref-td-ui text-center sticky right-0">
+                      <button
+                        className="global-ref-td-button-edit-ui"
+                        onClick={() => handleDeleteRow(index)}
+                        >
+                          {/* Delete                  */}
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+        </td>
+        <td className="global-ref-td-ui text-center sticky right-0">
+                      <button
+                        className="global-ref-td-button-delete-ui"
+                        onClick={() => handleDeleteBranch(index)}
+                        >
+                          {/* Delete                  */}
+                          <FontAwesomeIcon icon={faTrashAlt} />
+                        </button>
+        </td>
       </tr>
     ))
   ) : (
