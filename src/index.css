@@ -107,7 +107,7 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-2 mb-6
+    @apply bg-white shadow-md rounded-lg p-2 mb-2 mt-16
     dark:bg-gray-800;
   }
 
@@ -298,7 +298,7 @@ body {
     dark:bg-black;
   }
 
-  .global-tran-tab-div-ui {
+  .global-ref-tab-div-ui {
     @apply mt-6 bg-white p-4 sm:p-6 shadow-md rounded-lg
     dark:bg-gray-800;
   }
@@ -350,7 +350,7 @@ body {
   }
 
   .global-ref-td-ui {
-    @apply border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal p-2
+    @apply border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal px-2 py-1
     dark:text-white;
   }
 
@@ -358,14 +358,14 @@ body {
     @apply h-4 bg-transparent focus:outline-none focus:ring-0 whitespace-normal;
   }
 
-  .global-ref-td-button-add-ui {
+  .global-ref-td-button-edit-ui {
     @apply bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]
-    dark:bg-black dark:hover:bg-blue-900;
+    dark:bg-blue-800 dark:hover:bg-blue-900;
   }
 
   .global-ref-td-button-delete-ui {
     @apply bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]
-    dark:bg-black dark:hover:bg-red-900;
+    dark:bg-red-800 dark:hover:bg-red-900;
   }
 
 
@@ -406,26 +406,49 @@ body {
 .global-ref-textbox-button-search-ui {
   @apply text-white rounded-r-lg flex items-center justify-center focus:outline-none;
 }
-  
+
 .global-ref-floating-label {
   @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
-  bg-gray-100 px-2 text-sm text-gray-600 transition-all 
-  peer-placeholder-shown:top-1/2 
-  peer-placeholder-shown:-translate-y-1/2 
-  peer-placeholder-shown:scale-100 
-  peer-focus:top-2 
-  peer-focus:-translate-y-4 
-  peer-focus:scale-75 
-  peer-focus:text-blue-600
+                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    peer-placeholder-shown:top-1/2 
+                    peer-placeholder-shown:-translate-y-1/2 
+                    peer-placeholder-shown:scale-100 
+                    peer-focus:top-2 
+                    peer-focus:-translate-y-4 
+                    peer-focus:scale-75 
+                    peer-focus:text-blue-600
+                    dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
+}
+
+.global-ref-label-enabled {
+  @apply bg-white text-gray-800
           dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
 }
+
+.global-ref-label-disabled {
+  @apply bg-blue-100 text-gray-500
+          dark:bg-gray-600 dark:text-gray-500 dark:peer-focus:text-white;
+}
+
+.global-ref-textbox-enabled {
+  @apply bg-white border border-gray-400 focus:border-blue-600 text-black
+          dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
+}
+
+.global-ref-textbox-disabled {
+  @apply bg-blue-100 border border-gray-300 text-gray-500 cursor-not-allowed
+          dark:bg-gray-600 dark:text-gray-500 dark:peer-focus:text-white;
+}
+
 
 
 .global-ref-asterisk-ui {
   @apply text-red-600 font-extrabold;
 }
 
-
+.global-ref-norecords-ui {
+  @apply px-4 py-2 border text-center text-sm dark:text-white;
+}
 
 
   /* MODAL / LOOKUP */
