@@ -7,7 +7,7 @@ import {fetchData} from '../Configuration/BaseURL';
 const VATLookupModal = ({ isOpen, onClose, customParam }) => {
   const [vat, setVATs] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [filters, setFilters] = useState({ vatCode: '', vatName: '' });
+  const [filters, setFilters] = useState({ vatCode: '', vatName: '', acctCode: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -22,13 +22,20 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
         }),
       };
 
-
       fetchData("/lookupVat", params)
       .then((result) => {
+        console.log("Raw fetchData result:", result);
         if (result.success) {
-          const atcData = JSON.parse(result.data[0].result);
-          setVATs(atcData);
-          setFiltered(atcData);
+          const vatData = JSON.parse(result.data[0].result);
+
+          console.log("Parsed VAT data:", vatData);
+
+          const enrichedData = vatData.map(item => ({
+  ...item,
+  acctCode: item.acct_code || ''  // <-- match API field
+}));
+          setVATs(enrichedData);
+          setFiltered(enrichedData);
         } else {
           alert(result.message || "Failed to fetch VAT");
         }
@@ -40,7 +47,7 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
       .finally(() => {
         setLoading(false);
       });
-  }
+    }
   }, [isOpen]);
   
 
@@ -105,7 +112,7 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
                       onChange={(e) => handleFilterChange(e, 'vatName')}
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
-                  </th>             
+                  </th>               
                   <th className="border px-4 py-1"></th>
                 </tr>
               </thead>

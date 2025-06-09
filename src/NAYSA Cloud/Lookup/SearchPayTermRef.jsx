@@ -87,7 +87,7 @@ const PayTermLookupModal = ({ isOpen, onClose }) => {
                 <tr>
                   <th className="px-2 py-2 border">Payment Term</th>
                   <th className="px-10 py-2 border">Description</th>
-                  <th className="px-4 py-2 border text-right">Rate</th>
+                  <th className="px-4 py-2 border text-right">Days</th>
                   <th className="px-4 py-2 border">Action</th>
                 </tr>
                 <tr className="bg-white">

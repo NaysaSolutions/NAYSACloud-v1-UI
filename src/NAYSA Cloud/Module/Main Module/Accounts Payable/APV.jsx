@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -57,6 +58,8 @@ const APV = () => {
     statusColor = 'global-tran-stat-text-closed-ui';
   }
 
+  const [totalDebit, setTotalDebit] = useState(0);
+  const [totalCredit, setTotalCredit] = useState(0);
   const [detailRows, setDetailRows] = useState([]);
   const [detailRowsGL, setDetailRowsGL] = useState([]);
   const [isFetchDisabled, setIsFetchDisabled] = useState(false); 
@@ -75,6 +78,8 @@ const APV = () => {
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencyName, setCurrencyName] = useState("Philippine Peso");
   const [currencyRate, setCurrencyRate] = useState("1.000000");
+  const [apTypes, setApTypes] = useState([]);
+const [selectedApType, setSelectedApType] = useState("Purchases"); // default empty or first value
   const [apAccountName, setApAccountName] = useState("");
   const [apAccountCode, setApAccountCode] = useState("");
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
@@ -90,14 +95,25 @@ const APV = () => {
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);
   const [isResetDisabled, setIsResetDisabled] = useState(false);
   const [header, setHeader] = useState({
-    apv_date: "",
-  });
+  apv_date: new Date().toISOString().split('T')[0],
+  remarks: "" // Add this line to include remarks in the header
+});
   const updateTotalsDisplay = (invoice, vat, atc, payable) => {
   document.getElementById('totalInvoiceAmount').textContent = invoice.toFixed(2);
   document.getElementById('totalVATAmount').textContent = vat.toFixed(2);
   document.getElementById('totalATCAmount').textContent = atc.toFixed(2);
   document.getElementById('totalPayableAmount').textContent = payable.toFixed(2);
 };
+
+
+useEffect(() => {
+  const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
+  const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
+
+  setTotalDebit(debitSum);
+  setTotalCredit(creditSum);
+}, [detailRowsGL]);
+
 
   useEffect(() => {
 
@@ -145,110 +161,183 @@ const APV = () => {
 
  const handleGenerateGLEntries = async () => {
   setIsLoading(true);
+
   try {
-    // Prepare the data payload for the GL generation API
     const glData = {
       branchcode: branchCode,
-      apvNo: documentNo,
-      apvId: "APV",
+      apvNo: documentNo || "",
+      apvId: documentID || "APV",
       apvDate: header.apv_date,
-      tranType: "",
-      tranMode: "",
+      apvtranType: selectedApType || "APV01",
+      tranMode: "M",
       apAcct: apAccountCode,
       vendCode: vendCode,
       vendName: vendName?.vendName || "",
-      refapvNo: "",
-      acctCode: "",
-      VEND_TYPE: "REG", 
-      currCode: currencyCode,
-      currRate: parseFloat(currencyRate), 
+      refapvNo1: "",
+      refapvNo2: "",
+      acctCode: apAccountCode,
+      currCode: currencyCode || "PHP",
+      currRate: parseFloat(currencyRate) || 1,
       remarks: header.remarks || "",
-      userCode: "NSI", 
-      dateStamp: new Date().toLocaleDateString('en-US'), // Format as MM/DD/YYYY
-      timeStamp: "", 
-      cutOff: "",   
-      result: "",   
+      userCode: "NSI",
+      dateStamp: new Date().toLocaleDateString('en-US'),
+      timeStamp: "",
+      cutOff: header.apv_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
       tranDocId: "APV",
-      tranDocExist: 1,
+      tranDocExist: documentNo ? 1 : 0,
       dt1: detailRows.map((row, index) => ({
-        line_no: String(index + 1).padStart(3, '0'),
-        inv_type: row.invType || "FG",
-        po_no: row.poNo || "",
-        rr_no: row.rrNo || "",
-        jo_no: "",
-        svo_no: "",
-        si_no: row.siNo || "",
-        si_date: row.siDate || "",
+        lnNo: String(index + 1).padStart(3, '0'),
+        invType: row.invType || "FG",
+        poNo: row.poNo || "",
+        rrNo: row.rrNo || "",
+        joNo: "",
+        svoNo: "",
+        siNo: row.siNo || "",
+        siDate: row.siDate || header.apv_date,
         amount: parseFloat(row.amount || 0),
-        si_amount: parseFloat(row.siAmount || 0),
-        debit_acct: row.debitAcct || "",
-        vat_acct: row.vatCode || "",
-        adv_acct: "",
-        sltype_code: "",
-        sl_code: row.slCode || "",
-        sl_name: row.slName || "",
-        address1: "", 
-        address2: "", 
-        address3: "", 
-        tin: "",     
-        rc_code: row.rcCode || "",
-        vat_code: row.vatCode || "",
-        vat_amount: parseFloat(row.vatAmount || 0),
-        atc_code: row.atcCode || "",
-        atc_amount: parseFloat(row.atcAmount || 0),
-        payterm_code: row.paytermCode || "",
-        due_date: row.dueDate || "",
-        ctr_date: "",
-        advpo_no: "",
-        advpo_amount: 0,
-        advpo_atc_amount: 0,
-        remarks: "",
-        line_id: "" 
+        siAMount: parseFloat(row.siAmount || row.amount || 0),
+        debitAcct: row.debitAcct || "",
+        vatAcct: row.vatCode || "",
+        advAcct: "",
+        sltypeCode: row.sltypeCode || "",
+        slCode: row.slCode || "",
+        slName: row.slName || "",
+        address1: "",
+        address2: "",
+        address3: "",
+        tin: vendName?.tin || "",
+        rcCode: row.rcCode || "",
+        vatCode: row.vatCode || "",
+        vatAmount: parseFloat(row.vatAmount || 0),
+        atcCode: row.atcCode || "",
+        atcAmount: parseFloat(row.atcAmount || 0),
+        paytermCode: row.paytermCode || "",
+        dueDate: row.dueDate || "",
+        ctrDate: "",
+        advpoNo: "",
+        advpoAmount: 0,
+        advAtcAmount: 0,
+        remarks: row.remarks || "",
+        lineId: row.line_id || ""
       })),
       dt2: []
     };
-    
-    const payload = {
-  json_data: JSON.stringify(glData)
-};
+
+    const payload = { json_data: glData };
 
     console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
-    // Call the generate GL API
     const response = await postRequest("generateGLAPV", JSON.stringify(payload));
 
-    if (response.success) {
-      console.log("GL Entries generated successfully:", response);
-      // Optionally show success message or refresh GL entries
+    console.log("Raw response from generateGLAPV API:", response);
+
+    if (response?.status === 'success' && Array.isArray(response.data)) {
+      let glEntries;
+
+      try {
+        glEntries = JSON.parse(response.data[0].result);
+        if (!Array.isArray(glEntries)) {
+          glEntries = [glEntries];
+        }
+      } catch (parseError) {
+        console.error("Error parsing GL entries:", parseError);
+        throw new Error("Failed to parse GL entries");
+      }
+
+      const transformedEntries = glEntries.map((entry, idx) => ({
+        id: idx + 1,
+        acctCode: entry.acctCode || "",
+        rcCode: entry.rcCode || "",
+        sltypeCode: entry.sltypeCode || "",
+        slCode: entry.slCode || "",
+        particular: entry.particular || `APV ${documentNo || ''} - ${vendName?.vendName || "Vendor"}`,
+        vatCode: entry.vatCode || "",
+        vatName: entry.vatName || "",
+        atcCode: entry.atcCode || "",
+        atcName: entry.atcName || "",
+        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
+        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
+        slRefNo: entry.slrefNo || "",
+        slrefDate: entry.slrefDate || "",
+        remarks: header.remarks || "",
+        dt1Lineno: entry.dt1Lineno || ""
+      }));
+
+      setDetailRowsGL(transformedEntries);
+
+      const totalDebitValue = transformedEntries.reduce(
+        (sum, row) => sum + parseFloat(row.debit || 0),
+        0
+      );
+      const totalCreditValue = transformedEntries.reduce(
+        (sum, row) => sum + parseFloat(row.credit || 0),
+        0
+      );
+
+      setTotalDebit(totalDebitValue);
+      setTotalCredit(totalCreditValue);
+
+      return transformedEntries;
     } else {
-      console.error("Failed to generate GL entries:", response);
-      // Optionally show an error message to the user
+      console.error("🔴 API responded with failure:", response.message);
+      throw new Error(response.message || "Failed to generate GL entries");
     }
   } catch (error) {
-    console.error("Error generating GL entries:", error);
-    // Optionally show an error message to the user
+    console.error("🔴 Error in handleGenerateGLEntries:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Generation Failed',
+      text: 'Error generating GL entries: ' + error.message,
+      confirmButtonColor: '#3085d6',
+    });
+    return null;
   } finally {
     setIsLoading(false);
   }
 };
 
-  const handleSave = () => {
+
+
+  const handleSave = async () => {
+  try {
     // Basic validation
     if (!branchCode) {
-      alert("Please select a branch");
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please select a branch',
+      });
       return;
     }
-  
+
     if (!vendCode) {
-      alert("Please select a payee");
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please select a payee',
+      });
       return;
     }
-  
+
     if (detailRows.length === 0) {
-      alert("Please add at least one invoice detail");
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Please add at least one invoice detail',
+      });
       return;
     }
-  
+
+    // Check if debit and credit totals balance
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: 'Debit and Credit totals must balance',
+      });
+      return;
+    }
+
     // Generate document number if empty
     let docNoToUse = documentNo;
     let isAutoGenerated = false;
@@ -262,102 +351,143 @@ const APV = () => {
       isAutoGenerated = true;
     }
 
-    // Disable controls
+    // Disable controls during save
     setIsDocNoDisabled(true);
     setIsSaveDisabled(true);
     setIsResetDisabled(true);
-  
-    // Format the data according to the requested structure
-    const formData = { 
-    "APV": {
-      "branchcode": branchCode,
-      "apvNo": documentNo,
-      "apvId": "APV",
-      "apvDate": header.apv_date,
-      "tranType": apType, 
-      "tranMode": "",
-      "apAcct": apAccountCode,
-      "vendCode": vendCode,
-      "vendName": vendName?.vendName || "",
-      "refapvNo": "",
-      "acctCode": "",
-      "VEND_TYPE": "REG",
-      "currCode": currencyCode,
-      "currRate": currencyRate,
-      "remarks": header.remarks || "",
-      "userCode": "NSI", // Default user, can be dynamic
-      "dateStamp": new Date().toISOString(),
-      "timeStamp": "",
-      "result": "",
-      "tranDocId": "APV",
-      "tranDocExist": 1,
-      "dt1": detailRows.map((row, index) => ({
-        "line_no": String(index + 1).padStart(3, '0'),
-        "inv_type": row.invType || "FG",
-        "po_no": row.poNo || "",
-        "rr_no": row.rrNo || "",
-        "jo_no": "",
-        "svo_no": "",
-        "si_no": row.siNo || "",
-        "si_date": row.siDate || "",
-        "amount": parseFloat(row.amount || 0),
-        "si_amount": parseFloat(row.siAmount || 0),
-        "debit_acct": row.debitAcct || "",
-        "vat_acct": "PZ", 
-        "adv_acct": "",
-        "sltype_code": "",
-        "sl_code": row.slCode || "",
-        "sl_name": "",
-        "address1": "",
-        "address2": "",
-        "address3": "",
-        "tin": "",
-        "rc_code": row.rcCode || "",
-        "vat_code": row.vatCode || "",
-        "vat_amount": parseFloat(row.vatAmount || 0),
-        "atc_code": row.atcCode || "",
-        "atc_amount": parseFloat(row.atcAmount || 0),
-        "payterm_code": row.paytermCode || "",
-        "due_date": row.dueDate || "",
-        "ctr_date": "",
-        "advpo_no": "",
-        "advpo_amount": 0,
-        "advpo_atc_amount": 0,
-        "remarks": "",
-        "line_id": ""
-      })),
-      "GeneralLedger": detailRowsGL.map((row, index) => ({}))
-    }
-  };
-  
-    console.log("APV Data to be saved:", JSON.stringify(formData, null, 2));
-    
-    // Disable documentNo input if it was auto-generated
-    if (isAutoGenerated) {
-      const docNoInput = document.getElementById('currName');
-      if (docNoInput) {
-        docNoInput.disabled = true;
+
+    // Prepare the data structure for the API
+    const formData = {
+      json_data: {
+        branchCode: branchCode,
+        apvNo: docNoToUse,
+        apvId: "",
+        apvDate: header.apv_date,
+        apvtranType: selectedApType || "APV01",
+        tranMode: "M",
+        apAcct: apAccountCode,
+        vendCode: vendCode,
+        vendName: vendName?.vendName || "",
+        refapvNo1: header.refDocNo1 || "",
+        refapvNo2: header.refDocNo2 || "",
+        acctCode: apAccountCode,
+        currCode: currencyCode || "PHP",
+        currRate: parseFloat(currencyRate) || 1,
+        remarks: header.remarks || "",
+        userCode: "NSI",
+        dateStamp: new Date().toISOString(),
+        timeStamp: "",
+        cutOff: header.apv_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
+        tranDocId: "APV",
+        tranDocExist: documentNo ? 1 : 0,
+        dt1: detailRows.map((row, index) => ({
+          lnNo: String(index + 1).padStart(3, '0'),
+          invType: row.invType || "FG",
+          poNo: row.poNo || "",
+          rrNo: row.rrNo || "",
+          joNo: "",
+          svoNo: "",
+          siNo: row.siNo || "",
+          siDate: row.siDate || header.apv_date,
+          amount: parseFloat(row.amount || 0),
+          siAMount: parseFloat(row.siAmount || row.amount || 0),
+          debitAcct: row.debitAcct || "",
+          vatAcct: row.vatCode || "",
+          advAcct: "",
+          sltypeCode: row.sltypeCode || "",
+          slCode: row.slCode || vendCode || "",
+          slName: row.slName || vendName?.vendName || "",
+          address1: "",
+          address2: "",
+          address3: "",
+          tin: vendName?.tin || "",
+          rcCode: row.rcCode || "",
+          vatCode: row.vatCode || "",
+          vatAmount: parseFloat(row.vatAmount || 0),
+          atcCode: row.atcCode || "",
+          atcAmount: parseFloat(row.atcAmount || 0),
+          paytermCode: row.paytermCode || "",
+          dueDate: row.dueDate || "",
+          ctrDate: "",
+          advpoNo: "",
+          advpoAmount: 0,
+          advAtcAmount: 0,
+          remarks: row.remarks || "",
+          lineId: row.line_id || ""
+        })),
+        dt2: detailRowsGL.map((entry, index) => ({
+          recNo: String(index + 1).padStart(3, '0'),
+          acctCode: entry.acctCode || "",
+          rcCode: entry.rcCode || "",
+          slCode: entry.slCode || "",
+          particular: entry.particular || `APV ${docNoToUse} - ${vendName?.vendName || "Vendor"}`,
+          vatCode: entry.vatCode || "",
+          vatName: entry.vatName || "",
+          atcCode: entry.atcCode || "",
+          atcName: entry.atcName || "",
+          debit: parseFloat(entry.debit || 0),
+          credit: parseFloat(entry.credit || 0),
+          slrefNo: entry.slRefNo || "",
+          slrefDate: entry.slrefDate || "",
+          remarks: header.remarks || "",
+          dt1Lineno: entry.dt1Lineno || ""
+        }))
       }
+    };
+
+    console.log("Sending data to API:", JSON.stringify(formData, null, 2));
+
+    // Call the API
+    const response = await postRequest("upsertAPV", JSON.stringify(formData));
+
+    if (response?.status === 'success') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'APV saved successfully!',
+      });
+
+      // If document number was auto-generated, disable editing
+    
+      // Update document ID if returned from server
+      if (response.data?.documentID) {
+        setdocumentID(response.data.documentID);
+        setdocumentNo(response.data.documentNo);
+      }
+    } else {
+      throw new Error(response?.message || 'Failed to save APV');
     }
-  
-    return formData;
-  };
+  } catch (error) {
+    console.error("Error saving APV:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Save Failed',
+      text: error.message || 'An error occurred while saving the APV',
+    });
+  } finally {
+    // Re-enable controls
+    setIsSaveDisabled(false);
+    setIsResetDisabled(false);
+  }
+};
 
   const getDocumentControl = async () => {
-    try {
-      const response = await fetchData("getHSDoc", { DOC_ID: "APV" });
-      if (response.success)  {
-        const result = JSON.parse(response.data[0].result);
+  try {
+    const response = await fetchData("getHSDoc", { DOC_ID: "APV" });
+    if (response.success) {
+      const result = JSON.parse(response.data[0].result);
 
-          setdocumentName(result[0]?.docName);
-          setdocumentSeries(result[0]?.docName);
-          setdocumentDocLen(result[0]?.docName);
-     
-      }
-    } catch (err) {
-      console.error("Document Control API error:", err);
+      setdocumentName(result[0]?.docName);
+      setdocumentSeries(result[0]?.docName);
+      setdocumentDocLen(result[0]?.docName);
+      
+      // Now fetch the AP Types
+      await fetchApTypes();
     }
+  } catch (err) {
+    console.error("Document Control API error:", err);
   }
+}
 
 
 
@@ -384,55 +514,117 @@ const APV = () => {
     }
   }
 
+  const fetchApTypes = async () => {
+  try {
+    const payload = {
+      json_data: {
+        dropdownColumn: "APVTRAN_TYPE",
+        docCode: "APV"
+      }
+    };
+    
+    console.log("Fetching AP Types with payload:", payload);
+    
+    const response = await postRequest("getHSDropdown", JSON.stringify(payload));
+    
+    console.log("AP Types API response:", response);
+    
+    if (response.success) {
+      const result = JSON.parse(response.data[0].result);
+      console.log("Parsed AP Types:", result);
+      
+      setApTypes(result);
+      
+      // Set default value to first option if available
+      if (result.length > 0) {
+        setSelectedApType(result[0].DROPDOWN_CODE);
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching AP Types:", error);
+  }
+};
+
+// const handleAPTypeChange = (event) => {
+//   const selectedType = event.target.value;
+//   setSelectedApType(selectedType);
+//   console.log("Selected AP Type:", selectedType);
+//   switch (selectedType) {
+//     case "APV01"://purchases
+//       //hide sl type, sl name, address, tin
+
+//     case "APV02":// non purchases
+//       //hide whole invoice detail
+
+//     case "APV03": //advances
+//       //hide sl type, sl name, address, tin 
+//       // show advances acct
+
+//       case "APV05"://reimbursements
+//       // hide type to PO No
+//       //display sl type, sl name, address, tin
+
+//       case "APV06": //liquidation
+//       // hide type to PO No
+//       //display sl type, sl name, address, tin
+
+// }
+
+
 
   const handleAddRow = async () => {
-    try {
-      const items = await handleFetchDetail(vendCode);
-      console.log("Fetched items:", items); // check this in devtools
-  
-      // Fix: if it's not an array, wrap it in one
-      const itemList = Array.isArray(items) ? items : [items];
+  try {
+    const items = await handleFetchDetail(vendCode);
+    console.log("Fetched items:", items);
 
-  
-      const newRows = itemList.map(item => ({
+    const itemList = Array.isArray(items) ? items : [items];
+
+    const newRows = await Promise.all(itemList.map(async (item) => {
+      const amount = parseFloat(item.origAmount || 0);
+      const vatRate = await getVatRate(item.vatCode);
+      
+      return {
         lnNo: "",
         invType: "FG",
         rrNo: "",
         poNo: "",
         siNo: "",
         siDate: new Date().toISOString().split('T')[0],
-        amount: item.origAmount || "0.00",
-        currency: vendName?.currCode || "", 
-        siAmount: "0.00",
+        amount: amount.toFixed(2), // Original amount
+        currency: vendName?.currCode || "",
+        siAmount: amount.toFixed(2), // Invoice amount = original amount
         debitAcct: "",
         rcCode: "",
         rcName: "",
-        slCode: "",
+        sltypeCode: item.sltypeCode || "",
+        slCode: vendCode || "",
+        slName: vendName?.vendName || "",
         vatCode: item.vatCode || "",
-        vatName:  item.vatName,
-        vatAmount: "0.00",
+        vatName: item.vatName,
+        vatAmount: (amount * vatRate).toFixed(2), // Calculate VAT
         atcCode: item.atcCode || "",
         atcName: item.atcName,
         atcAmount: "0.00",
         paytermCode: item.paytermCode,
         dueDate: new Date().toISOString().split('T')[0],
-      }));
-  
-      setDetailRows(prev => [...prev, ...newRows]);
-  
-      setTimeout(() => {
-        // Fix the selector by escaping the square brackets
-        const tableContainer = document.querySelector('.max-h-\\[430px\\]');
-        if (tableContainer) {
-          tableContainer.scrollTop = tableContainer.scrollHeight;
-        }
-      }, 100);
-  
-    } catch (error) {
-      console.error("Error adding new row:", error);
-      alert("Failed to add new row. Please select a Payee first.");
-    }
-  };
+      };
+    }));
+
+    setDetailRows(prev => [...prev, ...newRows]);
+    updateTotals([...detailRows, ...newRows]);
+
+    setTimeout(() => {
+      const tableContainer = document.querySelector('.max-h-\\[430px\\]');
+      if (tableContainer) {
+        tableContainer.scrollTop = tableContainer.scrollHeight;
+      }
+    }, 100);
+
+  } catch (error) {
+    console.error("Error adding new row:", error);
+    alert("Failed to add new row. Please select a Payee first.");
+  }
+};
 
   const handleReset = () => {
     console.log("Resetting APV form");
@@ -473,7 +665,7 @@ const handleAddRowGL = () => {
       debit: "0.00",
       credit: "0.00",
       slRefNo: "",
-      remarks: "",
+      remarks: header.remarks || "",
     }
   ]);
 };
@@ -544,7 +736,7 @@ const handleDeleteRowGL = (index) => {
         },
       };
   
-      const vendResponse = await postRequest("addAPVDetail", JSON.stringify(vendPayload));
+      const vendResponse = await postRequest("addPayeeDetail", JSON.stringify(vendPayload));
       const rawResult = vendResponse.data[0]?.result;
   
       // Parse the string result into an actual JS object
@@ -671,21 +863,31 @@ const handleDeleteRowGL = (index) => {
 
   const handleSelectAPAccount = async (accountCode) => {
     if (accountCode) {
-      try {
-        const coaResponse = await axios.post("http://127.0.0.1:8000/api/getCOA", { 
-          ACCT_CODE: accountCode 
-        });
-        
-        if (coaResponse.data.success) {
-          const coaData = JSON.parse(coaResponse.data.data[0].result);
-          setApAccountName(coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "");
-          setApAccountCode(coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "");
+    try {
+      const coaResponse = await axios.post("http://127.0.0.1:8000/api/getCOA", { 
+        ACCT_CODE: accountCode 
+      });
+      
+      if (coaResponse.data.success) {
+        const coaData = JSON.parse(coaResponse.data.data[0].result);
+        setApAccountName(coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "");
+        setApAccountCode(coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "");
+        // Add REC_RC to the row data if available
+        const updatedRows = [...detailRows];
+        if (selectedRowIndex !== null) {
+          updatedRows[selectedRowIndex] = {
+            ...updatedRows[selectedRowIndex],
+            debitAcct: coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "",
+            REC_RC: coaData[0]?.REC_RC || 'N' // Default to 'N' if not specified
+          };
+          setDetailRows(updatedRows);
         }
-      } catch (error) {
-        console.error("COA API error:", error);
       }
+    } catch (error) {
+      console.error("COA API error:", error);
     }
-  };
+  }
+};
 
   // SL Code Lookup Handler
 const handleSlLookup = async (slCode) => {
@@ -735,50 +937,57 @@ const handlePaytermLookup = async (paytermCode) => {
 };
 
   const handleClosePayeeModal = async (selectedData) => {
-    if (!selectedData) {
-      setpayeeModalOpen(false);
-      return;
-    }
-  
+  if (!selectedData) {
     setpayeeModalOpen(false);
-    setIsLoading(true);
-  
-    try {
-      // Set basic payee info first
-      const payeeDetails = {
-        vendCode: selectedData?.vendCode || '',
-        vendName: selectedData?.vendName || '',
-        currCode: selectedData?.currCode || '', 
-        acctCode: selectedData?.acctCode || ''   
-      };
-      setvendName(payeeDetails);
+    return;
+  }
 
-      setvendCode(selectedData.vendCode)
-  
-      if (!selectedData.currCode) {
-        const vendPayload = { VEND_CODE: selectedData.vendCode };
-        const vendResponse = await axios.post("http://127.0.0.1:8000/api/getVendMast", vendPayload);
-  
-        if (vendResponse.data.success) {
-          const vendData = JSON.parse(vendResponse.data.data[0].result);
-          payeeDetails.currCode = vendData[0]?.currCode;
-          payeeDetails.acctCode = vendData[0]?.acctCode;
-          setvendName(payeeDetails);
-        }
+  setpayeeModalOpen(false);
+  setIsLoading(true);
+
+  try {
+    // Set basic payee info
+    const payeeDetails = {
+      vendCode: selectedData?.vendCode || '',
+      vendName: selectedData?.vendName || '',
+      currCode: selectedData?.currCode || '', 
+      acctCode: selectedData?.acctCode || ''   
+    };
+    setvendName(payeeDetails);
+    setvendCode(selectedData.vendCode);
+
+    // Update all existing detail rows with the payee's SL Code
+    const updatedRows = detailRows.map(row => ({
+      ...row,
+      slCode: selectedData.vendCode, // Set SL Code to payee code
+      slName: selectedData.vendName  // Set SL Name to payee name
+    }));
+    setDetailRows(updatedRows);
+
+    // Rest of your existing code...
+    if (!selectedData.currCode) {
+      const vendPayload = { VEND_CODE: selectedData.vendCode };
+      const vendResponse = await axios.post("http://127.0.0.1:8000/api/getVendMast", vendPayload);
+
+      if (vendResponse.data.success) {
+        const vendData = JSON.parse(vendResponse.data.data[0].result);
+        payeeDetails.currCode = vendData[0]?.currCode;
+        payeeDetails.acctCode = vendData[0]?.acctCode;
+        setvendName(payeeDetails);
       }
-  
-      // Update currency and account
-      await Promise.all([
-        handleSelectCurrency(payeeDetails.currCode),
-        handleSelectAPAccount(payeeDetails.acctCode)
-      ]);
-  
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    await Promise.all([
+      handleSelectCurrency(payeeDetails.currCode),
+      handleSelectAPAccount(payeeDetails.acctCode)
+    ]);
+
+  } catch (error) {
+    console.error("Error:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const updateTotals = (rows) => {
   let totalInvoice = 0;
@@ -787,71 +996,171 @@ const handlePaytermLookup = async (paytermCode) => {
   let totalPayable = 0;
 
   rows.forEach(row => {
-    const siAmount = parseFloat(row.siAmount) || 0;
-    const vatAmount = parseFloat(row.vatAmount) || 0;
-    const atcAmount = parseFloat(row.atcAmount) || 0;
+    const invoiceAmount = parseFloat(row.siAmount || row.amount || 0) || 0;
+    const vatAmount = parseFloat(row.vatAmount || 0) || 0;
+    const atcAmount = parseFloat(row.atcAmount || 0) || 0;
     
-    totalInvoice += siAmount; // Already includes VAT
-    totalVAT += vatAmount;   // Just for display (not added again)
-    totalATC += atcAmount;   // Will be deducted
+    totalInvoice += invoiceAmount;
+    totalVAT += vatAmount;
+    totalATC += atcAmount;
   });
 
-  // Total Payable = Invoice (includes VAT) - ATC
+  // Total Payable = Invoice Amount + VAT - ATC
   totalPayable = totalInvoice - totalATC;
 
   // Update the totals display
   updateTotalsDisplay(totalInvoice, totalVAT, totalATC, totalPayable);
 };
 
-  const handleDetailChange = (index, field, value) => {
+  const getVatRate = async (vatCode) => {
+  if (!vatCode) return 0;
+
+  try {
+    const response = await fetchData("getVat", { VAT_CODE: vatCode });
+
+    if (response.success) {
+      const vatData = JSON.parse(response.data[0].result);
+
+      console.log("vatData[0] full object:", vatData[0]);
+
+      // Try to get vatRate property (not rate)
+      const rate = vatData[0]?.vatRate;
+
+      console.log("Extracted rate (vatRate):", rate);
+
+      if (typeof rate === 'number') {
+        return rate;
+      }
+
+      const parsedRate = parseFloat(rate);
+      if (!isNaN(parsedRate)) {
+        return parsedRate;
+      }
+
+      console.warn("Unrecognized VAT rate format, defaulting to 0");
+      return 0;
+    }
+
+    console.warn("getVat API failed, defaulting to 0");
+    return 0;
+  } catch (error) {
+    console.error("Error fetching VAT rate:", error);
+    return 0;
+  }
+};
+
+const handleDetailChange = async (index, field, value, runCalculations = true) => {
   const updatedRows = [...detailRows];
-  
-  // Update the changed field
+
   updatedRows[index] = {
     ...updatedRows[index],
-    [field]: value
+    [field]: value,
   };
 
-  // If amount changes, recalculate VAT & ATC
+  // Always update siAmount when amount changes, even if not calculating yet
   if (field === 'amount') {
-    const amount = parseFloat(value) || 0;
-    
-    // VAT is already included, so siAmount = amount
-    updatedRows[index].siAmount = amount.toFixed(2);
-    
-    // Calculate VAT (12% of amount, but already included)
-    updatedRows[index].vatAmount = (amount * 0.12).toFixed(2);
-    
-    // Calculate ATC (2% of amount, to be deducted later)
-    updatedRows[index].atcAmount = (amount * 0.02).toFixed(2);
+    updatedRows[index].siAmount = value;
+  }
+
+  if (runCalculations) {
+    // Parse amount once for calculations
+    const amount = parseFloat(updatedRows[index].amount) || 0;
+
+    // Due Date recalculation (if you also want to do it on amount change)
+    if (field === 'amount' || field === 'daysDue') {
+      const daysDueNum = parseInt(updatedRows[index].daysDue, 10);
+      if (!isNaN(daysDueNum) && header.apv_date) {
+        const newDueDate = calculateDueDate(header.apv_date, daysDueNum);
+        updatedRows[index].dueDate = newDueDate;
+      } else {
+        updatedRows[index].dueDate = '';
+      }
+    }
+
+    // VAT recalculation
+    if (field === 'amount' || field === 'vatCode') {
+      const vatCode = updatedRows[index].vatCode;
+      const vatRate = vatCode ? await getVatRate(vatCode) : 0;
+      const vatRateDecimal = vatRate / 100;
+      const baseAmount = amount / (1 + vatRateDecimal);
+      const vatAmount = amount - baseAmount;
+      updatedRows[index].vatAmount = vatAmount.toFixed(2);
+    }
+
+    // ATC recalculation
+    if (field === 'amount' || field === 'atcCode') {
+      const atcCode = updatedRows[index].atcCode;
+      let atcAmount = 0;
+      if (atcCode) {
+        const atcRate = await getAtcRate(atcCode);
+        atcAmount = amount * (atcRate / 100);
+      }
+      updatedRows[index].atcAmount = atcAmount.toFixed(2);
+    }
   }
 
   setDetailRows(updatedRows);
-  updateTotals(updatedRows); // Update all totals
+  updateTotals(updatedRows);
 };
 
-const getVatRate = (vatCode) => {
-  // Default VAT rate is 12% unless specified otherwise
-  return 0.12; // 12%
+
+
+const getAtcRate = async (atcCode) => {
+  if (!atcCode) return 0;
+
+  try {
+    const response = await fetchData("getATC", { ATC_CODE: atcCode });
+
+    if (response.success) {
+      const atcData = JSON.parse(response.data[0].result);
+
+      const rate = atcData[0]?.atcRate;
+      console.log("getAtcRate: Raw rate fetched from API:", rate);
+
+      const parsedRate = parseFloat(rate);
+      console.log("getAtcRate: Parsed numeric rate:", parsedRate);
+
+      if (!isNaN(parsedRate)) {
+        return parsedRate;
+      }
+
+      console.warn("Unrecognized ATC rate format, defaulting to 0");
+      return 0;
+    }
+
+    console.warn("getATC API failed, defaulting to 0");
+    return 0;
+  } catch (error) {
+    console.error("Error fetching ATC rate:", error);
+    return 0;
+  }
 };
 
-const getAtcRate = (atcCode) => {
-  // Default ATC rate is 2% unless specified otherwise
-  return 0.02; // 2%
-};
 
-// SL Code Lookup
+
+
+// SL Code double-click handler
 const handleSlDoubleClick = (index) => {
-  setSelectedRowIndex(index);
-  setShowSlModal(true);
+  const currentValue = detailRows[index]?.slCode;
+  const updatedRows = [...detailRows];
+  
+  if (currentValue) {
+    updatedRows[index] = {
+      ...updatedRows[index],
+      slCode: vendCode || "", // Reset to payee code if available
+      slName: vendName?.vendName || "" // Reset to payee name if available
+    };
+    setDetailRows(updatedRows);
+  } else {
+    setSelectedRowIndex(index);
+    setShowSlModal(true);
+  }
 };
 
 // For SL Code Modal
 const handleCloseSlModal = async (selectedSl) => {
   if (selectedSl && selectedRowIndex !== null) {
-    // If you need additional data from the API
     const fullSlData = await handleSlLookup(selectedSl.slCode);
-    
     const updatedRows = [...detailRows];
     updatedRows[selectedRowIndex] = {
       ...updatedRows[selectedRowIndex],
@@ -864,68 +1173,60 @@ const handleCloseSlModal = async (selectedSl) => {
   setSelectedRowIndex(null);
 };
 
-// For Payment Terms Modal
-// For Payment Terms Modal
 const handleClosePaytermModal = (selectedPayterm) => {
   if (selectedPayterm && selectedRowIndex !== null) {
-    const updatedRows = [...detailRows];
-    const daysDue = parseInt(selectedPayterm.daysDue || selectedPayterm.rate || 0); // Use rate if daysDue doesn't exist
-    
-    // Calculate due date: invoice date + daysDue
-    const dueDate = calculateDueDate(header.apv_date, daysDue);
+    const daysDue = parseInt(selectedPayterm.daysDue || 0);
+    console.log("Selected payment term daysDue:", daysDue);
 
+    // Use today's date instead of header.apv_date
+    const today = new Date().toISOString().split("T")[0]; // format YYYY-MM-DD
+
+    const dueDate = calculateDueDate(today, daysDue);
+
+    const updatedRows = [...detailRows];
     updatedRows[selectedRowIndex] = {
       ...updatedRows[selectedRowIndex],
       paytermCode: selectedPayterm.paytermCode,
       paytermName: selectedPayterm.paytermName,
       daysDue: daysDue,
-      dueDate: dueDate // Auto-set based on calculation
+      dueDate: dueDate
     };
 
     setDetailRows(updatedRows);
-    console.log("Updated dueDate:", dueDate); // Debug log
   }
   setShowPaytermModal(false);
-  setSelectedRowIndex(null); // Make sure to reset this
+  setSelectedRowIndex(null);
 };
 
-// Helper function to calculate due date
-const calculateDueDate = (invoiceDate, daysDue) => {
-  if (!invoiceDate || isNaN(daysDue)) return "";
-  
+const calculateDueDate = (startDate, daysDue) => {
+  if (!startDate || isNaN(daysDue)) return "";
+
   try {
-    const date = new Date(invoiceDate);
+    const date = new Date(startDate);
     date.setDate(date.getDate() + daysDue);
-    return date.toISOString().split("T")[0]; // Returns YYYY-MM-DD
+    return date.toISOString().split("T")[0];
   } catch (error) {
     console.error("Error calculating due date:", error);
     return "";
   }
 };
-  
 
-  const handleAccountDoubleDtl1Click = (index) => {
-  const currentValue = detailRows[index]?.debitAcct;
-
-  if (currentValue) {
-    const updatedRows = [...detailRows];
-    updatedRows[index] = {
-      ...updatedRows[index],
-      debitAcct: ""
-    };
-    setDetailRows(updatedRows);
-  } else {
-    setSelectedRowIndex(index);
-    setShowAccountModal(true);
-  }
+  // DR Account double-click handler
+const handleAccountDoubleDtl1Click = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    debitAcct: ""
+  };
+  setDetailRows(updatedRows);
 };
 
-  
-  const handleRcDoubleDtl1Click = (index) => {
+// RC Code double-click handler
+const handleRcDoubleDtl1Click = (index) => {
   const currentValue = detailRows[index]?.rcCode;
-
+  const updatedRows = [...detailRows];
+  
   if (currentValue) {
-    const updatedRows = [...detailRows];
     updatedRows[index] = {
       ...updatedRows[index],
       rcCode: "",
@@ -938,12 +1239,12 @@ const calculateDueDate = (invoiceDate, daysDue) => {
   }
 };
 
-  
-  const handleVatDoubleDtl1Click = (index) => {
+// VAT Code double-click handler
+const handleVatDoubleDtl1Click = (index) => {
   const currentValue = detailRows[index]?.vatCode;
-
+  const updatedRows = [...detailRows];
+  
   if (currentValue) {
-    const updatedRows = [...detailRows];
     updatedRows[index] = {
       ...updatedRows[index],
       vatCode: "",
@@ -958,12 +1259,12 @@ const calculateDueDate = (invoiceDate, daysDue) => {
   }
 };
 
-  
-  const handleAtcDoubleDtl1Click = (index) => {
+// ATC double-click handler
+const handleAtcDoubleDtl1Click = (index) => {
   const currentValue = detailRows[index]?.atcCode;
-
+  const updatedRows = [...detailRows];
+  
   if (currentValue) {
-    const updatedRows = [...detailRows];
     updatedRows[index] = {
       ...updatedRows[index],
       atcCode: "",
@@ -976,6 +1277,77 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     setSelectedRowIndex(index);
     setShowAtcModal(true);
   }
+};
+
+
+
+// Payment Terms double-click handler
+const handlePaytermDoubleClick = (index) => {
+  const currentValue = detailRows[index]?.paytermCode;
+  const updatedRows = [...detailRows];
+  
+  if (currentValue) {
+    updatedRows[index] = {
+      ...updatedRows[index],
+      paytermCode: "",
+      paytermName: "",
+      dueDate: new Date().toISOString().split('T')[0] // Reset to today or default date
+    };
+    setDetailRows(updatedRows);
+  } else {
+    setSelectedRowIndex(index);
+    setShowPaytermModal(true);
+  }
+};
+
+// ATC Name double-click handler
+const handleAtcNameDoubleClick = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    atcCode: "",
+    atcName: "",
+    atcAmount: "0.00"
+  };
+  setDetailRows(updatedRows);
+  updateTotals(updatedRows);
+};
+
+// VAT Name double-click handler
+const handleVatNameDoubleClick = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    vatCode: "",
+    vatName: "",
+    vatAmount: "0.00"
+  };
+  setDetailRows(updatedRows);
+  updateTotals(updatedRows);
+};
+
+// RC Name double-click handler
+const handleRcNameDoubleClick = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    rcCode: "",
+    rcName: ""
+  };
+  setDetailRows(updatedRows);
+};
+
+
+// Payment Terms Name double-click handler
+const handlePaytermNameDoubleClick = (index) => {
+  const updatedRows = [...detailRows];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    paytermCode: "",
+    paytermName: "",
+    dueDate: new Date().toISOString().split('T')[0] // Reset to today or default date
+  };
+  setDetailRows(updatedRows);
 };
 
   
@@ -1016,56 +1388,72 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     setShowRcModal(false);
     setSelectedRowIndex(null);
   };
+
+  const handleDeleteRow = (index) => {
+  // Create a copy of the current rows
+  const updatedRows = [...detailRows];
   
-  const handleCloseVatModal = async (selectedVat) => {
-  if (selectedVat && selectedRowIndex !== null) {
-    try {
-      const vatResponse = await fetchData("getVat", { VAT_CODE: selectedVat.vatCode });
-      if (vatResponse.success) {
-        const vatData = JSON.parse(vatResponse.data[0].result);
-        const vatName = vatData[0]?.vatName || '';
-        
-        const updatedRows = [...detailRows];
-        updatedRows[selectedRowIndex] = {
-          ...updatedRows[selectedRowIndex],
-          vatCode: selectedVat.vatCode,
-          vatName: vatName,
-          // Recalculate VAT amount when VAT code changes
-          vatAmount: (parseFloat(updatedRows[selectedRowIndex].amount || 0) * 
-                     getVatRate(selectedVat.vatCode).toFixed(2)
-        )};
-        setDetailRows(updatedRows);
-        updateTotals(updatedRows);
-      }
-    } catch (error) {
-      console.error("Error fetching VAT data:", error);
-    }
-  }
-  setShowVatModal(false);
-  setSelectedRowIndex(null);
+  // Remove the row at the specified index
+  updatedRows.splice(index, 1);
+  
+  // Update the state with the new array
+  setDetailRows(updatedRows);
+  
+  // Recalculate totals after deletion
+  updateTotals(updatedRows);
 };
   
-  const handleCloseAtcModal = async (selectedAtc) => {
+  const handleCloseVatModal = (selectedVat) => {
+  setShowVatModal(false);
+
+  if (selectedVat && selectedRowIndex !== null) {
+    // Update vatCode and vatName in the row
+    handleDetailChange(selectedRowIndex, 'vatCode', selectedVat.vatCode);
+
+    const updatedRows = [...detailRows];
+    updatedRows[selectedRowIndex] = {
+      ...updatedRows[selectedRowIndex],
+      vatCode: selectedVat.vatCode,
+      vatName: selectedVat.vatName
+    };
+    setDetailRows(updatedRows);
+
+    // Optional: trigger recalculation
+    handleDetailChange(selectedRowIndex, 'vatCode', selectedVat.vatCode);
+  }
+};
+
+  
+  // For ATC Modal
+const handleCloseAtcModal = async (selectedAtc) => {
   if (selectedAtc && selectedRowIndex !== null) {
     try {
-      const atcResponse = await fetchData("getATC", { ATC_CODE: selectedAtc.atcCode });
-      if (atcResponse.success) {
-        const atcData = JSON.parse(atcResponse.data[0].result);
-        const atcName = atcData[0]?.atcName || '';
-        
-        const updatedRows = [...detailRows];
-        updatedRows[selectedRowIndex] = {
-          ...updatedRows[selectedRowIndex],
-          atcCode: selectedAtc.atcCode,
-          atcName: atcName,
-          atcAmount: (parseFloat(updatedRows[selectedRowIndex].amount || 0) * 
-                     getAtcRate(selectedAtc.atcCode).toFixed(2))
-        };
-        setDetailRows(updatedRows);
-        updateTotals(updatedRows);
-      }
+      const updatedRows = [...detailRows];
+      const row = updatedRows[selectedRowIndex];
+      const amount = parseFloat(row.amount || 0);
+      const vatRate = await getVatRate(row.vatCode);
+      
+      // Calculate base amount and VAT amount
+      const baseAmount = amount / (1 + vatRate);
+      const vatAmount = amount - baseAmount;
+      
+      // Get ATC rate and calculate ATC amount
+      const atcRate = await getAtcRate(selectedAtc.atcCode);
+      const atcAmount = baseAmount * atcRate;
+
+      updatedRows[selectedRowIndex] = {
+        ...row,
+        atcCode: selectedAtc.atcCode,
+        atcName: selectedAtc.atcName || "",
+        atcAmount: atcAmount.toFixed(2),
+        vatAmount: vatAmount.toFixed(2),
+        siAmount: amount.toFixed(2)
+      };
+
+      setDetailRows(updatedRows);
+      updateTotals(updatedRows);
     } catch (error) {
-      console.error("Error fetching ATC data:", error);
+      console.error("Error updating ATC:", error);
     }
   }
   setShowAtcModal(false);
@@ -1386,22 +1774,27 @@ const calculateDueDate = (invoiceDate, daysDue) => {
   <select
     id="apType"
     className="peer global-tran-textbox-ui"
-    defaultValue="purchases"
+    value={selectedApType}
+    onChange={(e) => setSelectedApType(e.target.value)}
+    disabled={apTypes.length === 0} // Disable if no options loaded
   >
-    <option value="purchases">Purchases</option>
-    <option value="non-purchases">Non-Purchases</option>
-    <option value="advances">Advances</option>
-    <option value="replenishment">Replenishment</option>
-    <option value="reimbursement">Reimbursement</option>
-    <option value="liquidation">Liquidation</option>
+    {apTypes.length > 0 ? (
+      <>
+        <option value="">Select AP Type</option>
+        {apTypes.map((type) => (
+          <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+            {type.DROPDOWN_NAME}
+          </option>
+        ))}
+      </>
+    ) : (
+      <option value="">Loading AP Types...</option>
+    )}
   </select>
-  <label
-    htmlFor="apType"
-    className="global-tran-floating-label"
-  >
+  <label htmlFor="apType" className="global-tran-floating-label">
     AP Type
   </label>
-
+  
   {/* Dropdown Icon */}
   <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
     <svg
@@ -1467,12 +1860,14 @@ const calculateDueDate = (invoiceDate, daysDue) => {
         {/* Column 4 - Remarks */}
         <div className="col-span-full"> 
                 <div className="relative w-full p-2">
-                  <textarea
-                    id="remarks"
-                    placeholder=""
-                    rows={5} 
-                    className="peer global-tran-textbox-remarks-ui"
-                  />
+                 <textarea
+  id="remarks"
+  placeholder=""
+  rows={5} 
+  className="peer global-tran-textbox-remarks-ui"
+  value={header.remarks || ""}
+  onChange={(e) => setHeader(prev => ({ ...prev, remarks: e.target.value }))}
+/>
                   <label
                     htmlFor="remarks"
                     className="global-tran-floating-label-remarks"
@@ -1536,6 +1931,7 @@ const calculateDueDate = (invoiceDate, daysDue) => {
           <th className="global-tran-th-ui">DR Account</th>
           <th className="global-tran-th-ui">RC Code</th>
           <th className="global-tran-th-ui">RC Name</th>
+          <th className="global-tran-th-ui" id='sltypeCode' >SL Type Code</th>
           <th className="global-tran-th-ui">SL Code</th>
           <th className="global-tran-th-ui">VAT Code</th>
           <th className="global-tran-th-ui">VAT Name</th>
@@ -1595,18 +1991,38 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                 onChange={(e) => handleDetailChange(index, 'siDate', e.target.value)}
               />
             </td>
-            <td className="global-tran-td-ui">
-  <input
-    type="number"
-    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-    value={row.amount !== undefined && row.amount !== null ? parseFloat(row.amount).toFixed(2) : ""}
-    onChange={(e) => handleDetailChange(index, 'amount', e.target.value)}
-    onBlur={(e) => {
-      const formatted = parseFloat(e.target.value).toFixed(2);
-      handleDetailChange(index, 'amount', formatted);
-    }}
-  />
-</td>
+           <input
+  type="text"
+  className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+  value={row.amount || ""}
+  onChange={(e) => {
+    const value = e.target.value;
+    // Allow digits + up to 2 decimals or empty string
+    if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+      handleDetailChange(index, "amount", value, false); // Update value only, no calculations
+    }
+  }}
+  onKeyDown={async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const value = e.target.value;
+      const num = parseFloat(value);
+      if (!isNaN(num)) {
+        // Format to 2 decimals and run calculations
+        await handleDetailChange(index, "amount", num.toFixed(2), true);
+      }
+    }
+  }}
+  onBlur={async (e) => {
+    // Optionally, also do calculations on blur if you want
+    const value = e.target.value;
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+      await handleDetailChange(index, "amount", num.toFixed(2), true);
+    }
+  }}
+/>
+
             <td className="global-tran-td-ui">
               <input
                 type="text"
@@ -1620,12 +2036,11 @@ const calculateDueDate = (invoiceDate, daysDue) => {
   <input
     type="number"
     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-    value={row.siAmount || ""}
-    onChange={(e) => handleDetailChange(index, 'siAmount', e.target.value)}
-    readOnly={true} // Make it read-only if you want to prevent manual changes
+    value={row.siAmount || row.amount || ""} // Show same as original amount
+    readOnly
   />
 </td>
-            <td className="global-tran-td-ui relative">
+           <td className="global-tran-td-ui relative">
   <div className="flex items-center">
     <input
       type="text"
@@ -1637,7 +2052,10 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
       className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => handleAccountDoubleDtl1Click(index)}
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowAccountModal(true);
+      }}
     />
   </div>
 </td>
@@ -1654,10 +2072,14 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
       className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => handleRcDoubleDtl1Click(index)}
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowRcModal(true);
+      }}
     />
   </div>
 </td>
+
             <td className="global-tran-td-ui">
               <input
                 type="text"
@@ -1666,17 +2088,22 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                 onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
               />
             </td>
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.sltypeCode || ""}
+                onChange={(e) => handleDetailChange(index, 'sltypeCode', e.target.value)}
+              />
+            </td>
             <td className="global-tran-td-ui relative">
   <div className="flex items-center">
     <input
       type="text"
       className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.slCode || ""}
+      value={row.slCode || vendCode || ""}
       readOnly
-      onDoubleClick={() => {
-        setSelectedRowIndex(index);
-        setShowSlModal(true);
-      }}
+      onDoubleClick={() => handleSlDoubleClick(index)}
     />
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
@@ -1688,19 +2115,23 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     />
   </div>
 </td>
-            <td className="global-tran-td-ui relative">
+           <td className="global-tran-td-ui relative">
   <div className="flex items-center">
     <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.vatCode || ""}
-      readOnly
-      onDoubleClick={() => handleVatDoubleDtl1Click(index)}
-    />
+  type="text"
+  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+  value={row.vatCode || ""}
+  readOnly
+  onDoubleClick={() => handleVatDoubleDtl1Click(index)}
+/>
+
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
       className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => handleVatDoubleDtl1Click(index)}
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowVatModal(true);
+      }}
     />
   </div>
 </td>
@@ -1713,13 +2144,13 @@ const calculateDueDate = (invoiceDate, daysDue) => {
               />
             </td>
             <td className="global-tran-td-ui">
-              <input
-                type="number"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.vatAmount || ""}
-                onChange={(e) => handleDetailChange(index, 'vatAmount', e.target.value)}
-              />
-            </td>
+  <input
+    type="number"
+    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+    value={row.vatAmount || ""}
+    readOnly
+  />
+</td>
             <td className="global-tran-td-ui relative">
   <div className="flex items-center">
     <input
@@ -1732,18 +2163,23 @@ const calculateDueDate = (invoiceDate, daysDue) => {
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
       className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => handleAtcDoubleDtl1Click(index)}
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowAtcModal(true);
+      }}
     />
   </div>
 </td>
+
             <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[200px] global-tran-td-inputclass-ui"
-                value={row.atcName || ""}
-                onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
-              />
-            </td>
+  <input
+    type="text"
+    className="w-[200px] global-tran-td-inputclass-ui"
+    value={row.atcName || ""}
+    readOnly
+    onDoubleClick={() => handleAtcNameDoubleClick(index)}
+  />
+</td>
             <td className="global-tran-td-ui">
               <input
                 type="number"
@@ -1752,17 +2188,13 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                 onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
               />
             </td>
-           <td className="global-tran-td-ui relative">
+          <td className="global-tran-td-ui relative">
   <div className="flex items-center">
-    <input
+   <input
       type="text"
       className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
       value={row.paytermCode || ""}
       readOnly
-      onDoubleClick={() => {
-        setSelectedRowIndex(index);
-        setShowPaytermModal(true);
-      }}
     />
     <FontAwesomeIcon 
       icon={faMagnifyingGlass} 
@@ -1776,12 +2208,12 @@ const calculateDueDate = (invoiceDate, daysDue) => {
 </td>
             <td className="global-tran-td-ui">
   <input
-    type="date"
-    className="w-[100px] global-tran-td-inputclass-ui text-center"
-    value={row.dueDate || ""}
-    readOnly // Prevent manual edits
-    onChange={(e) => { /* Optional: Allow manual override if needed */ }}
-  />
+  type="date"
+  className="w-[100px] global-tran-td-inputclass-ui text-center"
+  value={row.dueDate || ""}
+  readOnly
+/>
+
 </td>
             <td className="global-tran-td-ui text-center sticky right-12">
                           <button
@@ -1911,15 +2343,17 @@ const calculateDueDate = (invoiceDate, daysDue) => {
             <th className="global-tran-th-ui">LN</th>
             <th className="global-tran-th-ui">Account Code</th>
             <th className="global-tran-th-ui">RC Code</th>
+            <th className="global-tran-th-ui">SL Type Code</th>
             <th className="global-tran-th-ui">SL Code</th>
             <th className="global-tran-th-ui">Particulars</th>
             <th className="global-tran-th-ui">VAT Code</th>
             <th className="global-tran-th-ui">VAT Name</th>
-            <th className="global-tran-th-ui">ATC</th>
+            <th className="global-tran-th-ui">ATC Code</th>
             <th className="global-tran-th-ui">ATC Name</th>
             <th className="global-tran-th-ui">Debit</th>
             <th className="global-tran-th-ui">Credit</th>
             <th className="global-tran-th-ui">SL Ref. No.</th>
+            <th className="global-tran-th-ui">SL Ref. Date</th>
             <th className="global-tran-th-ui">Remarks</th>
             <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
             <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
@@ -1939,11 +2373,27 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                 />
               </td>
               <td className="global-tran-td-ui">
+                 <input
+      type="text"
+      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+      value={row.rcCode || ""}
+      readOnly
+    />
+    <FontAwesomeIcon 
+      icon={faMagnifyingGlass} 
+      className="absolute right-2 text-gray-400 cursor-pointer"
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowRcModal(true);
+      }}
+    />
+              </td>
+          <td className="global-tran-td-ui">
                 <input
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.rcCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
+                  value={row.sltypeCode || ""}
+                  onChange={(e) => handleDetailChange(index, 'sltypeCode', e.target.value)}
                 />
               </td>
               <td className="global-tran-td-ui">
@@ -1954,45 +2404,64 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                   onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
                 />
               </td>
+            
               <td className="global-tran-td-ui">
                 <input
                   type="text"
-                  className="w-[150px] global-tran-td-inputclass-ui"
-                  value={row.particulars || ""}
-                  onChange={(e) => handleDetailChange(index, 'particulars', e.target.value)}
+                  className="w-[300px] global-tran-td-inputclass-ui"
+                  value={row.particular || ""}
+                  onChange={(e) => handleDetailChange(index, 'particular', e.target.value)}
                 />
               </td>
               <td className="global-tran-td-ui">
                 <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.vatCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
-                />
+      type="text"
+      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+      value={row.vatCode || ""}
+      readOnly
+    />
+    <FontAwesomeIcon 
+      icon={faMagnifyingGlass} 
+      className="absolute right-2 text-gray-400 cursor-pointer"
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowVatModal(true);
+      }}
+    />
+              </td>
+              <td className="global-tran-td-ui">
+  <input
+    type="text"
+    className="w-[200px] global-tran-td-inputclass-ui"
+    value={row.vatName || ""}
+    readOnly
+    onDoubleClick={() => handleVatNameDoubleClick(index)}
+  />
+</td>
+              <td className="global-tran-td-ui">
+                <input
+      type="text"
+      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+      value={row.atcCode || ""}
+      readOnly
+    />
+    <FontAwesomeIcon 
+      icon={faMagnifyingGlass} 
+      className="absolute right-2 text-gray-400 cursor-pointer"
+      onClick={() => {
+        setSelectedRowIndex(index);
+        setShowAtcModal(true);
+      }}
+    />
               </td>
               <td className="global-tran-td-ui">
                 <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.vatDescription || ""}
-                  onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
-                />
-              </td>
-              <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.ewtCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
-                />
-              </td>
-              <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[80px] global-tran-td-inputclass-ui"
-                  value={row.ewtDescription || ""}
-                  onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
-                />
+  type="text"
+  className="w-[200px] global-tran-td-inputclass-ui"
+  value={row.atcName || ""}
+  onChange={(e) => handleDetailChange(index, 'atcName', e.target.value)}
+/>
+
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
@@ -2020,12 +2489,24 @@ const calculateDueDate = (invoiceDate, daysDue) => {
               </td>
               <td className="global-tran-td-ui">
                 <input
-                  type="text"
+                  type="date"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.remarks || ""}
-                  onChange={(e) => handleDetailChange(index, 'remarks', e.target.value)}
+                  value={row.slrefDate || ""}
+                  onChange={(e) => handleDetailChange(index, 'slrefDate', e.target.value)}
                 />
               </td>
+              <td className="global-tran-td-ui">
+  <input
+    type="text"
+    className="w-[100px] global-tran-td-inputclass-ui"
+    value={row.remarks || header.remarks || ""}
+    onChange={(e) => {
+      const updatedRows = [...detailRowsGL];
+      updatedRows[index].remarks = e.target.value;
+      setDetailRowsGL(updatedRows);
+    }}
+  />
+</td>
               
               <td className="global-tran-td-ui text-center sticky right-10">
                 <button
@@ -2041,7 +2522,7 @@ const calculateDueDate = (invoiceDate, daysDue) => {
                   className="global-tran-td-button-delete-ui "
                   onClick={() => handleDeleteRowGL(index)}
                   >
-                    {/* Delete                  */}
+                    {/* Delete */}
                     <FontAwesomeIcon icon={faMinus} />
                   </button>
               </td>
@@ -2079,8 +2560,8 @@ const calculateDueDate = (invoiceDate, daysDue) => {
           Total Debit:
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-          0.00
-        </label>
+  {totalDebit.toFixed(2)}
+</label>
       </div>
 
       {/* Total Credit */}
@@ -2089,8 +2570,8 @@ const calculateDueDate = (invoiceDate, daysDue) => {
           Total Credit:
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-          0.00
-        </label>
+  {totalCredit.toFixed(2)}
+</label>
       </div>
     </div>
 
@@ -2205,7 +2686,7 @@ const calculateDueDate = (invoiceDate, daysDue) => {
   <SLMastLookupModal
     isOpen={showSlModal}
     onClose={handleCloseSlModal}
-    customParam="apv_dtl"
+    customParam="ActiveAll" //should be active_all
   />
 )}
 
