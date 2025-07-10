@@ -113,7 +113,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                 ? "text-blue-600 border-b-2 border-blue-600 dark:text-blue-600"
                 : "text-gray-600 hover:text-blue-600 dark:text-gray-400 border-blue-800"
             }`}
-            // onClick={() => navigate("/history")}
+            onClick={() => navigate("/history")}
           >
             <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
               <span className="font-bold text-xs md:text-sm sm:text-sm lg:text-base tracking-wide">

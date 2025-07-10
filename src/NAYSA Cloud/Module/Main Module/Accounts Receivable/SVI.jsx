@@ -533,25 +533,51 @@ useEffect(() => {
       }
     };
     
-    console.log("Fetching AP Types with payload:", payload);
+    console.log("Fetching SVI Types with payload:", payload);
     
     const response = await postRequest("getHSDropdown", JSON.stringify(payload));
     
-    console.log("AP Types API response:", response);
+    console.log("SVI Types API response:", response);
     
-    if (response.success) {
-      const result = JSON.parse(response.data[0].result);
-      console.log("Parsed AP Types:", result);
-      
-      setsviTypes(result);
-      
-      // Set default value to first option if available
-      if (result.length > 0) {
-        setselectedSVIType(result[0].DROPDOWN_CODE);
+    if (response?.success) {
+      // Check if data exists and is not empty
+      if (response.data && response.data.length > 0) {
+        try {
+          const result = JSON.parse(response.data[0].result);
+          console.log("Parsed SVI Types:", result);
+          
+          if (result && Array.isArray(result)) {
+            setsviTypes(result);
+            
+            // Set default value to first option if available
+            if (result.length > 0) {
+              setselectedSVIType(result[0].DROPDOWN_CODE);
+            }
+          } else {
+            console.warn("API returned invalid data format");
+            setsviTypes([]); // Set empty array as fallback
+          }
+        } catch (parseError) {
+          console.error("Error parsing SVI Types:", parseError);
+          setsviTypes([]); // Set empty array as fallback
+        }
+      } else {
+        console.warn("No data received from API");
+        setsviTypes([]); // Set empty array as fallback
       }
+    } else {
+      console.error("API request failed:", response?.message);
+      setsviTypes([]); // Set empty array as fallback
     }
   } catch (error) {
-    console.error("Error fetching AP Types:", error);
+    console.error("Error fetching SVI Types:", error);
+    setsviTypes([]); // Set empty array as fallback
+    // Optionally show error to user
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load SVI types. Please try again later.',
+    });
   }
 };
 
@@ -1683,25 +1709,25 @@ const handleCloseAtcModal = async (selectedAtc) => {
         <div className="global-tran-textbox-group-div-ui">
                
           <div className="relative">
-            <select id="sviType"
-                    className="peer global-tran-textbox-ui"
-                    value={selectedSVIType}
-                    onChange={(e) => setselectedSVIType(e.target.value)}
-                    disabled={sviTypes.length === 0} // Disable if no options loaded
-            >
-                {sviTypes.length > 0 ? 
-                (
-                  <>
-                    <option value="">Select Billing Type</option>
-                    {sviTypes.map((type) => 
-                    (
-                      <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-                        {type.DROPDOWN_NAME}
-                      </option>
-                    ))}
-                  </>
-                ) : (<option value="">Loading AP Types...</option>)}
-            </select>          
+            <select
+  id="sviType"
+  className="peer global-tran-textbox-ui"
+  value={selectedSVIType}
+  onChange={(e) => setselectedSVIType(e.target.value)}
+>
+  {sviTypes.length > 0 ? (
+    <>
+      <option value="">Select SVI Type</option>
+      {sviTypes.map((type) => (
+        <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+          {type.DROPDOWN_NAME}
+        </option>
+      ))}
+    </>
+  ) : (
+    <option value="">No SVI Types available</option>
+  )}
+</select>    
             <label htmlFor="sviType" className="global-tran-floating-label">SVI Type</label>
 
             {/* Dropdown Icon */}
