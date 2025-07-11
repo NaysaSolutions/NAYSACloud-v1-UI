@@ -65,8 +65,8 @@ const JV = () => {
   const [vendName, setvendName] = useState(null);
   const [vendCode, setvendCode] = useState(null);  
   const [branches, setbranches] = useState([]);
-  const [branchCode, setBranchCode] = useState("");
-  const [branchName, setBranchName] = useState("");
+  const [branchCode, setBranchCode] = useState("HO");
+  const [branchName, setBranchName] = useState("Head Office");
   const [modalContext, setModalContext] = useState('');
   const [selectionContext, setSelectionContext] = useState('');
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
@@ -87,8 +87,10 @@ const JV = () => {
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);
   const [isResetDisabled, setIsResetDisabled] = useState(false);
   const [header, setHeader] = useState({
-    jv_date: "",
+    jv_date: new Date().toISOString().split('T')[0],
   });
+  const [jvType, setJvType] = useState('regular');
+const [refDocType, setRefDocType] = useState('');
 
   useEffect(() => {
 
@@ -333,6 +335,16 @@ const JV = () => {
     }
   };
 
+  const handleGLDetailChange = (index, field, value) => {
+  const updatedRows = [...detailRowsGL];
+  updatedRows[index] = {
+    ...updatedRows[index],
+    [field]: value
+  };
+  setDetailRowsGL(updatedRows);
+};
+
+
   const handleReset = () => {
     console.log("Resetting JV form");
     
@@ -366,9 +378,9 @@ const handleAddRowGL = () => {
       slCode: "",
       particulars: "",
       vatCode: "",
-      vatDescription: "",
-      ewtCode: "",
-      ewtDescription: "",
+      vatName: "",
+      atcCode: "",
+      atcName: "",
       debit: "0.00",
       credit: "0.00",
       slRefNo: "",
@@ -683,80 +695,65 @@ const handleDeleteRowGL = (index) => {
     setSelectedRowIndex(null);
   };
   
-  const handleCloseRcModal = async (selectedRc) => {
-    if (selectedRc && selectedRowIndex !== null) {
-      try {
-        // Fetch RC Name from /getRCMast API
-        const rcResponse = await fetchData("getRCMast", { RC_CODE: selectedRc.rcCode });
-        if (rcResponse.success) {
-          const rcData = JSON.parse(rcResponse.data[0].result);
-          const rcName = rcData[0]?.rcName || '';
-          
-          const updatedRows = [...detailRows];
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            rcCode: selectedRc.rcCode,
-            rcName: rcName,
-          };
-          setDetailRows(updatedRows);
-        }
-      } catch (error) {
-        console.error("Error fetching RC data:", error);
-      }
-    }
-    setShowRcModal(false);
-    setSelectedRowIndex(null);
-  };
+  const handleCloseRcModal = (selected) => {
+  if (selected && selectedRowIndex !== null) {
+    const updatedRows = [...detailRowsGL];
+    updatedRows[selectedRowIndex] = {
+      ...updatedRows[selectedRowIndex],
+      rcCode: selected.rcCode,
+      rcName: selected.rcName,
+    };
+    setDetailRowsGL(updatedRows);
+  }
+  setShowRcModal(false);
+  setSelectedRowIndex(null);
+};
   
-  const handleCloseVatModal = async (selectedVat) => {
-    if (selectedVat && selectedRowIndex !== null) {
-      try {
-        // Fetch VAT details from /getVat API
-        const vatResponse = await fetchData("getVat", { VAT_CODE: selectedVat.vatCode });
-        if (vatResponse.success) {
-          const vatData = JSON.parse(vatResponse.data[0].result);
-          const vatName = vatData[0]?.vatName || '';
-          
-          const updatedRows = [...detailRows];
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            vatCode: selectedVat.vatCode,
-            vatName: vatName,
-          };
-          setDetailRows(updatedRows);
-        }
-      } catch (error) {
-        console.error("Error fetching VAT data:", error);
-      }
-    }
-    setShowVatModal(false);
-    setSelectedRowIndex(null);
-  };
-  
-  const handleCloseAtcModal = async (selectedAtc) => {
-    if (selectedAtc && selectedRowIndex !== null) {
-      try {
-        // Fetch ATC details from /getATC API
-        const atcResponse = await fetchData("getATC", { ATC_CODE: selectedAtc.atcCode });
-        if (atcResponse.success) {
-          const atcData = JSON.parse(atcResponse.data[0].result);
-          const atcName = atcData[0]?.atcName || '';
-          
-          const updatedRows = [...detailRows];
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            atcCode: selectedAtc.atcCode,
-            atcName: atcName,
-          };
-          setDetailRows(updatedRows);
-        }
-      } catch (error) {
-        console.error("Error fetching ATC data:", error);
-      }
-    }
-    setShowAtcModal(false);
-    setSelectedRowIndex(null);
-  };
+  const handleVatDoubleGLClick = (index) => {
+  setSelectedRowIndex(index);
+  setShowVatModal(true);
+};
+
+const handleCloseVatModal = (selected) => {
+  if (selected && selectedRowIndex !== null) {
+    const updatedRows = [...detailRowsGL];
+    updatedRows[selectedRowIndex] = {
+      ...updatedRows[selectedRowIndex],
+      vatCode: selected.vatCode,
+      vatName: selected.vatName || selected.vatDescription, // Handle both naming conventions
+    };
+    setDetailRowsGL(updatedRows);
+  }
+  setShowVatModal(false);
+  setSelectedRowIndex(null);
+};
+
+// For ATC
+const handleAtcDoubleGLClick = (index) => {
+  setSelectedRowIndex(index);
+  setShowAtcModal(true);
+};
+
+const handleCloseAtcModal = (selected) => {
+  if (selected && selectedRowIndex !== null) {
+    const updatedRows = [...detailRowsGL];
+    updatedRows[selectedRowIndex] = {
+      ...updatedRows[selectedRowIndex],
+      atcCode: selected.atcCode,
+      atcName: selected.atcName || selected.ewtDescription,
+    };
+    setDetailRowsGL(updatedRows);
+  }
+  setShowAtcModal(false);
+  setSelectedRowIndex(null);
+};
+
+// For RC
+const handleRcDoubleGLClick = (index) => {
+  setSelectedRowIndex(index);
+  setShowRcModal(true);
+};
+
 
   const handleCloseBranchModal = (selectedBranch) => {
     if (selectedBranch) {
@@ -985,38 +982,41 @@ const handleDeleteRowGL = (index) => {
  
   {/* AP Account Code Input */}
 <div className="relative">
-  <input
-    type="hidden"
-    id="apAccountCode"
-    placeholder=""
-    readOnly
-    value={apAccountCode || ""}
-  />
-  <input
-    type="text"
-    id="apAccountName"
-    value={apAccountName || ""}
-    placeholder=""
-    readOnly
-    className="peer global-tran-textbox-ui"
-  />
+  <select
+  id="refDocType"
+  className="peer global-tran-textbox-ui"
+  value={refDocType}
+  onChange={(e) => setRefDocType(e.target.value)}
+>
+  {jvType === 'regular' && (
+    <option value="journal-voucher">Journal Voucher</option>
+  )}
+
+  {jvType === 'transaction-reversal' && (
+    <>
+      <option value="accounts-payable">Accounts Payable</option>
+      <option value="collection-receipt">Collection Receipt</option>
+      <option value="check-voucher">Check Voucher</option>
+      <option value="acknowledgment-receipt">Acknowledgment Receipt</option>
+      <option value="journal-voucher">Journal Voucher</option>
+      <option value="petty-cash-voucher">Petty Cash Voucher</option>
+    </>
+  )}
+
+  {jvType === 'ar-settlement' && (
+    <>
+      <option value="ar-credit-memo">AR Credit Memo</option>
+      <option value="collection-receipt">Collection Receipt</option>
+      <option value="acknowledgment-receipt">Acknowledgment Receipt</option>
+    </>
+  )}
+</select>
   <label
-    htmlFor="apAccountName"
+    htmlFor="refDocType"
     className="global-tran-floating-label"
   >
     Reference Document Type
   </label>
-  <button
-    type="button"
-    onClick={() => setCoaModalOpen(true)}
-    className={`global-tran-textbox-button-search-padding-ui ${
-      isFetchDisabled 
-      ? "global-tran-textbox-button-search-disabled-ui" 
-      : "global-tran-textbox-button-search-enabled-ui"
-    } global-tran-textbox-button-search-ui`}
-  >
-    <FontAwesomeIcon icon={faMagnifyingGlass} />
-  </button>
 </div>
 </div>
         </div>
@@ -1069,15 +1069,16 @@ const handleDeleteRowGL = (index) => {
           </div>
 
           <div className="relative">
-  <select
-    id="jvType"
-    className="peer global-tran-textbox-ui"
-    defaultValue="regular"
-  >
-    <option value="regular">Regular Adjustment</option>
-    <option value="transaction-reversal">Transaction Reversal</option>
-    <option value="ar-settlement">AR Settlement Application</option>
-  </select>
+ <select
+  id="jvType"
+  className="peer global-tran-textbox-ui"
+  value={jvType}
+  onChange={(e) => setJvType(e.target.value)}
+>
+  <option value="regular">Regular Adjustment</option>
+  <option value="transaction-reversal">Transaction Reversal</option>
+  <option value="ar-settlement">AR Settlement Application</option>
+</select>
   <label
     htmlFor="jvType"
     className="global-tran-floating-label"
@@ -1236,19 +1237,21 @@ const handleDeleteRowGL = (index) => {
               <td className="global-tran-td-ui text-center">{index + 1}</td>
               <td className="global-tran-td-ui">
               <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.acctCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'acctCode', e.target.value)}
-                />
+  type="text"
+  className="w-[100px] global-tran-td-inputclass-ui"
+  value={row.acctCode || ""}
+  onChange={(e) => handleDetailChange(index, 'acctCode', e.target.value)}
+  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+/>
               </td>
               <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.rcCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
-                />
+              <input
+  type="text"
+  className="w-[100px] global-tran-td-inputclass-ui"
+  value={row.rcCode || ""}
+  onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
+  onDoubleClick={() => handleRcDoubleDtl1Click(index)}
+/>
               </td>
               <td className="global-tran-td-ui">
                 <input
@@ -1267,36 +1270,38 @@ const handleDeleteRowGL = (index) => {
                 />
               </td>
               <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.vatCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'vatCode', e.target.value)}
-                />
-              </td>
+  <input
+    type="text"
+    className="w-[100px] global-tran-td-inputclass-ui"
+    value={row.vatCode || ""}
+    onChange={(e) => handleGLDetailChange(index, 'vatCode', e.target.value)}
+    onDoubleClick={() => handleVatDoubleGLClick(index)}
+  />
+</td>
+<td className="global-tran-td-ui">
+  <input
+    type="text"
+    className="w-[100px] global-tran-td-inputclass-ui"
+    value={row.vatName || ""}
+    readOnly
+  />
+</td>
               <td className="global-tran-td-ui">
                 <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.vatDescription || ""}
-                  onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
-                />
+  type="text"
+  className="w-[100px] global-tran-td-inputclass-ui"
+  value={row.atcCode || ""}
+  onChange={(e) => handleDetailChange(index, 'atcCode', e.target.value)}
+  onDoubleClick={() => handleAtcDoubleDtl1Click(index)}
+/>
               </td>
               <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.ewtCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'ewtCode', e.target.value)}
-                />
-              </td>
-              <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[80px] global-tran-td-inputclass-ui"
-                  value={row.ewtDescription || ""}
-                  onChange={(e) => handleDetailChange(index, 'ewtDescription', e.target.value)}
-                />
+               <input
+  type="text"
+  className="w-[200px] global-tran-td-inputclass-ui"
+  value={row.atcName || ""}
+  readOnly
+/>
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
@@ -1460,7 +1465,7 @@ const handleDeleteRowGL = (index) => {
       }
       setCoaModalOpen(false);
     }}
-    customParam="apv_hd"
+    customParam="apv_dtl"
   />
 )}
 
@@ -1479,7 +1484,7 @@ const handleDeleteRowGL = (index) => {
   <RCLookupModal 
     isOpen={showRcModal}
     onClose={handleCloseRcModal}
-    customParam="apv_dtl"
+    customParam="jv_gl"
     apiEndpoint="getRCMast"
   />
 )}
@@ -1489,17 +1494,16 @@ const handleDeleteRowGL = (index) => {
   <VATLookupModal  
     isOpen={showVatModal}
     onClose={handleCloseVatModal}
-    customParam="apv_dtl"
+    customParam="jv_gl"
     apiEndpoint="getVat"
   />
 )}
 
-{/* ATC Code Modal */}
 {showAtcModal && (
   <ATCLookupModal  
     isOpen={showAtcModal}
     onClose={handleCloseAtcModal}
-    customParam="apv_dtl"
+    customParam="jv_gl"
     apiEndpoint="getATC"
   />
 )}
