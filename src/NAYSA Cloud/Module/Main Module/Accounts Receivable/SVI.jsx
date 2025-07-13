@@ -9,13 +9,13 @@ import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner
 // Lookup/Modal
 import BranchLookupModal from "../../../Lookup/SearchBranchRef";
 import CurrLookupModal from "../../../Lookup/SearchCurrRef.jsx";
-import PayeeMastLookupModal from "../../../Lookup/SearchVendMast";
+import CustomerMastLookupModal from "../../../Lookup/SearchCustMast";
 import COAMastLookupModal from "../../../Lookup/SearchCOAMast.jsx";
 import RCLookupModal from "../../../Lookup/SearchRCMast.jsx";
 import VATLookupModal from "../../../Lookup/SearchVATRef.jsx";
 import ATCLookupModal from "../../../Lookup/SearchATCRef.jsx";
 import SLMastLookupModal from "../../../Lookup/SearchSLMast.jsx";
-import PaytermLookupModal from "../../../Lookup/SearchPayTermRef.jsx";
+import BillTermLookupModal from "../../../Lookup/SearchBillTermRef.jsx";
 
 // Global
 import { useReset } from "../../../Components/ResetContext";
@@ -64,11 +64,11 @@ const SVI = () => {
   const [detailRowsGL, setDetailRowsGL] = useState([]);
   const [isFetchDisabled, setIsFetchDisabled] = useState(false); 
   const [branchModalOpen, setBranchModalOpen] = useState(false);
-  const [payeeModalOpen, setpayeeModalOpen] = useState(false);
+  const [custModalOpen, setcustModalOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [custName, setcustName] = useState(null);
   const [custCode, setcustCode] = useState(null);  
-  const [attention, setattention] = useState(null);
+  const [attention, setAttention] = useState(null);
   const [branches, setbranches] = useState([]);
   const [branchCode, setBranchCode] = useState("");
   const [branchName, setBranchName] = useState("");
@@ -98,7 +98,7 @@ const [selectedSVIType, setselectedSVIType] = useState("REG"); // default empty 
   const [showVatModal, setShowVatModal] = useState(false);
   const [showAtcModal, setShowAtcModal] = useState(false);
   const [showSlModal, setShowSlModal] = useState(false);
-  const [showPaytermModal, setShowPaytermModal] = useState(false);
+  const [showBilltermModal, setShowBilltermModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
   const [isDocNoDisabled, setIsDocNoDisabled] = useState(false);
@@ -585,38 +585,36 @@ useEffect(() => {
   const handleAddRow = async () => {
   try {
     const items = await handleFetchDetail(custCode);
-    console.log("Fetched items:", items);
-
     const itemList = Array.isArray(items) ? items : [items];
-
     const newRows = await Promise.all(itemList.map(async (item) => {
-      const amount = parseFloat(item.origAmount || 0);
-      const vatRate = await getVatRate(item.vatCode);
+      // const amount = parseFloat(item.origAmount || 0);
+      // const vatRate = await getVatRate(item.vatCode);
       
       return {
         lnNo: "",
-        invType: "FG",
-        rrNo: "",
-        poNo: "",
-        siNo: "",
-        siDate: new Date().toISOString().split('T')[0],
-        amount: amount.toFixed(2), // Original amount
-        currency: custName?.currCode || "",
-        siAmount: amount.toFixed(2), // Invoice amount = original amount
-        debitAcct: "",
-        rcCode: "",
-        rcName: "",
-        sltypeCode: item.sltypeCode || "",
-        slCode: custCode || "",
-        slName: custName?.custName || "",
-        vatCode: item.vatCode || "",
-        vatName: item.vatName,
-        vatAmount: (amount * vatRate).toFixed(2), // Calculate VAT
-        atcCode: item.atcCode || "",
-        atcName: item.atcName,
+        billCode: "",
+        billName: "",
+        sviSpecs: "",
+        quantity:"0.00",
+        uomCode: "",
+        unitPrice: "0.00",
+        grossAmount: "0.00",
+        discRate: "0.00",
+        discAmount: "0.00",
+        netDisc: "0.00",
+        vatCode: "",
+        vatName: "",
+        vatAmount: "0.00",
+        atcCode: "",
+        atcName: "",
+        atcName:  "",
         atcAmount: "0.00",
-        paytermCode: item.paytermCode,
-        dueDate: new Date().toISOString().split('T')[0],
+        sviAmount: "0.00",
+        salesAcct: "",
+        arAcct: "",       
+        vatAcct: "",
+        discAcct: "",
+        rcCode: ""
       };
     }));
 
@@ -734,6 +732,29 @@ const handleDeleteRowGL = (index) => {
       console.error("Currency API error:", currError);
     }
   };
+
+
+
+  const handleSelectBillTerm = async (billtermCode) => {
+    if (billtermCode) {
+    try {
+      const termResponse = await axios.post("http://127.0.0.1:8000/api/getBillterm", { 
+        BILLTERM_CODE: billtermCode 
+      });
+      
+      if (termResponse.data.success) {
+        const termData = JSON.parse(termResponse.data.data[0].result);
+        setbilltermName(termData[0]?.billtermName || termData[0]?.billtermName || "");
+        setbilltermCode(termData[0]?.billtermCode || termData[0]?.billtermCode || "");
+        
+      }
+    } catch (error) {
+      console.error("Billterm API error:", error);
+    }
+  }
+};
+
+
 
   const handleFetchDetail = async (custCode) => {
     console.log("custCode:", custCode);
@@ -946,50 +967,62 @@ const handlePaytermLookup = async (paytermCode) => {
   return null;
 };
 
-  const handleClosePayeeModal = async (selectedData) => {
+  const handleCloseCustModal = async (selectedData) => {
   if (!selectedData) {
-    setpayeeModalOpen(false);
+    setcustModalOpen(false);
     return;
   }
 
-  setpayeeModalOpen(false);
+  setcustModalOpen(false);
   setIsLoading(true);
 
   try {
     // Set basic payee info
-    const payeeDetails = {
+    const custDetails = {
       custCode: selectedData?.custCode || '',
       custName: selectedData?.custName || '',
-      currCode: selectedData?.currCode || '', 
-      acctCode: selectedData?.acctCode || ''   
+      currCode: selectedData?.currCode || '',  
+      attention: selectedData?.attention || '',
+      billtermCode: selectedData?.billtermCode || '',
+      billtermName: selectedData?.billtermName || ''
     };
-    setcustName(payeeDetails);
+    setcustName(custDetails);
     setcustCode(selectedData.custCode);
+  
 
-    // Update all existing detail rows with the payee's SL Code
-    const updatedRows = detailRows.map(row => ({
-      ...row,
-      slCode: selectedData.custCode, // Set SL Code to payee code
-      slName: selectedData.custName  // Set SL Name to payee name
-    }));
-    setDetailRows(updatedRows);
+
+    // Update SL Code of GL Entries
+    // const updatedRows = detailRows.map(row => ({
+    //   ...row,
+    //   slCode: selectedData.custCode, 
+    //   slName: selectedData.custName  
+    // }));
+    // setDetailRows(updatedRows);
+
+
 
     // Rest of your existing code...
     if (!selectedData.currCode) {
-      const vendPayload = { VEND_CODE: selectedData.custCode };
-      const vendResponse = await axios.post("http://127.0.0.1:8000/api/getVendMast", vendPayload);
 
-      if (vendResponse.data.success) {
-        const vendData = JSON.parse(vendResponse.data.data[0].result);
-        payeeDetails.currCode = vendData[0]?.currCode;
-        payeeDetails.acctCode = vendData[0]?.acctCode;
-        setcustName(payeeDetails);
+      const payload = { CUST_CODE: selectedData.custCode };
+      const response = await axios.post("http://127.0.0.1:8000/api/getCustomer", payload);
+      if (response.data.success) {
+        const data = JSON.parse(response.data.data[0].result);
+        custDetails.currCode = data[0]?.currCode;
+        custDetails.attention = data[0]?.custContact;   
+        custDetails.billtermCode = data[0]?.billtermCode;   
+        custDetails.billtermName = data[0]?.billtermName;
+        setcustName(custDetails)  
       }
     }
+  
 
     await Promise.all([
-      handleSelectCurrency(payeeDetails.currCode),
-      handleSelectAPAccount(payeeDetails.acctCode)
+      handleSelectCurrency(custDetails.currCode),
+      handleSelectBillTerm(custDetails.billtermCode),
+      setAttention(custDetails.attention),
+
+    
     ]);
 
   } catch (error) {
@@ -1470,6 +1503,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
   setSelectedRowIndex(null);
 };
 
+
+
   const handleCloseBranchModal = (selectedBranch) => {
     if (selectedBranch) {
       setBranchCode(selectedBranch.branchCode);
@@ -1488,6 +1523,13 @@ const handleCloseAtcModal = async (selectedAtc) => {
   };
 
 
+  const handleCloseBillTermModal = (selectedBillTerm) => {
+    if (selectedBillTerm) {
+      setbilltermCode(selectedBillTerm.billtermCode);
+      setbilltermName(selectedBillTerm.billtermName);
+    }
+    setShowBilltermModal(false);
+  };
 
 
 
@@ -1649,7 +1691,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
             <button
               type="button"
-              onClick={() => setpayeeModalOpen(true)}
+              onClick={() => setcustModalOpen(true)}
               className={`global-tran-textbox-button-search-padding-ui ${
                 isFetchDisabled 
                 ? "global-tran-textbox-button-search-disabled-ui" 
@@ -1700,7 +1742,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                       </option>
                     ))}
                   </>
-                ) : (<option value="">Loading AP Types...</option>)}
+                ) : (<option value="">Loading Billing Types...</option>)}
             </select>          
             <label htmlFor="sviType" className="global-tran-floating-label">SVI Type</label>
 
@@ -1715,14 +1757,14 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
 
 
-          {/* AP Account Code Input */}
+          {/* Billing Term */}
           <div className="relative">
             <input type="hidden" id="billtermCode"  placeholder="" readOnly value={billtermCode || ""}/>
             <input type="text" id="billtermName" value={billtermName || ""} placeholder="" readOnly className="peer global-tran-textbox-ui"/>
             <label htmlFor="billtermName" className="global-tran-floating-label">
             <span className="global-tran-asterisk-ui"> * </span>Billing Term</label>
                         
-            <button type="button" onClick={() => setCoaModalOpen(true)}
+            <button type="button" onClick={() => setShowBilltermModal(true)}
               className={`global-tran-textbox-button-search-padding-ui ${
                 isFetchDisabled 
                 ? "global-tran-textbox-button-search-disabled-ui" 
@@ -1735,16 +1777,12 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
 
 
-          {/* Attention Display */}
-          <div className="relative">
-            <input type="text"
-                   id="attention"
-                   placeholder=" "
-                   value={attention?.attention || ''}
-                   className="peer global-tran-textbox-ui"
-            />
+
+           <div className="relative">
+            <input type="text" id="attention" placeholder=" " value={attention} className="peer global-tran-textbox-ui"/>
             <label htmlFor="attention" className="global-tran-floating-label">Attention</label>
           </div>
+
 
 
 
@@ -1970,282 +2008,424 @@ const handleCloseAtcModal = async (selectedAtc) => {
           <th className="global-tran-th-ui">Amount Due</th>
           <th className="global-tran-th-ui">Sales Account</th>
           <th className="global-tran-th-ui">AR Account</th>
+          <th className="global-tran-th-ui">VAT Account</th>
           <th className="global-tran-th-ui">Discount Account</th>
           <th className="global-tran-th-ui">RC Code</th>        
           <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
           <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
         </tr>
       </thead>
+
+
+
       <tbody className="relative">{detailRows.map((row, index) => (
         <tr key={index} className="global-tran-tr-ui">
+          
+          {/* LN */}
           <td className="global-tran-td-ui text-center">{index + 1}</td>
-          <td className="global-tran-td-ui">
-              <select
-                className="w-[50px] global-tran-td-inputclass-ui"
-                value={row.invType || ""}
-                // onChange={(e) => handleDetailChange(index, 'type', e.target.value)}
-              >
-                <option value="FG">FG</option>
-                <option value="MS">MS</option>
-                <option value="RM">RM</option>
-              </select>
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.rrNo || ""}
-                onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.poNo || ""}
-                onChange={(e) => handleDetailChange(index, 'poNo', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.siNo || ""}
-                onChange={(e) => handleDetailChange(index, 'siNo', e.target.value)}
-              />
-            </td>
-            <td className="global-tran-td-ui">
-              <input
-                type="date"
-                className="w-[100px] global-tran-td-inputclass-ui text-center"
-                value={row.siDate || ""}
-                onChange={(e) => handleDetailChange(index, 'siDate', e.target.value)}
-              />
-            </td>
-           <input
-  type="text"
-  className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-  value={row.amount || ""}
-  onChange={(e) => {
-    const value = e.target.value;
-    // Allow digits + up to 2 decimals or empty string
-    if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
-      handleDetailChange(index, "amount", value, false); // Update value only, no calculations
-    }
-  }}
-  onKeyDown={async (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const value = e.target.value;
-      const num = parseFloat(value);
-      if (!isNaN(num)) {
-        // Format to 2 decimals and run calculations
-        await handleDetailChange(index, "amount", num.toFixed(2), true);
-      }
-    }
-  }}
-  onBlur={async (e) => {
-    // Optionally, also do calculations on blur if you want
-    const value = e.target.value;
-    const num = parseFloat(value);
-    if (!isNaN(num)) {
-      await handleDetailChange(index, "amount", num.toFixed(2), true);
-    }
-  }}
-/>
+         
 
-            <td className="global-tran-td-ui">
+         {/* Bill Code */}
+          <td className="global-tran-td-ui relative">
+            <div className="flex items-center">
               <input
                 type="text"
-                className="w-[80px] global-tran-td-inputclass-ui text-center"
-                value={custName?.currCode ? `${custName.currCode}` : "PHP"}
+                className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                value={row.billCode || ""}
                 readOnly
-                // onChange={(e) => handleDetailChange(index, 'currency', e.target.value)}
+                // onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
               />
-            </td>
-            <td className="global-tran-td-ui">
-  <input
-    type="number"
-    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-    value={row.siAmount || row.amount || ""} // Show same as original amount
-    readOnly
-  />
-</td>
-           <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.debitAcct || ""}
-      readOnly
-      onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowAccountModal(true);
-      }}
-    />
-  </div>
-</td>
-
-<td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.rcCode || ""}
-      readOnly
-      onDoubleClick={() => handleRcDoubleDtl1Click(index)}
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowRcModal(true);
-      }}
-    />
-  </div>
-</td>
-
-            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[250px] global-tran-td-inputclass-ui"
-                value={row.rcName || ""}
-                onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value)}
+              <FontAwesomeIcon 
+                icon={faMagnifyingGlass} 
+                className="absolute right-2 text-gray-400 cursor-pointer"
+                onClick={() => {
+                  setSelectedRowIndex(index);
+                  // setShowAccountModal(true);
+                }}
               />
-            </td>
-            <td className="global-tran-td-ui">
+            </div>
+          </td>
+
+
+            {/* Description */}
+           <td className="global-tran-td-ui">
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.sltypeCode || ""}
-                onChange={(e) => handleDetailChange(index, 'sltypeCode', e.target.value)}
+                value={row.billName || ""}
+                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
               />
             </td>
-            <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.slCode || custCode || ""}
-      readOnly
-      onDoubleClick={() => handleSlDoubleClick(index)}
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowSlModal(true);
-      }}
-    />
-  </div>
-</td>
-           <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-  type="text"
-  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-  value={row.vatCode || ""}
-  readOnly
-  onDoubleClick={() => handleVatDoubleDtl1Click(index)}
-/>
 
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowVatModal(true);
-      }}
-    />
-  </div>
-</td>
-            <td className="global-tran-td-ui">
+             {/* Specification */}
+           <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[200px] global-tran-td-inputclass-ui"
-                value={row.vatName || ""}
-                onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.sviSpecs || ""}
+                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
               />
             </td>
-            <td className="global-tran-td-ui">
-  <input
-    type="number"
-    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-    value={row.vatAmount || ""}
-    readOnly
-  />
-</td>
-            <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.atcCode || ""}
-      readOnly
-      onDoubleClick={() => handleAtcDoubleDtl1Click(index)}
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowAtcModal(true);
-      }}
-    />
-  </div>
-</td>
 
-            <td className="global-tran-td-ui">
-  <input
-    type="text"
-    className="w-[200px] global-tran-td-inputclass-ui"
-    value={row.atcName || ""}
-    readOnly
-    onDoubleClick={() => handleAtcNameDoubleClick(index)}
-  />
-</td>
+
+            <input
+              type="text"
+              className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+              value={row.quantity || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+                  handleDetailChange(index, "quantity", value, false); // Update value only, no calculations
+                }
+              }}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const value = e.target.value;
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) {
+                    await handleDetailChange(index, "quantity", num.toFixed(2), true);
+                  }
+                }
+              }}
+              onBlur={async (e) => {
+                const value = e.target.value;
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                  await handleDetailChange(index, "quantity", num.toFixed(2), true);
+                }
+              }}
+            />
+
+
+            {/* UOM */}
+           <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.uomCode || ""}
+                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+              />
+            </td>
+
+
+             <input
+              type="text"
+              className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+              value={row.unitPrice || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+                  handleDetailChange(index, "unitPrice", value, false); // Update value only, no calculations
+                }
+              }}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const value = e.target.value;
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) {
+                    await handleDetailChange(index, "unitPrice", num.toFixed(2), true);
+                  }
+                }
+              }}
+              onBlur={async (e) => {
+                const value = e.target.value;
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                  await handleDetailChange(index, "unitPrice", num.toFixed(2), true);
+                }
+              }}
+            />
+
             <td className="global-tran-td-ui">
               <input
                 type="number"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.atcAmount || ""}
-                onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
+                value={row.grossAmount || row.grossAmount || ""} // Show same as original amount
+                readOnly
               />
             </td>
-          <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-   <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.paytermCode || ""}
-      readOnly
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-gray-400 cursor-pointer"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowPaytermModal(true);
-      }}
-    />
-  </div>
-</td>
-            <td className="global-tran-td-ui">
-  <input
-  type="date"
-  className="w-[100px] global-tran-td-inputclass-ui text-center"
-  value={row.dueDate || ""}
-  readOnly
-/>
 
-</td>
+
+
+             <input
+              type="text"
+              className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+              value={row.discRate || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+                  handleDetailChange(index, "discRate", value, false); // Update value only, no calculations
+                }
+              }}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const value = e.target.value;
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) {
+                    await handleDetailChange(index, "discRate", num.toFixed(2), true);
+                  }
+                }
+              }}
+              onBlur={async (e) => {
+                const value = e.target.value;
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                  await handleDetailChange(index, "discRate", num.toFixed(2), true);
+                }
+              }}
+            />
+
+           
+
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.discAmount || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+                    handleDetailChange(index, "discAmount", value, false); // Update value only, no calculations
+                  }
+                }}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const value = e.target.value;
+                    const num = parseFloat(value);
+                    if (!isNaN(num)) {
+                      await handleDetailChange(index, "discAmount", num.toFixed(2), true);
+                    }
+                  }
+                }}
+                onBlur={async (e) => {
+                  const value = e.target.value;
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) {
+                    await handleDetailChange(index, "discAmount", num.toFixed(2), true);
+                  }
+                }}
+              />
+            </td>
+
+
+            <td className="global-tran-td-ui">
+              <input
+                type="number"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.netDisc || row.netDisc || ""} // Show same as original amount
+                readOnly
+              />
+            </td>
+
+
+
+             <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.vatCode || ""}
+                  readOnly
+                  onDoubleClick={() => handleVatDoubleDtl1Click(index)}
+                />
+            
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowVatModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+            <td className="global-tran-td-ui">
+                <input
+                    type="text"
+                    className="w-[200px] global-tran-td-inputclass-ui"
+                    value={row.vatName || ""}
+                    onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+                />
+            </td>
+
+            <td className="global-tran-td-ui">
+              <input
+                type="number"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.vatAmount || ""}
+                readOnly
+              />
+            </td>
+
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.atcCode || ""}
+                  readOnly
+                  onDoubleClick={() => handleAtcDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowAtcModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+            
+            <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[200px] global-tran-td-inputclass-ui"
+                value={row.atcName || ""}
+                readOnly
+                onDoubleClick={() => handleAtcNameDoubleClick(index)}
+              />
+            </td>
+
+            <td className="global-tran-td-ui">
+                <input
+                   type="number"
+                   className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                   value={row.atcAmount || ""}
+                   onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
+                />
+            </td>
+
+
+             <td className="global-tran-td-ui">
+              <input
+                type="number"
+                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                value={row.sviAmount || ""}
+                readOnly
+              />
+            </td>
+
+
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.salesAcct || ""}
+                  readOnly
+                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowAccountModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+
+
+            
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.arAcct || ""}
+                  readOnly
+                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowAccountModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+            
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.vatAcct || ""}
+                  readOnly
+                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowAccountModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.discAcct || ""}
+                  readOnly
+                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowAccountModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+
+
+
+            
+            <td className="global-tran-td-ui relative">
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
+                  value={row.rcCode || ""}
+                  readOnly
+                  onDoubleClick={() => handleRcDoubleDtl1Click(index)}
+                />
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-gray-400 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRowIndex(index);
+                    setShowRcModal(true);
+                  }}
+                />
+              </div>
+            </td>
+
+
+
+              
+
+
             <td className="global-tran-td-ui text-center sticky right-12">
                           <button
                             className="global-tran-td-button-add-ui"
@@ -2267,6 +2447,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
           </tr>
         ))}
       </tbody>
+
+
     </table>
   </div>
   </div>
@@ -2635,6 +2817,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
 /> */}
 
 
+
+
 {branchModalOpen && (
         <BranchLookupModal 
           isOpen={branchModalOpen}
@@ -2650,11 +2834,21 @@ const handleCloseAtcModal = async (selectedAtc) => {
         />
       )}
 
-{payeeModalOpen && (
-  <PayeeMastLookupModal
-    isOpen={payeeModalOpen}
-    onClose={handleClosePayeeModal}
-    customParam="apv_hd"
+
+  
+{showBilltermModal && (
+        <BillTermLookupModal 
+          isOpen={showBilltermModal}
+          onClose={handleCloseBillTermModal}
+        />
+      )}
+
+
+{custModalOpen && (
+  <CustomerMastLookupModal
+    isOpen={custModalOpen}
+    onClose={handleCloseCustModal}
+    customParam="ActiveAll"
   />
 )}
 
@@ -2692,15 +2886,9 @@ const handleCloseAtcModal = async (selectedAtc) => {
   />
 )}
 
-{/* VAT Code Modal */}
-{showVatModal && (
-  <VATLookupModal  
-    isOpen={showVatModal}
-    onClose={handleCloseVatModal}
-    customParam="apv_dtl"
-    apiEndpoint="getVat"
-  />
-)}
+
+
+
 
 {/* ATC Code Modal */}
 {showAtcModal && (
@@ -2721,13 +2909,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
   />
 )}
 
-{/* Payment Terms Lookup Modal */}
-{showPaytermModal && (
-  <PaytermLookupModal
-    isOpen={showPaytermModal}
-    onClose={handleClosePaytermModal}
-  />
-)}
+
 
 {showSpinner && <LoadingSpinner />}
 
