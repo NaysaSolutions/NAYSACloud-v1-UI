@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { useLocation } from "react-router-dom";
+
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -39,6 +41,7 @@ const APV = () => {
   const [documentDetail2, setdocumentDetail2] = useState([]);
   const [documentID, setdocumentID] = useState(null)
   const [documentNo, setdocumentNo] = useState("")
+  const location = useLocation();
   
   const [activeTab, setActiveTab] = useState("basic");
   const [GLactiveTab, setGLActiveTab] = useState("invoice");
@@ -69,7 +72,7 @@ const APV = () => {
   const [vendName, setvendName] = useState(null);
   const [vendCode, setvendCode] = useState(null);  
   const [branches, setbranches] = useState([]);
-  const [branchCode, setBranchCode] = useState("");
+  const [branchCode, setBranchCode] = useState("Head Office");
   const [branchName, setBranchName] = useState("");
   const [modalContext, setModalContext] = useState('');
   const [selectionContext, setSelectionContext] = useState('');
@@ -79,7 +82,8 @@ const APV = () => {
   const [currencyName, setCurrencyName] = useState("Philippine Peso");
   const [currencyRate, setCurrencyRate] = useState("1.000000");
   const [apTypes, setApTypes] = useState([]);
-const [selectedApType, setSelectedApType] = useState("Purchases"); // default empty or first value
+const [selectedApType, setSelectedApType] = React.useState("Purchases");
+const [selectedTranType, setSelectedTranType] = useState("");
   const [apAccountName, setApAccountName] = useState("");
   const [apAccountCode, setApAccountCode] = useState("");
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
@@ -158,6 +162,110 @@ useEffect(() => {
       </div>
     </div>
   );
+
+
+  // Add this useEffect at the top of your component
+  useEffect(() => {
+    if (location.state?.transactionData && location.state?.isFromHistory) {
+      const transaction = location.state.transactionData;
+      
+      // Set all the form fields with the transaction data
+      setHeader({
+        apv_date: transaction.apvDate || new Date().toISOString().split('T')[0],
+        remarks: transaction.remarks || "",
+        refDocNo1: transaction.refapvNo1 || "",
+        refDocNo2: transaction.refapvNo2 || ""
+      });
+
+      setdocumentNo(transaction.apvNo || "");
+      setBranchCode(transaction.branchCode || "");
+      setBranchName(transaction.branchName || "");
+      setCurrencyCode(transaction.currCode || "PHP");
+      setCurrencyRate(transaction.currRate?.toString() || "1.000000");
+      setSelectedApType(transaction.apvtranType || "APV01");
+      
+      if (transaction.vendCode) {
+        setvendCode(transaction.vendCode);
+        setvendName({
+          vendCode: transaction.vendCode,
+          vendName: transaction.vendName || transaction.vednName || "",
+          currCode: transaction.currCode || ""
+        });
+      }
+
+      // Set AP Account
+      setApAccountCode(transaction.acctCode || "");
+      
+      // Set detail rows if they exist
+      if (transaction.dt1) {
+        const formattedRows = transaction.dt1.map(item => ({
+          lnNo: item.lnNo || "",
+          invType: item.invType || "FG",
+          rrNo: item.rrNo || "",
+          poNo: item.poNo || "",
+          siNo: item.siNo || "",
+          siDate: item.siDate?.split('T')[0] || header.apv_date,
+          amount: parseFloat(item.amount || 0).toFixed(2),
+          currency: transaction.currCode || "PHP",
+          siAmount: parseFloat(item.siAmount || item.amount || 0).toFixed(2),
+          debitAcct: item.debitAcct || "",
+          rcCode: item.rcCode || "",
+          rcName: item.rcName || "",
+          sltypeCode: item.sltypeCode || "",
+          slCode: item.slCode || transaction.vendCode || "",
+          slName: item.slName || transaction.vendName || "",
+          vatCode: item.vatCode || "",
+          vatName: item.vatName || "",
+          vatAmount: parseFloat(item.vatAmount || 0).toFixed(2),
+          atcCode: item.atcCode || "",
+          atcName: item.atcName || "",
+          atcAmount: parseFloat(item.atcAmount || 0).toFixed(2),
+          paytermCode: item.paytermCode || "",
+          dueDate: item.dueDate?.split('T')[0] || "",
+          remarks: item.remarks || ""
+        }));
+        setDetailRows(formattedRows);
+      }
+
+      // Set GL rows if they exist
+      if (transaction.dt2) {
+        const formattedGLRows = transaction.dt2.map((item, index) => ({
+          id: index + 1,
+          acctCode: item.acctCode || "",
+          rcCode: item.rcCode || "",
+          sltypeCode: item.sltypeCode || "",
+          slCode: item.slCode || "",
+          particular: item.particular || `APV ${transaction.apvNo} - ${transaction.vendName || "Vendor"}`,
+          vatCode: item.vatCode || "",
+          vatName: item.vatName || "",
+          atcCode: item.atcCode || "",
+          atcName: item.atcName || "",
+          debit: parseFloat(item.debit || 0).toFixed(2),
+          credit: parseFloat(item.credit || 0).toFixed(2),
+          slRefNo: item.slrefNo || "",
+          slrefDate: item.slrefDate?.split('T')[0] || "",
+          remarks: item.remarks || transaction.remarks || "",
+          dt1Lineno: item.dt1Lineno || ""
+        }));
+        setDetailRowsGL(formattedGLRows);
+      }
+
+      // Disable document number editing since this is an existing document
+      setIsDocNoDisabled(true);
+    }
+  }, [location.state]);
+
+
+  useEffect(() => {
+  const shouldHideInvoiceDetails =
+    selectedApType === "APV02" || selectedTranType === "Non Purchases";
+
+  setFieldVisibility((prev) => ({
+    ...prev,
+    invoiceDetails: !shouldHideInvoiceDetails,
+  }));
+}, [selectedApType, selectedTranType]);
+
 
  const handleGenerateGLEntries = async () => {
   setIsLoading(true);
@@ -545,31 +653,92 @@ useEffect(() => {
   }
 };
 
-// const handleAPTypeChange = (event) => {
-//   const selectedType = event.target.value;
-//   setSelectedApType(selectedType);
-//   console.log("Selected AP Type:", selectedType);
-//   switch (selectedType) {
-//     case "APV01"://purchases
-//       //hide sl type, sl name, address, tin
+const handleAPTypeChange = (event) => {
+  const selectedType = event.target.value;
+  setSelectedApType(selectedType);
 
-//     case "APV02":// non purchases
-//       //hide whole invoice detail
+  // Default: show all fields
+  let visibility = {
+    sltypeCode: true,
+    slName: true,
+    address: true,
+    tin: true,
+    invType: true,
+    rrNo: true,
+    poNo: true,
+    siNo: true,
+    siDate: true,
+  };
 
-//     case "APV03": //advances
-//       //hide sl type, sl name, address, tin 
-//       // show advances acct
+  switch (selectedType) {
+    case "APV01": // purchases
+      // Hide SL Type, SL Name, Address, TIN
+      visibility.sltypeCode = false;
+      visibility.slName = false;
+      visibility.address = false;
+      visibility.tin = false;
+      break;
 
-//       case "APV05"://reimbursements
-//       // hide type to PO No
-//       //display sl type, sl name, address, tin
+    case "APV02": // non purchases
+      // Hide whole invoice detail (Type, RR No., PO No., SI No., SI Date)
+      visibility.invType = false;
+      visibility.rrNo = false;
+      visibility.poNo = false;
+      visibility.siNo = false;
+      visibility.siDate = false;
+      break;
 
-//       case "APV06": //liquidation
-//       // hide type to PO No
-//       //display sl type, sl name, address, tin
+    case "APV03": // advances
+      // Hide SL Type, SL Name, Address, TIN
+      visibility.sltypeCode = false;
+      visibility.slName = false;
+      visibility.address = false;
+      visibility.tin = false;
+      break;
 
-// }
+    case "APV05": // reimbursements
+      // Hide Type, RR No., PO No
+      visibility.invType = false;
+      visibility.rrNo = false;
+      visibility.poNo = false;
+      // Show SL Type, SL Name, Address, TIN
+      visibility.sltypeCode = true;
+      visibility.slName = true;
+      visibility.address = true;
+      visibility.tin = true;
+      break;
 
+    case "APV06": // liquidation
+      // Hide Type, RR No., PO No
+      visibility.invType = false;
+      visibility.rrNo = false;
+      visibility.poNo = false;
+      // Show SL Type, SL Name, Address, TIN
+      visibility.sltypeCode = true;
+      visibility.slName = true;
+      visibility.address = true;
+      visibility.tin = true;
+      break;
+
+    default:
+      // If no selection or unrecognized, show all fields by default
+      break;
+  }
+
+  setFieldVisibility(visibility);
+};
+
+const [fieldVisibility, setFieldVisibility] = React.useState({
+  sltypeCode: true,
+  slName: true,
+  address: true,
+  tin: true,
+  invType: true,
+  rrNo: true,
+  poNo: true,
+  siNo: true,
+  siDate: true,
+});
 
 
   const handleAddRow = async () => {
@@ -1103,6 +1272,223 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
   updateTotals(updatedRows);
 };
 
+const handleFetchClick = async () => {
+  if (!documentNo || !branchCode) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Information',
+      text: 'Please enter both Branch and APV No. to fetch data',
+    });
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    await fetchSavedAPV(documentNo, branchCode);
+  } catch (error) {
+    console.error("Error fetching APV:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Fetch Failed',
+      text: 'Failed to retrieve APV data. Please check the APV number and try again.',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const handleDocumentNoChange = async (e) => {
+  setdocumentNo(e.target.value);
+
+  // Only fetch if we have both branch code and APV number
+  if (documentNo && branchCode) {
+    try {
+      setIsLoading(true);
+      await fetchSavedAPV(documentNo, branchCode);
+    } catch (error) {
+      console.error("Error fetching APV:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Fetch Failed',
+        text: 'Failed to retrieve APV data. Please check the APV number and try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+};
+
+const fetchSavedAPV = async (apvNo, branchCode) => {
+  try {
+    const payload = {
+      json_data: {
+        branchCode: branchCode,
+        apvNo: apvNo
+      }
+    };
+
+    const response = await postRequest("getAPV", JSON.stringify(payload));
+    
+    if (response.success) {
+      const result = JSON.parse(response.data[0].result);
+      
+      // Update the form with the retrieved data
+      updateFormWithSavedData(result);
+    } else {
+      throw new Error(response.message || "Failed to fetch APV data");
+    }
+  } catch (error) {
+    console.error("Error fetching APV:", error);
+    throw error;
+  }
+};
+
+const updateFormWithSavedData = async (data) => {
+  if (!data) return;
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+    return dateString.split('T')[0];
+  };
+
+  // Update Header
+  setHeader({
+    apv_date: formatDate(data.apvDate) || new Date().toISOString().split('T')[0],
+    remarks: data.remarks || "",
+    refDocNo1: data.refapvNo1 || "",
+    refDocNo2: data.refapvNo2 || ""
+  });
+
+  // Vendor
+  if (data.vendCode) {
+    setvendCode(data.vendCode);
+    setvendName({
+      vendCode: data.vendCode,
+      vendName: data.vendName || data.vednName || "",
+      currCode: data.currCode || data.currCode || ""
+    });
+  }
+
+  // Currency and AP Info
+  setCurrencyCode(data.currCode || "");
+  setCurrencyRate(data.currRate?.toString() || "");
+  setSelectedApType(data.apvtranType || "");
+  setApAccountCode(data.acctCode || "");
+
+  // Fetch AP Account Name if not present
+  if (!data.acctName && data.acctCode) {
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/getCOA", {
+        ACCT_CODE: data.acctCode,
+      });
+      if (response.data.success) {
+        const coaData = JSON.parse(response.data.data[0].result);
+        const acctName = coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "";
+        setApAccountName(acctName);
+      } else {
+        setApAccountName("");
+      }
+    } catch (err) {
+      console.warn("Failed to fetch account name:", err);
+      setApAccountName("");
+    }
+  } else {
+    setApAccountName(data.acctName || "");
+  }
+
+  setdocumentID(data.apvId || "");
+
+  // Detail Rows (dt1)
+  if (data.dt1) {
+    const parsedDt1 = Array.isArray(data.dt1) ? data.dt1 : JSON.parse(data.dt1);
+
+    const formattedRows = await Promise.all(parsedDt1.map(async (item) => {
+      let rcName = item.rcName || "";
+
+      if (item.rcCode && !rcName) {
+        try {
+          const rcResponse = await fetchData("getRCMast", { RC_CODE: item.rcCode });
+          if (rcResponse.success) {
+            const rcData = JSON.parse(rcResponse.data[0].result);
+            rcName = rcData[0]?.rcName || "";
+          }
+        } catch (error) {
+          console.warn(`RC fetch failed for ${item.rcCode}:`, error);
+        }
+      }
+
+      return {
+        lnNo: item.lnNo || "",
+        invType: item.invType || "FG",
+        rrNo: item.rrNo || "",
+        poNo: item.poNo || "",
+        siNo: item.siNo || "",
+        siDate: formatDate(item.siDate),
+        amount: parseFloat(item.amount || 0).toFixed(2),
+        currency: data.currCode || "",
+        siAmount: parseFloat(item.siAmount || item.amount || 0).toFixed(2),
+        debitAcct: item.debitAcct || "",
+        rcCode: item.rcCode || "",
+        rcName,
+        sltypeCode: item.sltypeCode || "",
+        slCode: item.slCode || data.vendCode || "",
+        slName: item.slName || data.vednName || data.vendName || "",
+        vatCode: item.vatCode || "",
+        vatName: item.vatName || "",
+        vatAmount: parseFloat(item.vatAmount || 0).toFixed(2),
+        atcCode: item.atcCode || "",
+        atcName: item.atcName || "",
+        atcAmount: parseFloat(item.atcAmount || 0).toFixed(2),
+        paytermCode: item.paytermCode || "",
+        dueDate: formatDate(item.dueDate),
+        remarks: item.remarks || ""
+      };
+    }));
+
+    setDetailRows(formattedRows);
+  } else {
+    setDetailRows([]);
+  }
+
+  // GL Rows (dt2)
+  if (data.dt2) {
+    const parsedDt2 = Array.isArray(data.dt2) ? data.dt2 : JSON.parse(data.dt2);
+
+    const formattedGLRows = parsedDt2.map((item, index) => ({
+      id: index + 1,
+      acctCode: item.acctCode || "",
+      rcCode: item.rcCode || "",
+      sltypeCode: item.sltypeCode || "",
+      slCode: item.slCode || "",
+      particular: item.particular || `APV ${data.apvNo} - ${data.vednName || data.vendName || "Vendor"}`,
+      vatCode: item.vatCode || "",
+      vatName: item.vatName || "",
+      atcCode: item.atcCode || "",
+      atcName: item.atcName || "",
+      debit: parseFloat(item.debit || 0).toFixed(2),
+      credit: parseFloat(item.credit || 0).toFixed(2),
+      slRefNo: item.slrefNo || "",
+      slrefDate: formatDate(item.slrefDate),
+      remarks: item.remarks || data.remarks || "",
+      dt1Lineno: item.dt1Lineno || ""
+    }));
+
+    setDetailRowsGL(formattedGLRows);
+
+    const totalDebit = formattedGLRows.reduce((sum, row) => sum + parseFloat(row.debit || 0), 0);
+    const totalCredit = formattedGLRows.reduce((sum, row) => sum + parseFloat(row.credit || 0), 0);
+
+    setTotalDebit(totalDebit);
+    setTotalCredit(totalCredit);
+  } else {
+    setDetailRowsGL([]);
+    setTotalDebit(0);
+    setTotalCredit(0);
+  }
+};
+
+
 
 
 const getAtcRate = async (atcCode) => {
@@ -1365,29 +1751,29 @@ const handlePaytermNameDoubleClick = (index) => {
   };
   
   const handleCloseRcModal = async (selectedRc) => {
-    if (selectedRc && selectedRowIndex !== null) {
-      try {
-        // Fetch RC Name from /getRCMast API
-        const rcResponse = await fetchData("getRCMast", { RC_CODE: selectedRc.rcCode });
-        if (rcResponse.success) {
-          const rcData = JSON.parse(rcResponse.data[0].result);
-          const rcName = rcData[0]?.rcName || '';
-          
-          const updatedRows = [...detailRows];
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            rcCode: selectedRc.rcCode,
-            rcName: rcName,
-          };
-          setDetailRows(updatedRows);
-        }
-      } catch (error) {
-        console.error("Error fetching RC data:", error);
+  if (selectedRc && selectedRowIndex !== null) {
+    try {
+      // Fetch RC Name from /getRCMast API
+      const rcResponse = await fetchData("getRCMast", { RC_CODE: selectedRc.rcCode });
+      if (rcResponse.success) {
+        const rcData = JSON.parse(rcResponse.data[0].result);
+        const rcName = rcData[0]?.rcName || '';
+        
+        const updatedRows = [...detailRows];
+        updatedRows[selectedRowIndex] = {
+          ...updatedRows[selectedRowIndex],
+          rcCode: selectedRc.rcCode,
+          rcName: rcName,
+        };
+        setDetailRows(updatedRows);
       }
+    } catch (error) {
+      console.error("Error fetching RC data:", error);
     }
-    setShowRcModal(false);
-    setSelectedRowIndex(null);
-  };
+  }
+  setShowRcModal(false);
+  setSelectedRowIndex(null);
+};
 
   const handleDeleteRow = (index) => {
   // Create a copy of the current rows
@@ -1586,29 +1972,30 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
         {/* APV Number Field */}
         <div className="relative">
-        <input
-          type="text"
-          id="currName"
-          value={documentNo}
-          onChange={(e) => setdocumentNo(e.target.value)}                  
-          placeholder=" "
-          className={`peer global-tran-textbox-ui ${isDocNoDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-          disabled={isDocNoDisabled}
-        />
-        <label htmlFor="APVNo" className="global-tran-floating-label">
-          APV No.
-        </label>
-        <button
-          className={`global-tran-textbox-button-search-padding-ui ${
-            isFetchDisabled || isDocNoDisabled
-            ? "global-tran-textbox-button-search-disabled-ui" 
-            : "global-tran-textbox-button-search-enabled-ui"
-          } global-tran-textbox-button-search-ui`}
-          disabled={isDocNoDisabled}
-        >
-          <FontAwesomeIcon icon={faMagnifyingGlass} />
-        </button>
-      </div>
+  <input
+    type="text"
+    id="currName"
+    value={documentNo}
+    onChange={handleDocumentNoChange}                  
+    placeholder=" "
+    className={`peer global-tran-textbox-ui ${isDocNoDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+    disabled={isDocNoDisabled}
+  />
+  <label htmlFor="APVNo" className="global-tran-floating-label">
+    APV No.
+  </label>
+  <button
+    onClick={handleFetchClick}
+    className={`global-tran-textbox-button-search-padding-ui ${
+      isFetchDisabled || isDocNoDisabled
+      ? "global-tran-textbox-button-search-disabled-ui" 
+      : "global-tran-textbox-button-search-enabled-ui"
+    } global-tran-textbox-button-search-ui`}
+    disabled={isDocNoDisabled}
+  >
+    <FontAwesomeIcon icon={faMagnifyingGlass} />
+  </button>
+</div>
 
           {/* APV Date Picker */}
           <div className="relative">
@@ -1772,25 +2159,20 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
           <div className="relative">
   <select
-    id="apType"
-    className="peer global-tran-textbox-ui"
-    value={selectedApType}
-    onChange={(e) => setSelectedApType(e.target.value)}
-    disabled={apTypes.length === 0} // Disable if no options loaded
-  >
-    {apTypes.length > 0 ? (
-      <>
-        <option value="">Select AP Type</option>
-        {apTypes.map((type) => (
-          <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-            {type.DROPDOWN_NAME}
-          </option>
-        ))}
-      </>
-    ) : (
-      <option value="">Loading AP Types...</option>
-    )}
-  </select>
+  id="apType"
+  className="peer global-tran-textbox-ui"
+  value={selectedApType}
+  onChange={handleAPTypeChange}  // <-- call your handler here
+  disabled={apTypes.length === 0}
+>
+  <option value="">Select AP Type</option>
+  {apTypes.map((type) => (
+    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+      {type.DROPDOWN_NAME}
+    </option>
+  ))}
+</select>
+
   <label htmlFor="apType" className="global-tran-floating-label">
     AP Type
   </label>
@@ -1880,7 +2262,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
       </div>
       </div>
       <br />
-      
+      {fieldVisibility.invoiceDetails && (
+  <>
       {/* APV Detail Section */}
       <div id="apv_dtl" className="global-tran-tab-div-ui">
 
@@ -1920,9 +2303,15 @@ const handleCloseAtcModal = async (selectedAtc) => {
       <thead className="global-tran-thead-div-ui">
         <tr>
           <th className="global-tran-th-ui">LN</th>
+          {fieldVisibility.invType && (
           <th className="global-tran-th-ui">Type</th>
+          )}
+          {fieldVisibility.rrNo && (
           <th className="global-tran-th-ui">RR No.</th>
+          )}
+          {fieldVisibility.poNo && (
           <th className="global-tran-th-ui">PO/JO No.</th>
+          )}
           <th className="global-tran-th-ui">Invoice No.</th>
           <th className="global-tran-th-ui">Invoice Date</th>
           <th className="global-tran-th-ui">Original Amount</th>
@@ -1931,8 +2320,12 @@ const handleCloseAtcModal = async (selectedAtc) => {
           <th className="global-tran-th-ui">DR Account</th>
           <th className="global-tran-th-ui">RC Code</th>
           <th className="global-tran-th-ui">RC Name</th>
+          {fieldVisibility.sltypeCode && (
           <th className="global-tran-th-ui" id='sltypeCode' >SL Type Code</th>
+          )}
+          {fieldVisibility.slName && (
           <th className="global-tran-th-ui">SL Code</th>
+          )}
           <th className="global-tran-th-ui">VAT Code</th>
           <th className="global-tran-th-ui">VAT Name</th>
           <th className="global-tran-th-ui">VAT Amount</th>
@@ -2298,6 +2691,9 @@ const handleCloseAtcModal = async (selectedAtc) => {
 </div>
 
 </div>
+ </>
+)}
+
 
 
  
