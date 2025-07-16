@@ -3,7 +3,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 
-const COAMastLookupModal = ({ isOpen, onClose, customParam  }) => {
+const COAMastLookupModal = ({ isOpen, onClose, customParam,source }) => {
   const [accounts, setAccounts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [filters, setFilters] = useState({ acctCode: '', acctName: '', acctBalance: '' , reqSL: ''  , reqRC: '' });
@@ -14,15 +14,7 @@ const COAMastLookupModal = ({ isOpen, onClose, customParam  }) => {
     if (isOpen) {
       setLoading(true);
 
-
-      switch (customParam) {
-        case "apv_hd":
-          customParam = "APGL";
-          break;         
-        default:
-          break;
-      }
-
+      
 
       axios.post("http://127.0.0.1:8000/api/lookupCOA", {
         PARAMS: JSON.stringify({
@@ -69,7 +61,7 @@ const COAMastLookupModal = ({ isOpen, onClose, customParam  }) => {
   }, [filters, accounts]);
 
   const handleApply = (coa) => {  
-    onClose(coa);
+    onClose(coa,source);
   };
 
   

@@ -16,7 +16,7 @@ const VATLookupModal = ({ isOpen, onClose, customParam }) => {
   
       const params = {
         PARAMS: JSON.stringify({
-          search: "",
+          search: customParam ||"",
           page: 1,
           pageSize: 10,
         }),

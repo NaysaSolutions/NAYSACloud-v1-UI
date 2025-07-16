@@ -133,7 +133,7 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
 
   return (
     <div className="global-lookup-main-div-ui">
-      <div className="global-lookup-div-ui max-w-6xl max-h-[100vh]">
+      <div className="global-lookup-div-ui max-w-2xl max-h-[100vh]">
         <button
           onClick={() => onClose(null)}
           className="global-lookup-button-close-ui"

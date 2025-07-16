@@ -3,7 +3,6 @@ export const docTypeNames = {
     // General Ledger Module
     JV: "Journal Voucher Transaction",
     PCV: "Petty Cash Voucher Transaction",
-
     // Accounts Payable Module
     APV: "Accounts Payable Voucher Transaction",
     APDM: "AP Debit Memo Voucher Transaction",
@@ -17,9 +16,10 @@ export const docTypeNames = {
     ARCM: "AR Credit Memo Voucher Transaction",
     CR: "Collection Receipt Transaction",
     SOA: "Statement of Account Transaction",
-
-
   };
+
+
+
 
   export const docTypeVideoGuide = {
     
@@ -63,4 +63,13 @@ export const docTypeNames = {
     CR: "Collection Receipt Transaction",
     SOA: "Statement of Account Transaction",
 
+  };
+
+
+
+  export const glAccountFilter = {
+    ActiveAll: "ActiveAll",
+    PayableAcct: "APGL",
+    VATOutputAcct:"VATOutputAcct",
+    VATInputAcct:"VATInputAcct"
   };

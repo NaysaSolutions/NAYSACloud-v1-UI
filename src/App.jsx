@@ -84,6 +84,7 @@ import Header from "./NAYSA Cloud/Components/Header";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
+import SVI from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
 import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
 import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV.jsx";
 import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
@@ -126,8 +127,8 @@ const AppContent = () => {
         <Routes>
           {/* <Route path="/" element={<APV />} /> */}
           {/* <Route path="/" element={<CV />} /> */}
-          <Route path="/history" element={<JVHistory />} />
-          <Route path="/" element={<JV />} /> Default to BranchRef
+          {/* <Route path="/history" element={<JVHistory />} /> */}
+          <Route path="/" element={<SVI />} /> Default to BranchRef
         </Routes>
       </div>
     </div>

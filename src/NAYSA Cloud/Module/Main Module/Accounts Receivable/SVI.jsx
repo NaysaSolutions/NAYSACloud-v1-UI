@@ -16,15 +16,28 @@ import VATLookupModal from "../../../Lookup/SearchVATRef.jsx";
 import ATCLookupModal from "../../../Lookup/SearchATCRef.jsx";
 import SLMastLookupModal from "../../../Lookup/SearchSLMast.jsx";
 import BillTermLookupModal from "../../../Lookup/SearchBillTermRef.jsx";
+import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
+
+
+// Configuration
+import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
+
 
 // Global
 import { useReset } from "../../../Components/ResetContext";
 import { docTypeNames } from '@/NAYSA Cloud/Global/doctype';
+import { glAccountFilter } from '@/NAYSA Cloud/Global/doctype';
 import { docTypeVideoGuide } from '@/NAYSA Cloud/Global/doctype';
 import { docTypePDFGuide } from '@/NAYSA Cloud/Global/doctype';
+import { getTopVatRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopATCRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
+import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
+import { parseAndFormat } from '@/NAYSA Cloud/Global/behavior';
 
-// Configuration
-import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
 
 // Header
 import Header from '@/NAYSA Cloud/Components/Header';
@@ -58,6 +71,7 @@ const SVI = () => {
     statusColor = 'global-tran-stat-text-closed-ui';
   }
 
+
   const [totalDebit, setTotalDebit] = useState(0);
   const [totalCredit, setTotalCredit] = useState(0);
   const [detailRows, setDetailRows] = useState([]);
@@ -79,24 +93,37 @@ const SVI = () => {
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencyName, setCurrencyName] = useState("Philippine Peso");
   const [currencyRate, setCurrencyRate] = useState("1.000000");
-  const [grossAmount, setgrossAmount] = useState("0.00");
-  const [discountAmount, setdiscountAmount] = useState("0.00");
-  const [netAmount, setnetAmount] = useState("0.00");
-  const [vatAmount, setvatAmount] = useState("0.00");
-  const [salesAmount, setsalesAmount] = useState("0.00");
-  const [atcAmount, setatcAmount] = useState("0.00");
-  const [amountDue, setamountDue] = useState("0.00");
+  // const [grossAmount, setgrossAmount] = useState("0.00");
+  // const [discountAmount, setdiscountAmount] = useState("0.00");
+  // const [netAmount, setnetAmount] = useState("0.00");
+  // const [vatAmount, setvatAmount] = useState("0.00");
+  // const [salesAmount, setsalesAmount] = useState("0.00");
+  // const [atcAmount, setatcAmount] = useState("0.00");
+  // const [amountDue, setamountDue] = useState("0.00");
+
+  const [totals, setTotals] = useState({
+  totalGrossAmount: '0.00',
+  totalDiscountAmount: '0.00',
+  totalNetAmount: '0.00',
+  totalVatAmount: '0.00',
+  totalSalesAmount: '0.00',
+  totalAtcAmount: '0.00',
+  totalAmountDue: '0.00',
+});
+
 
 
   const [sviTypes, setsviTypes] = useState([]);
-const [selectedSVIType, setselectedSVIType] = useState("REG"); // default empty or first value
+  const [selectedSVIType, setselectedSVIType] = useState("REG"); // default empty or first value
   const [billtermCode, setbilltermCode] = useState("");
   const [billtermName, setbilltermName] = useState("");
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountModalSource, setAccountModalSource] = useState(null);
   const [showRcModal, setShowRcModal] = useState(false);
   const [showVatModal, setShowVatModal] = useState(false);
   const [showAtcModal, setShowAtcModal] = useState(false);
+  const [showBillCodeModal, setshowBillCodeModal] = useState(false);
   const [showSlModal, setShowSlModal] = useState(false);
   const [showBilltermModal, setShowBilltermModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -104,15 +131,47 @@ const [selectedSVIType, setselectedSVIType] = useState("REG"); // default empty 
   const [isDocNoDisabled, setIsDocNoDisabled] = useState(false);
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);
   const [isResetDisabled, setIsResetDisabled] = useState(false);
+  
+  const customParamMap = {
+        arAct: glAccountFilter.ActiveAll,
+        salesAcct: glAccountFilter.ActiveAll,
+        vatAcct: glAccountFilter.VATOutputAcct,
+        discAcct:glAccountFilter.ActiveAll
+};
+  const customParam = customParamMap[accountModalSource] || null;
   const [header, setHeader] = useState({
   apv_date: new Date().toISOString().split('T')[0],
   remarks: "" // Add this line to include remarks in the header
 });
-  const updateTotalsDisplay = (invoice, vat, atc, payable) => {
-  document.getElementById('totalInvoiceAmount').textContent = invoice.toFixed(2);
-  document.getElementById('totalVATAmount').textContent = vat.toFixed(2);
-  document.getElementById('totalATCAmount').textContent = atc.toFixed(2);
-  document.getElementById('totalPayableAmount').textContent = payable.toFixed(2);
+
+
+
+  const updateTotalsDisplay = (grossAmt,discAmt,netDisc, vat, atc, amtDue) => {
+
+  document.getElementById('totInvoiceAmount').textContent = formatNumber(netDisc)
+  document.getElementById('totVATAmount').textContent = formatNumber(vat);
+  document.getElementById('totATCAmount').textContent = formatNumber(atc);
+  document.getElementById('totAmountDue').textContent = formatNumber(amtDue);
+
+  setTotals({
+    totalGrossAmount:formatNumber(grossAmt),
+    totalDiscountAmount: formatNumber(discAmt),
+    totalNetAmount: formatNumber(netDisc),
+    totalVatAmount: formatNumber(vat),
+    totalSalesAmount: formatNumber(netDisc-vat),
+    totalAtcAmount: formatNumber(atc),
+    totalAmountDue: formatNumber(amtDue),
+  });
+
+  // document.getElementById('grossAmount').textContent = grossAmt.toFixed(2);
+  // document.getElementById('discountAmount').textContent = discAmt.toFixed(2);
+  // document.getElementById('netAmount').textContent = netDisc.toFixed(2);
+  // document.getElementById('vatAmount').textContent = vat.toFixed(2);
+  // document.getElementById('salesAmount').textContent = (netDisc-vat).toFixed(2);
+  // document.getElementById('atcAmount').textContent = atc.toFixed(2);
+  // document.getElementById('amountDue').textContent = amtDue.toFixed(2);
+
+
 };
 
 
@@ -602,17 +661,16 @@ useEffect(() => {
         discRate: "0.00",
         discAmount: "0.00",
         netDisc: "0.00",
-        vatCode: "",
-        vatName: "",
+        vatCode: item.vatCode || "",
+        vatName: item.vatName || "",
         vatAmount: "0.00",
-        atcCode: "",
-        atcName: "",
-        atcName:  "",
+        atcCode: item.atcCode || "",
+        atcName: item.atcName || "",
         atcAmount: "0.00",
         sviAmount: "0.00",
         salesAcct: "",
         arAcct: "",       
-        vatAcct: "",
+        vatAcct: item.vatAcctCode,
         discAcct: "",
         rcCode: ""
       };
@@ -761,13 +819,13 @@ const handleDeleteRowGL = (index) => {
     if (!custCode) return [];
   
     try {
-      const vendPayload = {
+      const custPayload = {
         json_data: {
           custCode: custCode,
         },
       };
   
-      const vendResponse = await postRequest("addPayeeDetail", JSON.stringify(vendPayload));
+      const vendResponse = await postRequest("addCustomerDetail", JSON.stringify(custPayload));
       const rawResult = vendResponse.data[0]?.result;
   
       // Parse the string result into an actual JS object
@@ -1033,276 +1091,198 @@ const handlePaytermLookup = async (paytermCode) => {
 };
 
   const updateTotals = (rows) => {
-  let totalInvoice = 0;
+
+  let totalNetDiscount = 0;
   let totalVAT = 0;
   let totalATC = 0;
-  let totalPayable = 0;
+  let totalAmtDue = 0;
+  let totalGrossAmt =0;
+  let totalDiscAmt=0;
 
   rows.forEach(row => {
-    const invoiceAmount = parseFloat(row.siAmount || row.amount || 0) || 0;
-    const vatAmount = parseFloat(row.vatAmount || 0) || 0;
-    const atcAmount = parseFloat(row.atcAmount || 0) || 0;
     
-    totalInvoice += invoiceAmount;
+    const vatAmount = parseFormattedNumber(row.vatAmount || 0) || 0;
+    const atcAmount = parseFormattedNumber(row.atcAmount || 0) || 0;
+    const invoiceGross = parseFormattedNumber(row.grossAmount || 0) || 0;
+    const invoiceNetDisc = parseFormattedNumber(row.netDisc || row.netDisc || 0) || 0;
+    const invoiceDiscount = parseFormattedNumber(row.discAmount || 0) || 0;
+
+    totalGrossAmt+= invoiceGross;
+    totalDiscAmt+= invoiceDiscount;
+    totalNetDiscount+= invoiceNetDisc;
     totalVAT += vatAmount;
     totalATC += atcAmount;
   });
 
-  // Total Payable = Invoice Amount + VAT - ATC
-  totalPayable = totalInvoice - totalATC;
-
-  // Update the totals display
-  updateTotalsDisplay(totalInvoice, totalVAT, totalATC, totalPayable);
+  totalAmtDue = totalNetDiscount - totalATC;
+  updateTotalsDisplay (totalGrossAmt,totalDiscAmt,totalNetDiscount, totalVAT, totalATC, totalAmtDue);
 };
 
-  const getVatRate = async (vatCode) => {
-  if (!vatCode) return 0;
 
-  try {
-    const response = await fetchData("getVat", { VAT_CODE: vatCode });
 
-    if (response.success) {
-      const vatData = JSON.parse(response.data[0].result);
-
-      console.log("vatData[0] full object:", vatData[0]);
-
-      // Try to get vatRate property (not rate)
-      const rate = vatData[0]?.vatRate;
-
-      console.log("Extracted rate (vatRate):", rate);
-
-      if (typeof rate === 'number') {
-        return rate;
-      }
-
-      const parsedRate = parseFloat(rate);
-      if (!isNaN(parsedRate)) {
-        return parsedRate;
-      }
-
-      console.warn("Unrecognized VAT rate format, defaulting to 0");
-      return 0;
-    }
-
-    console.warn("getVat API failed, defaulting to 0");
-    return 0;
-  } catch (error) {
-    console.error("Error fetching VAT rate:", error);
-    return 0;
-  }
-};
 
 const handleDetailChange = async (index, field, value, runCalculations = true) => {
-  const updatedRows = [...detailRows];
-
-  updatedRows[index] = {
-    ...updatedRows[index],
-    [field]: value,
-  };
-
-  // Always update siAmount when amount changes, even if not calculating yet
-  if (field === 'amount') {
-    updatedRows[index].siAmount = value;
-  }
-
-  if (runCalculations) {
-    // Parse amount once for calculations
-    const amount = parseFloat(updatedRows[index].amount) || 0;
-
-    // Due Date recalculation (if you also want to do it on amount change)
-    if (field === 'amount' || field === 'daysDue') {
-      const daysDueNum = parseInt(updatedRows[index].daysDue, 10);
-      if (!isNaN(daysDueNum) && header.apv_date) {
-        const newDueDate = calculateDueDate(header.apv_date, daysDueNum);
-        updatedRows[index].dueDate = newDueDate;
-      } else {
-        updatedRows[index].dueDate = '';
-      }
-    }
-
-    // VAT recalculation
-    if (field === 'amount' || field === 'vatCode') {
-      const vatCode = updatedRows[index].vatCode;
-      const vatRate = vatCode ? await getVatRate(vatCode) : 0;
-      const vatRateDecimal = vatRate / 100;
-      const baseAmount = amount / (1 + vatRateDecimal);
-      const vatAmount = amount - baseAmount;
-      updatedRows[index].vatAmount = vatAmount.toFixed(2);
-    }
-
-    // ATC recalculation
-    if (field === 'amount' || field === 'atcCode') {
-      const atcCode = updatedRows[index].atcCode;
-      let atcAmount = 0;
-      if (atcCode) {
-        const atcRate = await getAtcRate(atcCode);
-        atcAmount = amount * (atcRate / 100);
-      }
-      updatedRows[index].atcAmount = atcAmount.toFixed(2);
-    }
-  }
-
-  setDetailRows(updatedRows);
-  updateTotals(updatedRows);
-};
-
-
-
-const getAtcRate = async (atcCode) => {
-  if (!atcCode) return 0;
-
-  try {
-    const response = await fetchData("getATC", { ATC_CODE: atcCode });
-
-    if (response.success) {
-      const atcData = JSON.parse(response.data[0].result);
-
-      const rate = atcData[0]?.atcRate;
-      console.log("getAtcRate: Raw rate fetched from API:", rate);
-
-      const parsedRate = parseFloat(rate);
-      console.log("getAtcRate: Parsed numeric rate:", parsedRate);
-
-      if (!isNaN(parsedRate)) {
-        return parsedRate;
-      }
-
-      console.warn("Unrecognized ATC rate format, defaulting to 0");
-      return 0;
-    }
-
-    console.warn("getATC API failed, defaulting to 0");
-    return 0;
-  } catch (error) {
-    console.error("Error fetching ATC rate:", error);
-    return 0;
-  }
-};
-
-
-
-
-// SL Code double-click handler
-const handleSlDoubleClick = (index) => {
-  const currentValue = detailRows[index]?.slCode;
-  const updatedRows = [...detailRows];
-  
-  if (currentValue) {
-    updatedRows[index] = {
-      ...updatedRows[index],
-      slCode: custCode || "", // Reset to payee code if available
-      slName: custName?.custName || "" // Reset to payee name if available
-    };
-    setDetailRows(updatedRows);
-  } else {
-    setSelectedRowIndex(index);
-    setShowSlModal(true);
-  }
-};
-
-// For SL Code Modal
-const handleCloseSlModal = async (selectedSl) => {
-  if (selectedSl && selectedRowIndex !== null) {
-    const fullSlData = await handleSlLookup(selectedSl.slCode);
     const updatedRows = [...detailRows];
-    updatedRows[selectedRowIndex] = {
-      ...updatedRows[selectedRowIndex],
-      slCode: fullSlData?.slCode || selectedSl.slCode,
-      slName: fullSlData?.slName || selectedSl.slName
-    };
-    setDetailRows(updatedRows);
-  }
-  setShowSlModal(false);
-  setSelectedRowIndex(null);
-};
 
-const handleClosePaytermModal = (selectedPayterm) => {
-  if (selectedPayterm && selectedRowIndex !== null) {
-    const daysDue = parseInt(selectedPayterm.daysDue || 0);
-    console.log("Selected payment term daysDue:", daysDue);
-
-    // Use today's date instead of header.apv_date
-    const today = new Date().toISOString().split("T")[0]; // format YYYY-MM-DD
-
-    const dueDate = calculateDueDate(today, daysDue);
-
-    const updatedRows = [...detailRows];
-    updatedRows[selectedRowIndex] = {
-      ...updatedRows[selectedRowIndex],
-      paytermCode: selectedPayterm.paytermCode,
-      paytermName: selectedPayterm.paytermName,
-      daysDue: daysDue,
-      dueDate: dueDate
+    updatedRows[index] = {
+      ...updatedRows[index],
+      [field]: value,
     };
 
+     const row = updatedRows[index];
+
+      if (field === 'vatCode') {
+          row.vatCode = value.vatCode,
+          row.vatAcct = value.acctCode,
+          row.vatName = value.vatName;     
+        };
+
+      if (field === 'atcCode' ){
+          row.atcCode = value.atcCode,
+          row.atcName = value.atcName;     
+        };
+
+
+      if (field === 'billCode'){
+          row.billCode= value.billCode,
+          row.billName= value.billName,
+          row.uomCode=value.uomCode,
+          row.arAcct = value.arAcct,
+          row.salesAcct= value.salesAcct,
+          row.discAcct= value.sDiscAcct,
+          row.rcCode= value.rcCode,
+          row.quantity= "0.00",
+          row.grossAmount= "0.00",
+          row.unitPrice= "0.00",
+          row.vatAmount= "0.00",
+          row.atcAmount= "0.00",
+          row.amountDue= "0.00",
+          row.discRate= "0.00",
+          row.discAmount= "0.00",
+          row.sviAmount ="0.00"
+    };
+
+
+    if (runCalculations) {  
+      const origQuantity = parseFormattedNumber(row.quantity) || 0;
+      const origUnitPrice = parseFormattedNumber(row.unitPrice) || 0;
+      const origDiscAmount = parseFormattedNumber(row.discAmount) || 0;
+      const origVatCode = row.vatCode || "";
+      const origAtcCode = row.atcCode || "";
+
+  
+      // shared calculation logic
+      async function recalcRow(newGrossAmt, newDiscAmount) {
+        const newNetDiscount = +(newGrossAmt - newDiscAmount).toFixed(2);
+        const newVatAmount = origVatCode ? await getTopVatAmount(origVatCode, newNetDiscount) : 0;
+        const newNetOfVat = +(newNetDiscount - newVatAmount).toFixed(2);
+        const newATCAmount = origAtcCode ? await getTopATCAmount(origAtcCode, newNetOfVat) : 0;
+        const newAmountDue = +(newNetDiscount - newATCAmount).toFixed(2);
+
+
+        row.grossAmount = formatNumber(newGrossAmt);
+        row.netDisc = formatNumber(newNetDiscount);
+        row.vatAmount = formatNumber(newVatAmount);
+        row.atcAmount = formatNumber(newATCAmount);
+        row.sviAmount = formatNumber(newAmountDue);
+        row.discAmount = formatNumber(newDiscAmount);
+        row.quantity = formatNumber(parseFormattedNumber (row.quantity));
+        row.unitPrice = formatNumber(parseFormattedNumber (row.unitPrice));
+        console.log(row.quantity);
+
+      }
+
+
+
+
+      if (field === 'quantity') {
+        const newQuantity = parseFormattedNumber(row.quantity) || 0;
+        const newGrossAmt = +(newQuantity * origUnitPrice).toFixed(2);
+        const discountRate = parseFormattedNumber(row.discRate) || 0;
+        const newDiscAmount = +(discountRate * newGrossAmt * 0.01).toFixed(2);
+        row.discAmount = newDiscAmount.toFixed(2);
+        await recalcRow(newGrossAmt, newDiscAmount);
+      }
+
+      if (field === 'unitPrice') {
+        const newPrice = parseFormattedNumber(row.unitPrice) || 0;
+        const newGrossAmt = +(origQuantity * newPrice).toFixed(2);
+        const discountRate = parseFormattedNumber(row.discRate) || 0;
+        const newDiscAmount = +(discountRate * newGrossAmt * 0.01).toFixed(2);
+        row.discAmount = newDiscAmount.toFixed(2);
+        await recalcRow(newGrossAmt, newDiscAmount);
+      }
+
+      if (field === 'discRate') {
+        const newDiscRate = parseFormattedNumber(row.discRate) || 0;
+        const newGrossAmt = +(origQuantity * origUnitPrice).toFixed(2);
+        const newDiscAmount = +(newDiscRate * newGrossAmt * 0.01).toFixed(2);
+        row.discAmount = newDiscAmount.toFixed(2);
+        await recalcRow(newGrossAmt, newDiscAmount);
+      }
+
+
+    if (field === 'vatCode' || field === 'atcCode') {
+      async function updateVatAndAtc() {
+        const newNetDiscount = +(parseFormattedNumber(row.grossAmount) - parseFormattedNumber(row.discAmount)).toFixed(2);
+        let newVatAmount = parseFormattedNumber(row.vatAmount) || 0;
+
+        if (field === 'vatCode') {
+          newVatAmount = row.vatCode ? await getTopVatAmount(row.vatCode, newNetDiscount) : 0;
+          row.vatAmount = newVatAmount.toFixed(2);
+        }
+
+        const newNetOfVat = +(newNetDiscount - newVatAmount).toFixed(2);
+        const newATCAmount = row.atcCode ? await getTopATCAmount(row.atcCode, newNetOfVat) : 0;
+
+        row.atcAmount = newATCAmount.toFixed(2);
+        row.amountDue = +(newNetDiscount - newATCAmount).toFixed(2);
+      }
+
+      await updateVatAndAtc();
+    }
+
+
+  }
+
     setDetailRows(updatedRows);
-  }
-  setShowPaytermModal(false);
-  setSelectedRowIndex(null);
+    updateTotals(updatedRows);
+
+
 };
 
-const calculateDueDate = (startDate, daysDue) => {
-  if (!startDate || isNaN(daysDue)) return "";
 
-  try {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + daysDue);
-    return date.toISOString().split("T")[0];
-  } catch (error) {
-    console.error("Error calculating due date:", error);
-    return "";
-  }
-};
 
-  // DR Account double-click handler
-const handleAccountDoubleDtl1Click = (index) => {
-  const updatedRows = [...detailRows];
-  updatedRows[index] = {
-    ...updatedRows[index],
-    debitAcct: ""
-  };
-  setDetailRows(updatedRows);
-};
 
-// RC Code double-click handler
-const handleRcDoubleDtl1Click = (index) => {
-  const currentValue = detailRows[index]?.rcCode;
+// Invoice Detail Event on Bill Code Double Click
+const handleBillCodeDoubleDtl1Click = (index) => {
+  const currentValue = detailRows[index]?.billCode;
   const updatedRows = [...detailRows];
   
   if (currentValue) {
     updatedRows[index] = {
       ...updatedRows[index],
-      rcCode: "",
-      rcName: ""
-    };
-    setDetailRows(updatedRows);
-  } else {
-    setSelectedRowIndex(index);
-    setShowRcModal(true);
-  }
-};
-
-// VAT Code double-click handler
-const handleVatDoubleDtl1Click = (index) => {
-  const currentValue = detailRows[index]?.vatCode;
-  const updatedRows = [...detailRows];
-  
-  if (currentValue) {
-    updatedRows[index] = {
-      ...updatedRows[index],
-      vatCode: "",
-      vatName: "",
-      vatAmount: "0.00"
+      billCode: "",
+      billName: "",
+      quantity: "0.00",
+      uomCode:"",
+      arAcct:"",
+      salesAcct:"",
+      sDiscAcct:"",
+      rcCode:''
     };
     setDetailRows(updatedRows);
     updateTotals(updatedRows);
   } else {
     setSelectedRowIndex(index);
-    setShowVatModal(true);
+    setshowBillCodeModal(true);
   }
 };
 
-// ATC double-click handler
+
+
+
+// Invoice Detail Event on ATC Code Double Click
 const handleAtcDoubleDtl1Click = (index) => {
   const currentValue = detailRows[index]?.atcCode;
   const updatedRows = [...detailRows];
@@ -1393,20 +1373,43 @@ const handlePaytermNameDoubleClick = (index) => {
   setDetailRows(updatedRows);
 };
 
-  
-  const handleCloseAccountModal = (selectedAccount) => {
-    if (selectedAccount && selectedRowIndex !== null) {
-      const updatedRows = [...detailRows];
-      updatedRows[selectedRowIndex] = {
-        ...updatedRows[selectedRowIndex],
-        debitAcct: selectedAccount.acctCode,
-      };
-      setDetailRows(updatedRows);
+  const handleCloseAccountModal = (selectedAccount, source) => {
+  if (selectedAccount && selectedRowIndex !== null) {
+
+    const updatedRows = [...detailRows];
+    const updatedRow = { ...updatedRows[selectedRowIndex] };
+
+
+    const fieldMap = {
+      salesAcct: "salesAcct",
+      arAcct: "arAcct",
+      vatAcct: "vatAcct",
+      discAcct: "discAcct",
+    };
+
+
+    const targetField = fieldMap[source];
+    if (targetField) {
+      updatedRow[targetField] = selectedAccount.acctCode;
+    } else {
+      console.warn(`Unknown source: ${source}`);
     }
-    setShowAccountModal(false);
-    setSelectedRowIndex(null);
-  };
+
+
+    updatedRows[selectedRowIndex] = updatedRow;
+    setDetailRows(updatedRows);
+  }
+
+
+  setShowAccountModal(false);
+  setSelectedRowIndex(null);
+};
+
+
   
+
+
+
   const handleCloseRcModal = async (selectedRc) => {
     if (selectedRc && selectedRowIndex !== null) {
       try {
@@ -1446,62 +1449,75 @@ const handlePaytermNameDoubleClick = (index) => {
   updateTotals(updatedRows);
 };
   
-  const handleCloseVatModal = (selectedVat) => {
-  setShowVatModal(false);
 
+
+// Invoice Detail VAT Code Change
+const handleCloseVatModal = async (selectedVat) => {
+  
   if (selectedVat && selectedRowIndex !== null) {
-    // Update vatCode and vatName in the row
-    handleDetailChange(selectedRowIndex, 'vatCode', selectedVat.vatCode);
+    try {
 
-    const updatedRows = [...detailRows];
-    updatedRows[selectedRowIndex] = {
-      ...updatedRows[selectedRowIndex],
-      vatCode: selectedVat.vatCode,
-      vatName: selectedVat.vatName
-    };
-    setDetailRows(updatedRows);
+    const result = await getTopVatRow(selectedVat.vatCode);
+    if (result) {
+       handleDetailChange(selectedRowIndex, 'vatCode', result);
+    }
 
-    // Optional: trigger recalculation
-    handleDetailChange(selectedRowIndex, 'vatCode', selectedVat.vatCode);
+    } catch (error) {
+      console.error("Error updating Bill Code:", error);
+    }
   }
+  setShowVatModal(false);
+  setSelectedRowIndex(null);
 };
 
   
-  // For ATC Modal
+
+
+
+// Invoice Detail VAT Code Change
+const handleCloseBillCodeModal = async (selectedBillCode) => {
+  
+  if (selectedBillCode && selectedRowIndex !== null) {
+   try {
+
+    const result = await getTopBillCodeRow(selectedBillCode.billCode);
+     if (result) {
+       handleDetailChange(selectedRowIndex, 'billCode', result);
+    }
+
+
+    } catch (error) {
+      console.error("Error updating Bill Code:", error);
+    }
+  }
+
+  setshowBillCodeModal(false);
+  setSelectedRowIndex(null);
+};
+
+
+
+
+ // Invoice Detail ATC Code Change
 const handleCloseAtcModal = async (selectedAtc) => {
   if (selectedAtc && selectedRowIndex !== null) {
     try {
-      const updatedRows = [...detailRows];
-      const row = updatedRows[selectedRowIndex];
-      const amount = parseFloat(row.amount || 0);
-      const vatRate = await getVatRate(row.vatCode);
-      
-      // Calculate base amount and VAT amount
-      const baseAmount = amount / (1 + vatRate);
-      const vatAmount = amount - baseAmount;
-      
-      // Get ATC rate and calculate ATC amount
-      const atcRate = await getAtcRate(selectedAtc.atcCode);
-      const atcAmount = baseAmount * atcRate;
 
-      updatedRows[selectedRowIndex] = {
-        ...row,
-        atcCode: selectedAtc.atcCode,
-        atcName: selectedAtc.atcName || "",
-        atcAmount: atcAmount.toFixed(2),
-        vatAmount: vatAmount.toFixed(2),
-        siAmount: amount.toFixed(2)
-      };
+    const result = await getTopATCRow(selectedAtc.atcCode);
+    if (result) {
+       handleDetailChange(selectedRowIndex, 'atcCode', result);
+    }
 
-      setDetailRows(updatedRows);
-      updateTotals(updatedRows);
     } catch (error) {
-      console.error("Error updating ATC:", error);
+      console.error("Error updating ATC Code:", error);
     }
   }
   setShowAtcModal(false);
   setSelectedRowIndex(null);
 };
+
+
+
 
 
 
@@ -1856,8 +1872,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
 
           <div className="relative">
-              <input type="text" id="grossAmount" value={grossAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="grossAmount" className="global-tran-floating-label">Gross Amount</label>
+              <input type="text" id="totalGrossAmount" value={totals.totalGrossAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalGrossAmount" className="global-tran-floating-label">Gross Amount</label>
           </div>
 
 
@@ -1875,36 +1891,36 @@ const handleCloseAtcModal = async (selectedAtc) => {
           
 
             <div className="relative">
-              <input type="text" id="discountAmount" value={discountAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="discountAmount" className="global-tran-floating-label">Discount Amount</label>
+              <input type="text" id="totalDiscountAmount" value={totals.totalDiscountAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalDiscountAmount" className="global-tran-floating-label">Discount Amount</label>
             </div>
           
           
            <div className="relative">
-              <input type="text" id="netAmount" value={netAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="netAmount" className="global-tran-floating-label">Net Amount</label>
+              <input type="text" id="totalNetAmount" value={totals.totalNetAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalNetAmount" className="global-tran-floating-label">Net Amount</label>
            </div>
 
 
             <div className="relative">
-              <input type="text" id="vatAmount" value={vatAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="vatAmount" className="global-tran-floating-label">VAT Amount</label>
+              <input type="text" id="totalVatAmount" value={totals.totalVatAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalVatAmount" className="global-tran-floating-label">VAT Amount</label>
             </div>
           
          
             <div className="relative">
-              <input type="text" id="salesAmount" value={salesAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="salesAmount" className="global-tran-floating-label">Sales Amount</label>
+              <input type="text" id="totalSalesAmount" value={totals.totalSalesAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalSalesAmount" className="global-tran-floating-label">Sales Amount</label>
             </div>
 
             <div className="relative">
-              <input type="text" id="atcAmount" value={atcAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="atcAmount" className="global-tran-floating-label">ATC Amount</label>
+              <input type="text" id="totalAtcAmount" value={totals.totalAtcAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalAtcAmount" className="global-tran-floating-label">ATC Amount</label>
             </div>
 
             <div className="relative">
-              <input type="text" id="amountDue" value={amountDue} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-              <label htmlFor="amountDue" className="global-tran-floating-label">Amount Due</label>
+              <input type="text" id="totalAmountDue" value={totals.totalAmountDue} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+              <label htmlFor="totalAmountDue" className="global-tran-floating-label">Amount Due</label>
             </div>
          
 
@@ -2033,14 +2049,14 @@ const handleCloseAtcModal = async (selectedAtc) => {
                 className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
                 value={row.billCode || ""}
                 readOnly
-                // onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
+                onDoubleClick={() => handleBillCodeDoubleDtl1Click(index)}
               />
               <FontAwesomeIcon 
                 icon={faMagnifyingGlass} 
                 className="absolute right-2 text-gray-400 cursor-pointer"
                 onClick={() => {
                   setSelectedRowIndex(index);
-                  // setShowAccountModal(true);
+                  setshowBillCodeModal(true);
                 }}
               />
             </div>
@@ -2053,7 +2069,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.billName || ""}
-                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+                onChange={(e) => handleDetailChange(index, 'billName', e.target.value)}
               />
             </td>
 
@@ -2082,7 +2098,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   const value = e.target.value;
-                  const num = parseFloat(value);
+                  const num = parseFormattedNumber(value);
                   if (!isNaN(num)) {
                     await handleDetailChange(index, "quantity", num.toFixed(2), true);
                   }
@@ -2090,7 +2106,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               }}
               onBlur={async (e) => {
                 const value = e.target.value;
-                const num = parseFloat(value);
+                const num = parseFormattedNumber(value);
                 if (!isNaN(num)) {
                   await handleDetailChange(index, "quantity", num.toFixed(2), true);
                 }
@@ -2102,9 +2118,9 @@ const handleCloseAtcModal = async (selectedAtc) => {
            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
+                className="w-[100px] text-center global-tran-td-inputclass-ui"
                 value={row.uomCode || ""}
-                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
+                onChange={(e) => handleDetailChange(index, 'uomCode', e.target.value)}
               />
             </td>
 
@@ -2123,7 +2139,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   const value = e.target.value;
-                  const num = parseFloat(value);
+                  const num = parseFormattedNumber(value);
                   if (!isNaN(num)) {
                     await handleDetailChange(index, "unitPrice", num.toFixed(2), true);
                   }
@@ -2131,7 +2147,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               }}
               onBlur={async (e) => {
                 const value = e.target.value;
-                const num = parseFloat(value);
+                const num = parseFormattedNumber(value);
                 if (!isNaN(num)) {
                   await handleDetailChange(index, "unitPrice", num.toFixed(2), true);
                 }
@@ -2140,7 +2156,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
             <td className="global-tran-td-ui">
               <input
-                type="number"
+                type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                 value={row.grossAmount || row.grossAmount || ""} // Show same as original amount
                 readOnly
@@ -2214,7 +2230,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
             <td className="global-tran-td-ui">
               <input
-                type="number"
+                type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                 value={row.netDisc || row.netDisc || ""} // Show same as original amount
                 readOnly
@@ -2249,13 +2265,13 @@ const handleCloseAtcModal = async (selectedAtc) => {
                     type="text"
                     className="w-[200px] global-tran-td-inputclass-ui"
                     value={row.vatName || ""}
-                    onChange={(e) => handleDetailChange(index, 'vatDescription', e.target.value)}
+                    readOnly
                 />
             </td>
 
             <td className="global-tran-td-ui">
               <input
-                type="number"
+                type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                 value={row.vatAmount || ""}
                 readOnly
@@ -2295,7 +2311,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
             <td className="global-tran-td-ui">
                 <input
-                   type="number"
+                   type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                    value={row.atcAmount || ""}
                    onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
@@ -2305,7 +2321,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
              <td className="global-tran-td-ui">
               <input
-                type="number"
+                type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                 value={row.sviAmount || ""}
                 readOnly
@@ -2319,6 +2335,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
                   value={row.salesAcct || ""}
+
                   readOnly
                   onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
                 />
@@ -2328,6 +2345,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   onClick={() => {
                     setSelectedRowIndex(index);
                     setShowAccountModal(true);
+                    setAccountModalSource("salesAcct");
                   }}
                 />
               </div>
@@ -2351,6 +2369,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   onClick={() => {
                     setSelectedRowIndex(index);
                     setShowAccountModal(true);
+                    setAccountModalSource("arAcct");
                   }}
                 />
               </div>
@@ -2372,6 +2391,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   onClick={() => {
                     setSelectedRowIndex(index);
                     setShowAccountModal(true);
+                    setAccountModalSource("vatAcct");
                   }}
                 />
               </div>
@@ -2392,6 +2412,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   onClick={() => {
                     setSelectedRowIndex(index);
                     setShowAccountModal(true);
+                    setAccountModalSource("discAcct");
                   }}
                 />
               </div>
@@ -2473,7 +2494,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
     <label className="global-tran-tab-footer-total-label-ui">
       Total Invoice Amount:
     </label>
-    <label id="totalInvoiceAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totInvoiceAmount" className="global-tran-tab-footer-total-value-ui">
       0.00
     </label>
   </div>
@@ -2483,7 +2504,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
     <label className="global-tran-tab-footer-total-label-ui">
       Total VAT Amount:
     </label>
-    <label id="totalVATAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totVATAmount" className="global-tran-tab-footer-total-value-ui">
       0.00
     </label>
   </div>
@@ -2493,7 +2514,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
     <label className="global-tran-tab-footer-total-label-ui">
       Total ATC Amount:
     </label>
-    <label id="totalATCAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totATCAmount" className="global-tran-tab-footer-total-value-ui">
       0.00
     </label>
   </div>
@@ -2501,9 +2522,9 @@ const handleCloseAtcModal = async (selectedAtc) => {
   {/* Total Payable Amount (Invoice + VAT - ATC) */}
   <div className="global-tran-tab-footer-total-div-ui">
     <label className="global-tran-tab-footer-total-label-ui">
-      Total Payable Amount:
+      Total Amount Due:
     </label>
-    <label id="totalPayableAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totAmountDue" className="global-tran-tab-footer-total-value-ui">
       0.00
     </label>
   </div>
@@ -2862,9 +2883,11 @@ const handleCloseAtcModal = async (selectedAtc) => {
       }
       setCoaModalOpen(false);
     }}
-    customParam="apv_hd"
+
+    customParam="APGL"
   />
 )}
+
 
 
 {/* COA Account Modal */}
@@ -2872,9 +2895,12 @@ const handleCloseAtcModal = async (selectedAtc) => {
   <COAMastLookupModal
     isOpen={showAccountModal}
     onClose={handleCloseAccountModal}
-    customParam="apv_dtl"
+    source={accountModalSource}
+    customParam={customParam}     
   />
 )}
+
+
 
 {/* RC Code Modal */}
 {showRcModal && (
@@ -2887,10 +2913,29 @@ const handleCloseAtcModal = async (selectedAtc) => {
 )}
 
 
+{/* Billing Codes Modal  Invoice Detail */}
+{showBillCodeModal && (
+  <BillCodeLookupModal  
+    isOpen={showBillCodeModal}
+    onClose={handleCloseBillCodeModal}
+    apiEndpoint="getBillcode"
+  />
+)}
 
 
 
-{/* ATC Code Modal */}
+{/* VAT Code Modal  Invoice Detail */}
+{showVatModal && (
+  <VATLookupModal  
+    isOpen={showVatModal}
+    onClose={handleCloseVatModal}
+    customParam="OutputService"
+    apiEndpoint="getVat"
+  />
+)}
+
+
+{/* ATC Code Modal Invoice Detail */}
 {showAtcModal && (
   <ATCLookupModal  
     isOpen={showAtcModal}
@@ -2899,6 +2944,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
     apiEndpoint="getATC"
   />
 )}
+
 
 {/* SL Code Lookup Modal */}
 {showSlModal && (
