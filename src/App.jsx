@@ -85,10 +85,10 @@ import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
 import SVI from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
-import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
+// import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
 import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV.jsx";
 import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
-import JVHistory from "./NAYSA Cloud/Module/Main Module/General Ledger/JVHistory.jsx";
+// import JVHistory from "./NAYSA Cloud/Module/Main Module/General Ledger/JVHistory.jsx";
 // import PCV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV.jsx";
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef from "./NAYSA Cloud/Reference File/BankRef.jsx";
@@ -128,7 +128,7 @@ const AppContent = () => {
           {/* <Route path="/" element={<APV />} /> */}
           {/* <Route path="/" element={<CV />} /> */}
           {/* <Route path="/history" element={<JVHistory />} /> */}
-          <Route path="/" element={<SVI />} /> Default to BranchRef
+          <Route path="/" element={<CV />} /> Default to BranchRef
         </Routes>
       </div>
     </div>

@@ -618,7 +618,7 @@ return (
           )}
         </div>
       </div>
-      <br />
+      
 
       {/* Invoice Details Button */}
       <div id="cv_dtl" className="global-tran-tab-div-ui">
