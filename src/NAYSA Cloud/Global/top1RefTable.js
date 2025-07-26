@@ -1,4 +1,5 @@
-import {fetchData , postRequest} from 'C:/NSIApps/phpProgramming/NAYSACloud-v1-UI/src/NAYSA Cloud/Configuration/BaseURL.jsx'
+// import {fetchData , postRequest} from 'C:/NSIApps/phpProgramming/NAYSACloud-v1-UI/src/NAYSA Cloud/Configuration/BaseURL.jsx'
+import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 
 
 export async function getTopCompanyRow() {

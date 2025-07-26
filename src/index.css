@@ -107,7 +107,7 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-2 mb-2 mt-16
+    @apply bg-white shadow-md rounded-lg p-2 mb-6 mt-6
     dark:bg-gray-800;
   }
 
