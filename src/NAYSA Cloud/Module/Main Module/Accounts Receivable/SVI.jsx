@@ -27,16 +27,21 @@ import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
 import { docTypeNames } from '@/NAYSA Cloud/Global/doctype';
 import { glAccountFilter } from '@/NAYSA Cloud/Global/doctype';
+import { docTypes } from '@/NAYSA Cloud/Global/doctype';
 import { docTypeVideoGuide } from '@/NAYSA Cloud/Global/doctype';
 import { docTypePDFGuide } from '@/NAYSA Cloud/Global/doctype';
 import { getTopVatRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopATCRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopCompanyRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { getTopDocDropDown } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { generateGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
-import { parseAndFormat } from '@/NAYSA Cloud/Global/behavior';
+
 
 
 // Header
@@ -55,9 +60,10 @@ const SVI = () => {
   
   const [activeTab, setActiveTab] = useState("basic");
   const [GLactiveTab, setGLActiveTab] = useState("invoice");
+  const [companyData, setCompanyData] = useState({});
 
   //Document Global Setup
-  const docType = 'SVI'; 
+  const docType = docTypes.SVI; 
   const pdfLink = docTypePDFGuide[docType];
   const videoLink = docTypeVideoGuide[docType];
   const documentTitle = docTypeNames[docType] || 'Transaction';
@@ -80,8 +86,8 @@ const SVI = () => {
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [custModalOpen, setcustModalOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [custName, setcustName] = useState(null);
-  const [custCode, setcustCode] = useState(null);  
+  const [custName, setCustName] = useState(null);
+  const [custCode, setCustCode] = useState(null);  
   const [attention, setAttention] = useState(null);
   const [branches, setbranches] = useState([]);
   const [branchCode, setBranchCode] = useState("");
@@ -90,16 +96,15 @@ const SVI = () => {
   const [selectionContext, setSelectionContext] = useState('');
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [coaModalOpen, setCoaModalOpen] = useState(false);
-  const [currencyCode, setCurrencyCode] = useState("");
-  const [currencyName, setCurrencyName] = useState("Philippine Peso");
+  const [currencyCode, setCurrencyCode] = useState(null);
+  const [currencyName, setCurrencyName] = useState(null);
   const [currencyRate, setCurrencyRate] = useState("1.000000");
-  // const [grossAmount, setgrossAmount] = useState("0.00");
-  // const [discountAmount, setdiscountAmount] = useState("0.00");
-  // const [netAmount, setnetAmount] = useState("0.00");
-  // const [vatAmount, setvatAmount] = useState("0.00");
-  // const [salesAmount, setsalesAmount] = useState("0.00");
-  // const [atcAmount, setatcAmount] = useState("0.00");
-  // const [amountDue, setamountDue] = useState("0.00");
+  const [refDocNo1, setRefDocNo1] = useState(null);
+  const [refDocNo2, setRefDocNo2] = useState(null);
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [remarks, setRemarks] = useState("");
+
 
   const [totals, setTotals] = useState({
   totalGrossAmount: '0.00',
@@ -109,7 +114,7 @@ const SVI = () => {
   totalSalesAmount: '0.00',
   totalAtcAmount: '0.00',
   totalAmountDue: '0.00',
-});
+  });
 
 
 
@@ -137,12 +142,11 @@ const SVI = () => {
         salesAcct: glAccountFilter.ActiveAll,
         vatAcct: glAccountFilter.VATOutputAcct,
         discAcct:glAccountFilter.ActiveAll
-};
+  };
   const customParam = customParamMap[accountModalSource] || null;
   const [header, setHeader] = useState({
-  apv_date: new Date().toISOString().split('T')[0],
-  remarks: "" // Add this line to include remarks in the header
-});
+  svi_date: new Date().toISOString().split('T')[0]
+  });
 
 
 
@@ -163,51 +167,51 @@ const SVI = () => {
     totalAmountDue: formatNumber(amtDue),
   });
 
-  // document.getElementById('grossAmount').textContent = grossAmt.toFixed(2);
-  // document.getElementById('discountAmount').textContent = discAmt.toFixed(2);
-  // document.getElementById('netAmount').textContent = netDisc.toFixed(2);
-  // document.getElementById('vatAmount').textContent = vat.toFixed(2);
-  // document.getElementById('salesAmount').textContent = (netDisc-vat).toFixed(2);
-  // document.getElementById('atcAmount').textContent = atc.toFixed(2);
-  // document.getElementById('amountDue').textContent = amtDue.toFixed(2);
 
 
 };
 
 
-useEffect(() => {
-  const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
-  const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
+  useEffect(() => {
+    handleReset();
+  }, []);
 
-  setTotalDebit(debitSum);
-  setTotalCredit(creditSum);
-}, [detailRowsGL]);
+
+
+// useEffect(() => {
+//   const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
+//   const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
+
+//   setTotalDebit(debitSum);
+//   setTotalCredit(creditSum);
+// }, [detailRowsGL]);
+
+
+
+
 
 
   useEffect(() => {
 
-    if (resetFlag) {
-      setCurrencyCode("");
-      setCurrencyName("");
-      setBranchName("");
-      
-      const today = new Date().toISOString().split("T")[0];
-      setHeader((prev) => ({ ...prev, apv_date: today }));
-      console.log("Fields in APV reset!");
+    if (resetFlag) {    
+       handleReset();
     }
-
-     getDocumentControl();
-     
-  
+    
     let timer;
     if (isLoading) {
       timer = setTimeout(() => setShowSpinner(true), 200);
     } else {
       setShowSpinner(false);
-    }
-  
+    } 
     return () => clearTimeout(timer);
   }, [resetFlag, isLoading]);
+
+
+  useEffect(() => {
+  // console.log("custCode updated:", custCode);
+  //  console.log("custCode updated:", attention);
+  }, [custCode]);
+
 
   useEffect(() => {
     if (custName?.currCode && detailRows.length > 0) {
@@ -228,141 +232,195 @@ useEffect(() => {
     </div>
   );
 
+  
+  const handleReset = () => {
+
+      console.log("reset")
+      const today = new Date().toISOString().split("T")[0];
+      setHeader((prev) => ({ ...prev, svi_date: today }));
+      
+      loadDocDropDown();
+      loadDocControl();
+      loadCompanyData();
+
+      setRefDocNo1("");
+      setRefDocNo2("")
+      setFromDate(null);
+      setToDate(null);
+      setRemarks("");
+
+      setCustName(null);
+      setCustCode(null);
+      setdocumentNo("");
+      setDetailRows([]);
+      setDetailRowsGL([]);
+    
+  };
+
+
+
+
+  const loadCompanyData = async () => {
+      const data = await getTopCompanyRow();
+      if(data){
+      setCurrencyCode(data.currCode);
+      setCurrencyName(data.currName);
+      setCurrencyRate(formatNumber(data.currRate,6));
+      };
+  };
+
+
+
+  const loadDocControl = async () => {
+      const data = await getTopDocControlRow();
+      if(data){
+      setdocumentName(data.docName);
+      setdocumentSeries(data.docName);
+      setdocumentDocLen(data.docName);
+      };
+  };
+
+
+
+  const loadDocDropDown = async () => {
+   const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
+      if(data){
+         setsviTypes(data);
+         setselectedSVIType("REG");
+        };
+   };
+
+
+
+
+
  const handleGenerateGLEntries = async () => {
   setIsLoading(true);
 
-  try {
+  // try {
     const glData = {
-      branchcode: branchCode,
-      apvNo: documentNo || "",
-      apvId: documentID || "APV",
-      apvDate: header.apv_date,
-      apvtranType: selectedSVIType || "APV01",
-      tranMode: "M",
-      apAcct: apAccountCode,
+      branchCode: branchCode,
+      sviNo: documentNo || "",
+      sviId: documentID || "",
+      sviDate: header.svi_date,
+      svitranType: selectedSVIType,
+      billtermCode:billtermCode,
       custCode: custCode,
-      custName: custName?.custName || "",
-      refapvNo1: "",
-      refapvNo2: "",
-      acctCode: apAccountCode,
+      custName: custName,
+      refDocNo1: refDocNo1,
+      refDocNo2: refDocNo2,
+      fromDate: fromDate,
+      toDate: toDate,
       currCode: currencyCode || "PHP",
-      currRate: parseFloat(currencyRate) || 1,
-      remarks: header.remarks || "",
+      currRate: parseFormattedNumber(currencyRate) || 1,
+      remarks: remarks|| "",
       userCode: "NSI",
-      dateStamp: new Date().toLocaleDateString('en-US'),
-      timeStamp: "",
-      cutOff: header.apv_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
-      tranDocId: "APV",
-      tranDocExist: documentNo ? 1 : 0,
       dt1: detailRows.map((row, index) => ({
         lnNo: String(index + 1).padStart(3, '0'),
-        invType: row.invType || "FG",
-        poNo: row.poNo || "",
-        rrNo: row.rrNo || "",
-        joNo: "",
-        svoNo: "",
-        siNo: row.siNo || "",
-        siDate: row.siDate || header.apv_date,
-        amount: parseFloat(row.amount || 0),
-        siAMount: parseFloat(row.siAmount || row.amount || 0),
-        debitAcct: row.debitAcct || "",
-        vatAcct: row.vatCode || "",
-        advAcct: "",
-        sltypeCode: row.sltypeCode || "",
-        slCode: row.slCode || "",
-        slName: row.slName || "",
-        address1: "",
-        address2: "",
-        address3: "",
-        tin: custName?.tin || "",
-        rcCode: row.rcCode || "",
-        vatCode: row.vatCode || "",
-        vatAmount: parseFloat(row.vatAmount || 0),
+        billCode: row.billCode || "",
+        billName: row.billName || "",
+        sviSpecs: row.sviSpecs || "",
+        quantity: parseFormattedNumber(row.quantity || 0),
+        uomCode: row.uomCode || "",
+        unitPrice: parseFormattedNumber(row.unitPrice || 0),
+        grossAmount: parseFormattedNumber(row.grossAmount || 0),
+        discRate: parseFormattedNumber(row.discRate || 0),
+        discAmount: parseFormattedNumber(row.discAmt || 0),
+        netDisc: parseFormattedNumber(row.netDisc || 0),
+        vatCode: row.vatCode,
+        vatName: row.vatName,
+        vatAmount: parseFormattedNumber(row.vatAmount || 0),
         atcCode: row.atcCode || "",
-        atcAmount: parseFloat(row.atcAmount || 0),
-        paytermCode: row.paytermCode || "",
-        dueDate: row.dueDate || "",
-        ctrDate: "",
-        advpoNo: "",
-        advpoAmount: 0,
-        advAtcAmount: 0,
-        remarks: row.remarks || "",
-        lineId: row.line_id || ""
+        atcName: row.atcName || "",
+        atcAmount: parseFormattedNumber(row.atcAmount),
+        sviAmount: parseFormattedNumber(row.sviAmount || 0),
+        salesAcct: row.salesAcct,
+        arAcct: row.arAcct,
+        vatAcct: row.vatAcctCode,
+        discAcct: row.discAcct,
+        rcCode:row.rcCode
       })),
       dt2: []
     };
 
-    const payload = { json_data: glData };
+    console.log(glData);
 
-    console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+    // const result = await generateGLEntries( docType,glData, header, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading); 
+    // if (result) {
+    //   console.log("GL Entries Generated:", result);
+    // }
 
-    const response = await postRequest("generateGLAPV", JSON.stringify(payload));
+    //export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading)
 
-    console.log("Raw response from generateGLAPV API:", response);
+  //   const payload = { json_data: glData };
+  //   console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
-    if (response?.status === 'success' && Array.isArray(response.data)) {
-      let glEntries;
+  //   const response = await postRequest("generateGLAPV", JSON.stringify(payload));
+  //   console.log("Raw response from generateGLAPV API:", response);
 
-      try {
-        glEntries = JSON.parse(response.data[0].result);
-        if (!Array.isArray(glEntries)) {
-          glEntries = [glEntries];
-        }
-      } catch (parseError) {
-        console.error("Error parsing GL entries:", parseError);
-        throw new Error("Failed to parse GL entries");
-      }
+  //   if (response?.status === 'success' && Array.isArray(response.data)) {
+  //     let glEntries;
 
-      const transformedEntries = glEntries.map((entry, idx) => ({
-        id: idx + 1,
-        acctCode: entry.acctCode || "",
-        rcCode: entry.rcCode || "",
-        sltypeCode: entry.sltypeCode || "",
-        slCode: entry.slCode || "",
-        particular: entry.particular || `APV ${documentNo || ''} - ${custName?.custName || "Vendor"}`,
-        vatCode: entry.vatCode || "",
-        vatName: entry.vatName || "",
-        atcCode: entry.atcCode || "",
-        atcName: entry.atcName || "",
-        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
-        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-        slRefNo: entry.slrefNo || "",
-        slrefDate: entry.slrefDate || "",
-        remarks: header.remarks || "",
-        dt1Lineno: entry.dt1Lineno || ""
-      }));
+  //     try {
+  //       glEntries = JSON.parse(response.data[0].result);
+  //       if (!Array.isArray(glEntries)) {
+  //         glEntries = [glEntries];
+  //       }
+  //     } catch (parseError) {
+  //       console.error("Error parsing GL entries:", parseError);
+  //       throw new Error("Failed to parse GL entries");
+  //     }
 
-      setDetailRowsGL(transformedEntries);
+  //     const transformedEntries = glEntries.map((entry, idx) => ({
+  //       id: idx + 1,
+  //       acctCode: entry.acctCode || "",
+  //       rcCode: entry.rcCode || "",
+  //       sltypeCode: entry.sltypeCode || "",
+  //       slCode: entry.slCode || "",
+  //       particular: entry.particular || "",
+  //       vatCode: entry.vatCode || "",
+  //       vatName: entry.vatName || "",
+  //       atcCode: entry.atcCode || "",
+  //       atcName: entry.atcName || "",
+  //       debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
+  //       credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
+  //       slRefNo: entry.slrefNo || "",
+  //       slrefDate: entry.slrefDate || "",
+  //       remarks: header.remarks || "",
+  //       dt1Lineno: entry.dt1Lineno || ""
+  //     }));
 
-      const totalDebitValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.debit || 0),
-        0
-      );
-      const totalCreditValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.credit || 0),
-        0
-      );
+  //     setDetailRowsGL(transformedEntries);
 
-      setTotalDebit(totalDebitValue);
-      setTotalCredit(totalCreditValue);
+  //     const totalDebitValue = transformedEntries.reduce(
+  //       (sum, row) => sum + parseFloat(row.debit || 0),
+  //       0
+  //     );
+  //     const totalCreditValue = transformedEntries.reduce(
+  //       (sum, row) => sum + parseFloat(row.credit || 0),
+  //       0
+  //     );
 
-      return transformedEntries;
-    } else {
-      console.error("🔴 API responded with failure:", response.message);
-      throw new Error(response.message || "Failed to generate GL entries");
-    }
-  } catch (error) {
-    console.error("🔴 Error in handleGenerateGLEntries:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Generation Failed',
-      text: 'Error generating GL entries: ' + error.message,
-      confirmButtonColor: '#3085d6',
-    });
-    return null;
-  } finally {
-    setIsLoading(false);
-  }
+  //     setTotalDebit(totalDebitValue);
+  //     setTotalCredit(totalCreditValue);
+
+  //     return transformedEntries;
+  //   } else {
+  //     console.error("🔴 API responded with failure:", response.message);
+  //     throw new Error(response.message || "Failed to generate GL entries");
+  //   }
+  // } catch (error) {
+  //   console.error("🔴 Error in handleGenerateGLEntries:", error);
+  //   Swal.fire({
+  //     icon: 'error',
+  //     title: 'Generation Failed',
+  //     text: 'Error generating GL entries: ' + error.message,
+  //     confirmButtonColor: '#3085d6',
+  //   });
+  //   return null;
+  // } finally {
+  //   setIsLoading(false);
+  // }
 };
 
 
@@ -431,7 +489,7 @@ useEffect(() => {
         branchCode: branchCode,
         apvNo: docNoToUse,
         apvId: "",
-        apvDate: header.apv_date,
+        apvDate: header.svi_date,
         apvtranType: selectedSVIType || "APV01",
         tranMode: "M",
         apAcct: apAccountCode,
@@ -446,7 +504,7 @@ useEffect(() => {
         userCode: "NSI",
         dateStamp: new Date().toISOString(),
         timeStamp: "",
-        cutOff: header.apv_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
+        cutOff: header.svi_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
         tranDocId: "APV",
         tranDocExist: documentNo ? 1 : 0,
         dt1: detailRows.map((row, index) => ({
@@ -457,7 +515,7 @@ useEffect(() => {
           joNo: "",
           svoNo: "",
           siNo: row.siNo || "",
-          siDate: row.siDate || header.apv_date,
+          siDate: row.siDate || header.svi_date,
           amount: parseFloat(row.amount || 0),
           siAMount: parseFloat(row.siAmount || row.amount || 0),
           debitAcct: row.debitAcct || "",
@@ -540,24 +598,7 @@ useEffect(() => {
   }
 };
 
-  const getDocumentControl = async () => {
-  try {
-    const response = await fetchData("getHSDoc", { DOC_ID: "APV" });
-    if (response.success) {
-      const result = JSON.parse(response.data[0].result);
-
-      setdocumentName(result[0]?.docName);
-      setdocumentSeries(result[0]?.docName);
-      setdocumentDocLen(result[0]?.docName);
-      
-      // Now fetch the AP Types
-      await fetchsviTypes();
-    }
-  } catch (err) {
-    console.error("Document Control API error:", err);
-  }
-}
-
+  
 
 
   const getDocumentSavedData = async () => {
@@ -583,74 +624,18 @@ useEffect(() => {
     }
   }
 
-  const fetchsviTypes = async () => {
-  try {
-    const payload = {
-      json_data: {
-        dropdownColumn: "SVITRAN_TYPE",
-        docCode: "SVI"
-      }
-    };
-    
-    console.log("Fetching AP Types with payload:", payload);
-    
-    const response = await postRequest("getHSDropdown", JSON.stringify(payload));
-    
-    console.log("AP Types API response:", response);
-    
-    if (response.success) {
-      const result = JSON.parse(response.data[0].result);
-      console.log("Parsed AP Types:", result);
-      
-      setsviTypes(result);
-      
-      // Set default value to first option if available
-      if (result.length > 0) {
-        setselectedSVIType(result[0].DROPDOWN_CODE);
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching AP Types:", error);
-  }
-};
-
-// const handlesviTypeChange = (event) => {
-//   const selectedType = event.target.value;
-//   setselectedSVIType(selectedType);
-//   console.log("Selected AP Type:", selectedType);
-//   switch (selectedType) {
-//     case "APV01"://purchases
-//       //hide sl type, sl name, address, tin
-
-//     case "APV02":// non purchases
-//       //hide whole invoice detail
-
-//     case "APV03": //advances
-//       //hide sl type, sl name, address, tin 
-//       // show advances acct
-
-//       case "APV05"://reimbursements
-//       // hide type to PO No
-//       //display sl type, sl name, address, tin
-
-//       case "APV06": //liquidation
-//       // hide type to PO No
-//       //display sl type, sl name, address, tin
-
-// }
 
 
 
-  const handleAddRow = async () => {
+
+  const handleAddRow = async (index) => {
   try {
     const items = await handleFetchDetail(custCode);
     const itemList = Array.isArray(items) ? items : [items];
     const newRows = await Promise.all(itemList.map(async (item) => {
-      // const amount = parseFloat(item.origAmount || 0);
-      // const vatRate = await getVatRate(item.vatCode);
-      
+
       return {
-        lnNo: "",
+        lnNo: String(index + 1),
         billCode: "",
         billName: "",
         sviSpecs: "",
@@ -692,27 +677,8 @@ useEffect(() => {
   }
 };
 
-  const handleReset = () => {
-    console.log("Resetting APV form");
-    
-    // Reset all form fields to their initial state
-    setHeader({
-      apv_date: new Date().toISOString().split("T")[0] // Reset to today's date
-    });
-    setBranchCode("");
-    setBranchName("");
-    setCurrencyCode("");
-    setCurrencyName("Philippine Peso");
-    setCurrencyRate("1.000000");
-    setApAccountName("");
-    setApAccountCode("");
-    setcustName(null);
-    setcustCode(null);
-    setdocumentNo("");
-    setDetailRows([]);
-    setDetailRowsGL([]);
-    
-  };
+
+
   
   
 // Function to add a new row to the detail section with default empty values
@@ -722,6 +688,7 @@ const handleAddRowGL = () => {
     {
       acctCode: "",
       rcCode: "",
+      sltypeCode:"CU",
       slCode: "",
       particulars: "",
       vatCode: "",
@@ -730,8 +697,12 @@ const handleAddRowGL = () => {
       ewtDescription: "",
       debit: "0.00",
       credit: "0.00",
+      debitFx1: "0.00",
+      creditFx1: "0.00",
+      debitFx2: "0.00",
+      creditFx2: "0.00",
       slRefNo: "",
-      remarks: header.remarks || "",
+      remarks: "",
     }
   ]);
 };
@@ -761,7 +732,7 @@ const handleDeleteRowGL = (index) => {
         if (currencyCode.toUpperCase() !== 'PHP') {
           const forexPayload = {
             json_data: {
-              docDate: header.apv_date,
+              docDate: header.svi_date,
               currCode: currencyCode,
             },
           };
@@ -815,7 +786,6 @@ const handleDeleteRowGL = (index) => {
 
 
   const handleFetchDetail = async (custCode) => {
-    console.log("custCode:", custCode);
     if (!custCode) return [];
   
     try {
@@ -1034,6 +1004,8 @@ const handlePaytermLookup = async (paytermCode) => {
   setcustModalOpen(false);
   setIsLoading(true);
 
+ 
+
   try {
     // Set basic payee info
     const custDetails = {
@@ -1044,9 +1016,10 @@ const handlePaytermLookup = async (paytermCode) => {
       billtermCode: selectedData?.billtermCode || '',
       billtermName: selectedData?.billtermName || ''
     };
-    setcustName(custDetails);
-    setcustCode(selectedData.custCode);
-  
+    
+     setCustName(selectedData.custName);
+     setCustCode(selectedData.custCode);
+    
 
 
     // Update SL Code of GL Entries
@@ -1070,16 +1043,17 @@ const handlePaytermLookup = async (paytermCode) => {
         custDetails.attention = data[0]?.custContact;   
         custDetails.billtermCode = data[0]?.billtermCode;   
         custDetails.billtermName = data[0]?.billtermName;
-        setcustName(custDetails)  
+        // setcustName(custDetails)  
       }
     }
   
 
     await Promise.all([
+
       handleSelectCurrency(custDetails.currCode),
       handleSelectBillTerm(custDetails.billtermCode),
       setAttention(custDetails.attention),
-
+       
     
     ]);
 
@@ -1087,7 +1061,7 @@ const handlePaytermLookup = async (paytermCode) => {
     console.error("Error:", error);
   } finally {
     setIsLoading(false);
-  }
+  }  
 };
 
   const updateTotals = (rows) => {
@@ -1188,8 +1162,6 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
         row.discAmount = formatNumber(newDiscAmount);
         row.quantity = formatNumber(parseFormattedNumber (row.quantity));
         row.unitPrice = formatNumber(parseFormattedNumber (row.unitPrice));
-        console.log(row.quantity);
-
       }
 
 
@@ -1695,8 +1667,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
           {/* Customer Code */}
           <div className="relative">         
             <input  type="text"
-                    id="CustCode"
-                    value={custName?.custCode || ''}
+                    id="custCode"
+                    value={custCode}
                     readOnly
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
@@ -1721,7 +1693,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
           {/* Customer Name Display */}
           <div className="relative">
-            <input type="text" id="custName" placeholder=" " value={custName?.custName || ''} className="peer global-tran-textbox-ui"/>
+            <input type="text" id="custName" placeholder=" " value={custName} className="peer global-tran-textbox-ui"/>
             <label htmlFor="custName"className="global-tran-floating-label">
             <span className="global-tran-asterisk-ui"> * </span>Customer Name</label>
           </div>
@@ -1844,19 +1816,19 @@ const handleCloseAtcModal = async (selectedAtc) => {
             
           
           <div className="relative">
-            <input type="text" id="refDocNo1" placeholder=" " className="peer global-tran-textbox-ui"/>
+            <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => setRefDocNo1(e.target.value)} className="peer global-tran-textbox-ui"/>
             <label htmlFor="refDocNo1" className="global-tran-floating-label">Ref Doc No. 1</label>
           </div>
 
           <div className="relative">
-            <input type="text" id="refDocNo2" placeholder=" " className="peer global-tran-textbox-ui"/>
+            <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => setRefDocNo2(e.target.value)}  className="peer global-tran-textbox-ui"/>
             <label htmlFor="refDocNo2" className="global-tran-floating-label">Ref Doc No. 2</label>
           </div>
 
 
           <div className="relative">
             <input type="date"
-                   id="fromDate"
+                   id="fromDate" value={fromDate} onChange={(e) => setFromDate(e.target.value)} 
                    className="peer global-tran-textbox-ui"
             />
             <label htmlFor="fromDate" className="global-tran-floating-label">From Date</label>
@@ -1864,7 +1836,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
           <div className="relative">
             <input type="date"
-                   id="toDate"
+                   id="toDate" value={toDate} onChange={(e) => setToDate(e.target.value)} 
                    className="peer global-tran-textbox-ui"
             />
             <label htmlFor="toDate" className="global-tran-floating-label">To Date</label>
@@ -1950,8 +1922,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
   placeholder=""
   rows={5} 
   className="peer global-tran-textbox-remarks-ui"
-  value={header.remarks || ""}
-  onChange={(e) => setHeader(prev => ({ ...prev, remarks: e.target.value }))}
+  value={remarks}
+  onChange={(e) => setRemarks(e.target.value)}
 />
                   <label
                     htmlFor="remarks"
@@ -2480,7 +2452,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
-    onClick={handleAddRow}
+    onClick={handleAddRow()}
     className="global-tran-tab-footer-button-add-ui"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
@@ -2586,6 +2558,10 @@ const handleCloseAtcModal = async (selectedAtc) => {
             <th className="global-tran-th-ui">ATC Name</th>
             <th className="global-tran-th-ui">Debit</th>
             <th className="global-tran-th-ui">Credit</th>
+            <th className="global-tran-th-ui">Debit FX1</th>
+            <th className="global-tran-th-ui">Credit FX1</th>
+            <th className="global-tran-th-ui">Debit FX2</th>
+            <th className="global-tran-th-ui">Credit FX2</th>
             <th className="global-tran-th-ui">SL Ref. No.</th>
             <th className="global-tran-th-ui">SL Ref. Date</th>
             <th className="global-tran-th-ui">Remarks</th>
@@ -2711,6 +2687,40 @@ const handleCloseAtcModal = async (selectedAtc) => {
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.credit || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'credit', e.target.value)}
+                />
+              </td>
+
+               <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.debitFx1 || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'debitFx1', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.creditFx1 || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'creditFx1', e.target.value)}
+                />
+              </td>
+
+               <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.debitFx2 || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'debitFx2', e.target.value)}
+                />
+              </td>
+              <td className="global-tran-td-ui text-right">
+                <input
+                  type="number"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.creditFx2 || "0.00"}
+                  onChange={(e) => handleDetailChange(index, 'creditFx2', e.target.value)}
                 />
               </td>
               <td className="global-tran-td-ui">
@@ -2872,22 +2882,6 @@ const handleCloseAtcModal = async (selectedAtc) => {
     customParam="ActiveAll"
   />
 )}
-
-{coaModalOpen && (
-  <COAMastLookupModal
-    isOpen={coaModalOpen}
-    onClose={(selected) => {
-      if (selected) {
-        setApAccountCode(selected.acctCode);
-        setApAccountName(selected.acctName);
-      }
-      setCoaModalOpen(false);
-    }}
-
-    customParam="APGL"
-  />
-)}
-
 
 
 {/* COA Account Modal */}

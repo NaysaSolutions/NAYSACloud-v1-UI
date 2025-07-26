@@ -1,3 +1,9 @@
+export const docTypes = {
+  SVI: "SVI"
+};
+
+
+
 export const docTypeNames = {
 
     // General Ledger Module
@@ -62,7 +68,6 @@ export const docTypeNames = {
     ARCM: "AR Credit Memo Voucher Transaction",
     CR: "Collection Receipt Transaction",
     SOA: "Statement of Account Transaction",
-
   };
 
 
