@@ -283,12 +283,16 @@ const SVI = () => {
 
 
   const loadDocDropDown = async () => {
-   const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
-      if(data){
-         setsviTypes(data);
-         setselectedSVIType("REG");
-        };
-   };
+  try {
+    const data = await getTopDocDropDown(docType, "SVITRAN_TYPE");
+    setsviTypes(data); // data is always an array now
+    setselectedSVIType(data.length > 0 ? data[0].DROPDOWN_CODE : "");
+  } catch (error) {
+    console.error("Error loading document dropdown:", error);
+    setsviTypes([]);
+    setselectedSVIType("");
+  }
+};
 
 
 
@@ -2452,7 +2456,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
-    onClick={handleAddRow()}
+    onClick={() => handleAddRow(index)}
     className="global-tran-tab-footer-button-add-ui"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add

@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext";
 
 
-const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave}) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { triggerReset } = useReset();
@@ -18,6 +18,15 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
     console.log("Save button clicked");
     if (onSave) {
       onSave(); // Call the save handler from parent
+    }
+    setTimeout(() => setLoading(false), 2000);
+  };
+
+  const handlePost = () => {
+    setLoading(true);
+    console.log("Post button clicked");
+    if (onPost) {
+      onPost(); // Call the post handler from parent
     }
     setTimeout(() => setLoading(false), 2000);
   };
@@ -179,8 +188,16 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
           </button>
 
           <button
+    onClick={handlePost}
+    className="w-1/6 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 dark:bg-green-800 dark:hover:bg-green-700"
+  >
+    <FontAwesomeIcon icon={faSave} className="mr-1" />
+    Post
+  </button>
+
+          <button
             onClick={() => setIsOpen(!isOpen)}
-            className="w-1/6 w-[30px] mr-8 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
+            className="w-1/6 mr-8 text-[9px] whitespace-nowrap sm:text-xs px-2 py-2 sm:px-2 sm:py-2 md:px-1 md:py-1 lg:px-2 lg:py-2 lg:text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-900 dark:hover:bg-blue-800"
           >
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             {/* Guide */}

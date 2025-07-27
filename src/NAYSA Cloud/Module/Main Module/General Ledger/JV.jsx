@@ -152,6 +152,16 @@ const [refDocType, setRefDocType] = useState('');
       alert("Please add at least one Account detail");
       return;
     }
+
+    const missingRequirements = detailRowsGL.some(row => {
+    return (row.rcRequired && (!row.rcCode || row.rcCode === "RC Required")) ||
+           (row.slRequired && (!row.slCode || row.slCode === "SL Required"));
+  });
+
+  if (missingRequirements) {
+    alert("Please complete all required RC/SL fields before saving.");
+    return;
+  }
   
     // Generate document number if empty
     let docNoToUse = documentNo;
@@ -683,17 +693,30 @@ const handleDeleteRowGL = (index) => {
   };
   
   const handleCloseAccountModal = (selectedAccount) => {
-    if (selectedAccount && selectedRowIndex !== null) {
-      const updatedRows = [...detailRows];
-      updatedRows[selectedRowIndex] = {
-        ...updatedRows[selectedRowIndex],
-        debitAcct: selectedAccount.acctCode,
-      };
-      setDetailRows(updatedRows);
-    }
-    setShowAccountModal(false);
-    setSelectedRowIndex(null);
-  };
+  if (selectedAccount && selectedRowIndex !== null) {
+    const updatedRows = [...detailRowsGL];
+    const isRcRequired = selectedAccount.rcReq === 'Yes';
+    const isSlRequired = selectedAccount.slReq === 'Yes';
+
+    updatedRows[selectedRowIndex] = {
+      ...updatedRows[selectedRowIndex],
+      acctCode: selectedAccount.acctCode,
+      acctName: selectedAccount.acctName,
+      rcRequired: isRcRequired,
+      slRequired: isSlRequired,
+      // Set requirement messages if needed
+      rcCode: isRcRequired ? "RC Required" : updatedRows[selectedRowIndex].rcCode || "",
+      slCode: isSlRequired ? "SL Required" : updatedRows[selectedRowIndex].slCode || "",
+      // Clear previous values if now required
+      ...(isRcRequired && { rcName: "" }),
+      ...(isSlRequired && { slName: "" })
+    };
+    
+    setDetailRowsGL(updatedRows);
+  }
+  setShowAccountModal(false);
+  setSelectedRowIndex(null);
+};
   
   const handleCloseRcModal = (selected) => {
   if (selected && selectedRowIndex !== null) {
@@ -1018,6 +1041,18 @@ const handleRcDoubleGLClick = (index) => {
     Reference Document Type
   </label>
 </div>
+{/* Dropdown Icon */}
+  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+    <svg
+      className="h-4 w-4 text-gray-500"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
 </div>
         </div>
                   
@@ -1194,7 +1229,7 @@ const handleRcDoubleGLClick = (index) => {
         </button>
       </div>
 
-      {/* Action Button */}
+      {/* Action Button
       <div className="flex justify-end">
         <button
           // onClick={handleAddRow}
@@ -1203,7 +1238,7 @@ const handleRcDoubleGLClick = (index) => {
           Generate GL Entries
         </button>
         
-      </div>
+      </div> */}
     </div>
 
     {/* GL Details Table */}
@@ -1244,23 +1279,54 @@ const handleRcDoubleGLClick = (index) => {
   onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
 />
               </td>
-              <td className="global-tran-td-ui">
-              <input
-  type="text"
-  className="w-[100px] global-tran-td-inputclass-ui"
-  value={row.rcCode || ""}
-  onChange={(e) => handleDetailChange(index, 'rcCode', e.target.value)}
-  onDoubleClick={() => handleRcDoubleDtl1Click(index)}
-/>
-              </td>
-              <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.slCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
-                />
-              </td>
+
+             {/* RC Code Field */}
+<td className="global-tran-td-ui">
+  <input
+    type="text"
+    className={`w-[100px] global-tran-td-inputclass-ui ${
+      row.rcRequired && row.rcCode === "RC Required" 
+        ? ' text-red-500 font-semibold' 
+        : ''
+    }`}
+    value={row.rcCode || ""}
+    onChange={(e) => {
+      if (!(row.rcRequired && row.rcCode === "RC Required")) {
+        handleGLDetailChange(index, 'rcCode', e.target.value);
+      }
+    }}
+    onDoubleClick={() => handleRcDoubleGLClick(index)}
+    onFocus={() => {
+      if (row.rcRequired && row.rcCode === "RC Required") {
+        handleGLDetailChange(index, 'rcCode', "");
+      }
+    }}
+  />
+</td>
+
+{/* SL Code Field */}
+<td className="global-tran-td-ui">
+  <input
+    type="text"
+    className={`w-[100px] global-tran-td-inputclass-ui ${
+      row.slRequired && row.slCode === "SL Required" 
+        ? ' text-red-500 font-semibold' 
+        : ''
+    }`}
+    value={row.slCode || ""}
+    onChange={(e) => {
+      if (!(row.slRequired && row.slCode === "SL Required")) {
+        handleGLDetailChange(index, 'slCode', e.target.value);
+      }
+    }}
+    onFocus={() => {
+      if (row.slRequired && row.slCode === "SL Required") {
+        handleGLDetailChange(index, 'slCode', "");
+      }
+    }}
+  />
+</td>
+             
               <td className="global-tran-td-ui">
                 <input
                   type="text"
@@ -1475,7 +1541,7 @@ const handleRcDoubleGLClick = (index) => {
   <COAMastLookupModal
     isOpen={showAccountModal}
     onClose={handleCloseAccountModal}
-    customParam="apv_dtl"
+    
   />
 )}
 
