@@ -207,8 +207,8 @@ useEffect(() => {
   }, [resetFlag, isLoading]);
 
 
-  useEffect(() => {
-  }, [custCode]);
+  // useEffect(() => {
+  // }, [custCode]);
 
 
   useEffect(() => {
@@ -281,7 +281,6 @@ useEffect(() => {
 
 
   const loadDocDropDown = async () => {
-<<<<<<< HEAD
    const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
       if(data){
          setsviTypes(data);
@@ -289,34 +288,18 @@ useEffect(() => {
         };
    };
  
-=======
-  try {
-    const data = await getTopDocDropDown(docType, "SVITRAN_TYPE");
-    setsviTypes(data); // data is always an array now
-    setselectedSVIType(data.length > 0 ? data[0].DROPDOWN_CODE : "");
-  } catch (error) {
-    console.error("Error loading document dropdown:", error);
-    setsviTypes([]);
-    setselectedSVIType("");
-  }
-};
 
-
-
->>>>>>> fc3e3d97ad7db6cf4d7e79ea8f099935f26c6fba
-
-
- const handleGenerateGLEntries = async () => {
+const handleGenerateGLEntries = async () => {
   setIsLoading(true);
 
-  try {
+  // try {
     const glData = {
       branchCode: branchCode,
       sviNo: documentNo || "",
       sviId: documentID || "",
       sviDate: header.svi_date,
       svitranType: selectedSVIType,
-      billtermCode:billtermCode,
+      billtermCode: billtermCode,
       custCode: custCode,
       custName: custName,
       refDocNo1: refDocNo1,
@@ -325,10 +308,10 @@ useEffect(() => {
       toDate: toDate,
       currCode: currencyCode || "PHP",
       currRate: parseFormattedNumber(currencyRate) || 1,
-      remarks: remarks|| "",
+      remarks: remarks || "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
-        lnNo: String(index + 1),
+        lnNo: index + 1,
         billCode: row.billCode || "",
         billName: row.billName || "",
         sviSpecs: row.sviSpecs || "",
@@ -339,112 +322,108 @@ useEffect(() => {
         discRate: parseFormattedNumber(row.discRate || 0),
         discAmount: parseFormattedNumber(row.discAmt || 0),
         netDisc: parseFormattedNumber(row.netDisc || 0),
-        vatCode: row.vatCode,
-        vatName: row.vatName,
+        vatCode: row.vatCode || "",
+        vatName: row.vatName || "",
         vatAmount: parseFormattedNumber(row.vatAmount || 0),
         atcCode: row.atcCode || "",
         atcName: row.atcName || "",
-        atcAmount: parseFormattedNumber(row.atcAmount),
+        atcAmount: parseFormattedNumber(row.atcAmount || 0),
         sviAmount: parseFormattedNumber(row.sviAmount || 0),
-        salesAcct: row.salesAcct,
-        arAcct: row.arAcct,
+        salesAcct: row.salesAcct || "",
+        arAcct: row.arAcct || "",
         vatAcct: "",
-        discAcct: row.discAcct,
-        rcCode:row.rcCode
+        discAcct: row.discAcct || "",
+        rcCode: row.rcCode || ""
       })),
       dt2: []
     };
 
-    const payload = { json_data: glData };
+    // const payload = { json_data: glData };
+    const response = await generateGLEntries (docType, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading)
+    console.log("Payload for GL generation:", payload);
 
-
-
-
-  //   console.log("Payload for GL generation:", payload);
-  //  const response = await postRequest("generateGLSVI", payload);
-
-
- const apiUrl = 'http://127.0.0.1:8000/api/generateGLSVI'; // Adjust if using different port
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-
-    // const response = await postRequest("generateGLSVI", JSON.stringify(payload));
-
-    // console.log("Raw response from generateGLAPV API:", response);
-
-    if (response?.status === 'success' && Array.isArray(response.data)) {
-      let glEntries;
-
-      try {
-        glEntries = JSON.parse(response.data[0].result);
-        if (!Array.isArray(glEntries)) {
-          glEntries = [glEntries];
-        }
-      } catch (parseError) {
-        console.error("Error parsing GL entries:", parseError);
-        throw new Error("Failed to parse GL entries");
-      }
-
-      const transformedEntries = glEntries.map((entry, idx) => ({
-        id: idx + 1,
-        acctCode: entry.acctCode || "",
-        rcCode: entry.rcCode || "",
-        sltypeCode: entry.sltypeCode || "",
-        slCode: entry.slCode || "",
-        particular: entry.particular || `APV ${documentNo || ''} - ${vendName?.vendName || "Vendor"}`,
-        vatCode: entry.vatCode || "",
-        vatName: entry.vatName || "",
-        atcCode: entry.atcCode || "",
-        atcName: entry.atcName || "",
-        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
-        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-        slRefNo: entry.slrefNo || "",
-        slrefDate: entry.slrefDate || "",
-        remarks: header.remarks || "",
-        dt1Lineno: entry.dt1Lineno || ""
-      }));
-
-      setDetailRowsGL(transformedEntries);
-
-      const totalDebitValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.debit || 0),
-        0
-      );
-      const totalCreditValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.credit || 0),
-        0
-      );
-
-      setTotalDebit(totalDebitValue);
-      setTotalCredit(totalCreditValue);
-
-      return transformedEntries;
-    } else {
-      console.error("🔴 API responded with failure:", response.message);
-      throw new Error(response.message || "Failed to generate GL entries");
+    if(response) {
+      console.log("Successfully generated GL entries:");
     }
-  } catch (error) {
-    console.error("🔴 Error in handleGenerateGLEntries:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Generation Failed',
-      text: 'Error generating GL entries: ' + error.message,
-      confirmButtonColor: '#3085d6',
-    });
-    return null;
-  } finally {
-    setIsLoading(false);
-  }
+
+    // const response = await postRequest("generateGLSVI", JSON.stringify(payload), {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Accept': 'application/json'
+    //   },
+    //   body: JSON.stringify(payload)
+    // });
+
+    // const data = await response.json(); 
+    // console.log("Raw response from generateGLSVI API:", data);
+
+    // if (data?.status === 'success' && Array.isArray(data.data)) {
+    //   let glEntries;
+
+    //   try {
+    //     glEntries = JSON.parse(data.data[0].result);
+    //     if (!Array.isArray(glEntries)) {
+    //       glEntries = [glEntries];
+    //     }
+    //   } catch (parseError) {
+    //     console.error("Error parsing GL entries:", parseError);
+    //     throw new Error("Failed to parse GL entries");
+    //   }
+
+    //   const transformedEntries = glEntries.map((entry, idx) => ({
+    //     id: idx + 1,
+    //     acctCode: entry.acctCode || "",
+    //     rcCode: entry.rcCode || "",
+    //     sltypeCode: entry.sltypeCode || "",
+    //     slCode: entry.slCode || "",
+    //     particular: entry.particular || `SVI ${documentNo || ''} - ${custName || "Customer"}`,
+    //     vatCode: entry.vatCode || "",
+    //     vatName: entry.vatName || "",
+    //     atcCode: entry.atcCode || "",
+    //     atcName: entry.atcName || "",
+    //     debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
+    //     credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
+    //     slRefNo: entry.slrefNo || "",
+    //     slrefDate: entry.slrefDate || "",
+    //     remarks: header.remarks || "",
+    //     dt1Lineno: entry.dt1Lineno || ""
+    //   }));
+
+    //   setDetailRowsGL(transformedEntries);
+
+    //   const totalDebitValue = transformedEntries.reduce(
+    //     (sum, row) => sum + parseFloat(row.debit || 0),
+    //     0
+    //   );
+    //   const totalCreditValue = transformedEntries.reduce(
+    //     (sum, row) => sum + parseFloat(row.credit || 0),
+    //     0
+    //   );
+
+    //   setTotalDebit(totalDebitValue);
+    //   setTotalCredit(totalCreditValue);
+
+    //   return transformedEntries;
+    // } else {
+    //   console.error("API responded with failure:", data.message);
+    //   throw new Error(data.message || "Failed to generate GL entries");
+    // }
+  // }  (error) {
+  //   console.error("Error in handleGenerateGLEntries:", error);
+  //   Swal.fire({
+  //     icon: 'error',
+  //     title: 'Generation Failed',
+  //     text: 'Error generating GL entries: ' + error.message,
+  //     confirmButtonColor: '#3085d6',
+  //   });
+  //   return null;
+  // } finally {
+  //   setIsLoading(false);
+
 };
 
+ 
 
 
 
@@ -2272,11 +2251,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
-<<<<<<< HEAD
      onClick={() =>handleAddRow()}
-=======
-    onClick={() => handleAddRow(index)}
->>>>>>> fc3e3d97ad7db6cf4d7e79ea8f099935f26c6fba
     className="global-tran-tab-footer-button-add-ui"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add

@@ -128,7 +128,7 @@ const AppContent = () => {
           {/* <Route path="/" element={<APV />} /> */}
           {/* <Route path="/" element={<CV />} /> */}
           {/* <Route path="/history" element={<JVHistory />} /> */}
-          <Route path="/" element={<APV/>} /> 
+          <Route path="/" element={<SVI/>} /> 
         </Routes>
       </div>
     </div>

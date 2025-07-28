@@ -152,15 +152,19 @@ export async function getTopBillCodeRow(billCode) {
     return null;
   }
 }
-
-export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading) => {
+export const generateGLEntries = async (
+  docCode,
+  glData,
+  setDetailRowsGL,
+  setTotalDebit,
+  setTotalCredit,
+  setIsLoading
+) => {
   setIsLoading(true);
   const payload = { json_data: glData };
 
-  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
-
   try {
-    const response = await postRequest("generateGL"+docCode, JSON.stringify(payload));
+    const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
     console.log("Raw response from generateGL API:", response);
 
     if (response?.status === 'success' && Array.isArray(response.data)) {
@@ -172,7 +176,6 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
           glEntries = [glEntries];
         }
       } catch (parseError) {
-        console.error("Error parsing GL entries:", parseError);
         throw new Error("Failed to parse GL entries");
       }
 
@@ -189,10 +192,10 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
         atcName: entry.atcName || "",
         debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
         credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-        debitFx1: entry.debit ? parseFloat(entry.debitFx1).toFixed(2) : "0.00",
-        creditFx1: entry.credit ? parseFloat(entry.creditFx1).toFixed(2) : "0.00",
-        debitFx2: entry.debit ? parseFloat(entry.debitFx2).toFixed(2) : "0.00",
-        creditFx2: entry.credit ? parseFloat(entry.creditFx2).toFixed(2) : "0.00",
+        debitFx1: entry.debitFx1 ? parseFloat(entry.debitFx1).toFixed(2) : "0.00",
+        creditFx1: entry.creditFx1 ? parseFloat(entry.creditFx1).toFixed(2) : "0.00",
+        debitFx2: entry.debitFx2 ? parseFloat(entry.debitFx2).toFixed(2) : "0.00",
+        creditFx2: entry.creditFx2 ? parseFloat(entry.creditFx2).toFixed(2) : "0.00",
         slRefNo: entry.slrefNo || "",
         slrefDate: entry.slrefDate || "",
         remarks: entry.remarks || "",
@@ -201,29 +204,22 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
 
       setDetailRowsGL(transformedEntries);
 
-      const totalDebitValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.debit || 0),
-        0
-      );
-      const totalCreditValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.credit || 0),
-        0
-      );
+      const totalDebitValue = transformedEntries.reduce((sum, row) => sum + parseFloat(row.debit || 0), 0);
+      const totalCreditValue = transformedEntries.reduce((sum, row) => sum + parseFloat(row.credit || 0), 0);
 
       setTotalDebit(totalDebitValue);
       setTotalCredit(totalCreditValue);
 
       return transformedEntries;
     } else {
-      console.error("🔴 API responded with failure:", response.message);
       throw new Error(response.message || "Failed to generate GL entries");
     }
   } catch (error) {
-    console.error("🔴 Error in generateGLEntries:", error);
-    Swal.fire({
+    console.error("Error in generateGLEntries:", error);
+    swal.fire({
       icon: 'error',
       title: 'Generation Failed',
-      text: 'Error generating GL entries: ' + error.message,
+      text: error.message || 'Unknown error occurred',
       confirmButtonColor: '#3085d6',
     });
     return null;
