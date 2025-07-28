@@ -281,7 +281,6 @@ useEffect(() => {
 
 
   const loadDocDropDown = async () => {
-<<<<<<< HEAD
    const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
       if(data){
          setsviTypes(data);
@@ -289,21 +288,6 @@ useEffect(() => {
         };
    };
  
-=======
-  try {
-    const data = await getTopDocDropDown(docType, "SVITRAN_TYPE");
-    setsviTypes(data); // data is always an array now
-    setselectedSVIType(data.length > 0 ? data[0].DROPDOWN_CODE : "");
-  } catch (error) {
-    console.error("Error loading document dropdown:", error);
-    setsviTypes([]);
-    setselectedSVIType("");
-  }
-};
-
-
-
->>>>>>> fc3e3d97ad7db6cf4d7e79ea8f099935f26c6fba
 
 
  const handleGenerateGLEntries = async () => {
@@ -360,7 +344,7 @@ useEffect(() => {
 
 
 
-  //   console.log("Payload for GL generation:", payload);
+  console.log("Payload for GL generation:", JSON.stringify(payload));
   //  const response = await postRequest("generateGLSVI", payload);
 
 
@@ -2272,11 +2256,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
-<<<<<<< HEAD
      onClick={() =>handleAddRow()}
-=======
-    onClick={() => handleAddRow(index)}
->>>>>>> fc3e3d97ad7db6cf4d7e79ea8f099935f26c6fba
     className="global-tran-tab-footer-button-add-ui"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
