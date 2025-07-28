@@ -178,13 +178,13 @@ const SVI = () => {
 
 
 
-// useEffect(() => {
-//   const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
-//   const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
+useEffect(() => {
+  const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
+  const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
 
-//   setTotalDebit(debitSum);
-//   setTotalCredit(creditSum);
-// }, [detailRowsGL]);
+  setTotalDebit(debitSum);
+  setTotalCredit(creditSum);
+}, [detailRowsGL]);
 
 
 
@@ -208,8 +208,6 @@ const SVI = () => {
 
 
   useEffect(() => {
-  // console.log("custCode updated:", custCode);
-  //  console.log("custCode updated:", attention);
   }, [custCode]);
 
 
@@ -289,15 +287,13 @@ const SVI = () => {
          setselectedSVIType("REG");
         };
    };
-
-
-
+ 
 
 
  const handleGenerateGLEntries = async () => {
   setIsLoading(true);
 
-  // try {
+  try {
     const glData = {
       branchCode: branchCode,
       sviNo: documentNo || "",
@@ -316,7 +312,7 @@ const SVI = () => {
       remarks: remarks|| "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
-        lnNo: String(index + 1).padStart(3, '0'),
+        lnNo: String(index + 1),
         billCode: row.billCode || "",
         billName: row.billName || "",
         sviSpecs: row.sviSpecs || "",
@@ -336,306 +332,114 @@ const SVI = () => {
         sviAmount: parseFormattedNumber(row.sviAmount || 0),
         salesAcct: row.salesAcct,
         arAcct: row.arAcct,
-        vatAcct: row.vatAcctCode,
+        vatAcct: "",
         discAcct: row.discAcct,
         rcCode:row.rcCode
       })),
       dt2: []
     };
 
-    console.log(glData);
-
-    // const result = await generateGLEntries( docType,glData, header, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading); 
-    // if (result) {
-    //   console.log("GL Entries Generated:", result);
-    // }
-
-    //export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading)
-
-  //   const payload = { json_data: glData };
-  //   console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
-
-  //   const response = await postRequest("generateGLAPV", JSON.stringify(payload));
-  //   console.log("Raw response from generateGLAPV API:", response);
-
-  //   if (response?.status === 'success' && Array.isArray(response.data)) {
-  //     let glEntries;
-
-  //     try {
-  //       glEntries = JSON.parse(response.data[0].result);
-  //       if (!Array.isArray(glEntries)) {
-  //         glEntries = [glEntries];
-  //       }
-  //     } catch (parseError) {
-  //       console.error("Error parsing GL entries:", parseError);
-  //       throw new Error("Failed to parse GL entries");
-  //     }
-
-  //     const transformedEntries = glEntries.map((entry, idx) => ({
-  //       id: idx + 1,
-  //       acctCode: entry.acctCode || "",
-  //       rcCode: entry.rcCode || "",
-  //       sltypeCode: entry.sltypeCode || "",
-  //       slCode: entry.slCode || "",
-  //       particular: entry.particular || "",
-  //       vatCode: entry.vatCode || "",
-  //       vatName: entry.vatName || "",
-  //       atcCode: entry.atcCode || "",
-  //       atcName: entry.atcName || "",
-  //       debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
-  //       credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-  //       slRefNo: entry.slrefNo || "",
-  //       slrefDate: entry.slrefDate || "",
-  //       remarks: header.remarks || "",
-  //       dt1Lineno: entry.dt1Lineno || ""
-  //     }));
-
-  //     setDetailRowsGL(transformedEntries);
-
-  //     const totalDebitValue = transformedEntries.reduce(
-  //       (sum, row) => sum + parseFloat(row.debit || 0),
-  //       0
-  //     );
-  //     const totalCreditValue = transformedEntries.reduce(
-  //       (sum, row) => sum + parseFloat(row.credit || 0),
-  //       0
-  //     );
-
-  //     setTotalDebit(totalDebitValue);
-  //     setTotalCredit(totalCreditValue);
-
-  //     return transformedEntries;
-  //   } else {
-  //     console.error("🔴 API responded with failure:", response.message);
-  //     throw new Error(response.message || "Failed to generate GL entries");
-  //   }
-  // } catch (error) {
-  //   console.error("🔴 Error in handleGenerateGLEntries:", error);
-  //   Swal.fire({
-  //     icon: 'error',
-  //     title: 'Generation Failed',
-  //     text: 'Error generating GL entries: ' + error.message,
-  //     confirmButtonColor: '#3085d6',
-  //   });
-  //   return null;
-  // } finally {
-  //   setIsLoading(false);
-  // }
-};
+    const payload = { json_data: glData };
 
 
 
-  const handleSave = async () => {
-  try {
-    // Basic validation
-    if (!branchCode) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Please select a branch',
+
+  //   console.log("Payload for GL generation:", payload);
+  //  const response = await postRequest("generateGLSVI", payload);
+
+
+ const apiUrl = 'http://127.0.0.1:8000/api/generateGLSVI'; // Adjust if using different port
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
       });
-      return;
-    }
 
-    if (!custCode) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Please select a payee',
-      });
-      return;
-    }
 
-    if (detailRows.length === 0) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Please add at least one invoice detail',
-      });
-      return;
-    }
+    // const response = await postRequest("generateGLSVI", JSON.stringify(payload));
 
-    // Check if debit and credit totals balance
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Debit and Credit totals must balance',
-      });
-      return;
-    }
+    // console.log("Raw response from generateGLAPV API:", response);
 
-    // Generate document number if empty
-    let docNoToUse = documentNo;
-    let isAutoGenerated = false;
-    
-    if (!docNoToUse || docNoToUse.trim() === "") {
-      const lastNumber = localStorage.getItem('lastAPVNumber') || 0;
-      const nextNumber = parseInt(lastNumber) + 1;
-      docNoToUse = String(nextNumber).padStart(8, '0');
-      localStorage.setItem('lastAPVNumber', nextNumber);
-      setdocumentNo(docNoToUse);
-      isAutoGenerated = true;
-    }
+    if (response?.status === 'success' && Array.isArray(response.data)) {
+      let glEntries;
 
-    // Disable controls during save
-    setIsDocNoDisabled(true);
-    setIsSaveDisabled(true);
-    setIsResetDisabled(true);
+      try {
+        glEntries = JSON.parse(response.data[0].result);
+        if (!Array.isArray(glEntries)) {
+          glEntries = [glEntries];
+        }
+      } catch (parseError) {
+        console.error("Error parsing GL entries:", parseError);
+        throw new Error("Failed to parse GL entries");
+      }
 
-    // Prepare the data structure for the API
-    const formData = {
-      json_data: {
-        branchCode: branchCode,
-        apvNo: docNoToUse,
-        apvId: "",
-        apvDate: header.svi_date,
-        apvtranType: selectedSVIType || "APV01",
-        tranMode: "M",
-        apAcct: apAccountCode,
-        custCode: custCode,
-        custName: custName?.custName || "",
-        refapvNo1: header.refDocNo1 || "",
-        refapvNo2: header.refDocNo2 || "",
-        acctCode: apAccountCode,
-        currCode: currencyCode || "PHP",
-        currRate: parseFloat(currencyRate) || 1,
+      const transformedEntries = glEntries.map((entry, idx) => ({
+        id: idx + 1,
+        acctCode: entry.acctCode || "",
+        rcCode: entry.rcCode || "",
+        sltypeCode: entry.sltypeCode || "",
+        slCode: entry.slCode || "",
+        particular: entry.particular || `APV ${documentNo || ''} - ${vendName?.vendName || "Vendor"}`,
+        vatCode: entry.vatCode || "",
+        vatName: entry.vatName || "",
+        atcCode: entry.atcCode || "",
+        atcName: entry.atcName || "",
+        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
+        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
+        slRefNo: entry.slrefNo || "",
+        slrefDate: entry.slrefDate || "",
         remarks: header.remarks || "",
-        userCode: "NSI",
-        dateStamp: new Date().toISOString(),
-        timeStamp: "",
-        cutOff: header.svi_date.replace(/-/g, '').substring(0, 6), // YYYYMM format
-        tranDocId: "APV",
-        tranDocExist: documentNo ? 1 : 0,
-        dt1: detailRows.map((row, index) => ({
-          lnNo: String(index + 1).padStart(3, '0'),
-          invType: row.invType || "FG",
-          poNo: row.poNo || "",
-          rrNo: row.rrNo || "",
-          joNo: "",
-          svoNo: "",
-          siNo: row.siNo || "",
-          siDate: row.siDate || header.svi_date,
-          amount: parseFloat(row.amount || 0),
-          siAMount: parseFloat(row.siAmount || row.amount || 0),
-          debitAcct: row.debitAcct || "",
-          vatAcct: row.vatCode || "",
-          advAcct: "",
-          sltypeCode: row.sltypeCode || "",
-          slCode: row.slCode || custCode || "",
-          slName: row.slName || custName?.custName || "",
-          address1: "",
-          address2: "",
-          address3: "",
-          tin: custName?.tin || "",
-          rcCode: row.rcCode || "",
-          vatCode: row.vatCode || "",
-          vatAmount: parseFloat(row.vatAmount || 0),
-          atcCode: row.atcCode || "",
-          atcAmount: parseFloat(row.atcAmount || 0),
-          paytermCode: row.paytermCode || "",
-          dueDate: row.dueDate || "",
-          ctrDate: "",
-          advpoNo: "",
-          advpoAmount: 0,
-          advAtcAmount: 0,
-          remarks: row.remarks || "",
-          lineId: row.line_id || ""
-        })),
-        dt2: detailRowsGL.map((entry, index) => ({
-          recNo: String(index + 1).padStart(3, '0'),
-          acctCode: entry.acctCode || "",
-          rcCode: entry.rcCode || "",
-          slCode: entry.slCode || "",
-          particular: entry.particular || `APV ${docNoToUse} - ${custName?.custName || "Vendor"}`,
-          vatCode: entry.vatCode || "",
-          vatName: entry.vatName || "",
-          atcCode: entry.atcCode || "",
-          atcName: entry.atcName || "",
-          debit: parseFloat(entry.debit || 0),
-          credit: parseFloat(entry.credit || 0),
-          slrefNo: entry.slRefNo || "",
-          slrefDate: entry.slrefDate || "",
-          remarks: header.remarks || "",
-          dt1Lineno: entry.dt1Lineno || ""
-        }))
-      }
-    };
+        dt1Lineno: entry.dt1Lineno || ""
+      }));
 
-    console.log("Sending data to API:", JSON.stringify(formData, null, 2));
+      setDetailRowsGL(transformedEntries);
 
-    // Call the API
-    const response = await postRequest("upsertAPV", JSON.stringify(formData));
+      const totalDebitValue = transformedEntries.reduce(
+        (sum, row) => sum + parseFloat(row.debit || 0),
+        0
+      );
+      const totalCreditValue = transformedEntries.reduce(
+        (sum, row) => sum + parseFloat(row.credit || 0),
+        0
+      );
 
-    if (response?.status === 'success') {
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: 'APV saved successfully!',
-      });
+      setTotalDebit(totalDebitValue);
+      setTotalCredit(totalCreditValue);
 
-      // If document number was auto-generated, disable editing
-    
-      // Update document ID if returned from server
-      if (response.data?.documentID) {
-        setdocumentID(response.data.documentID);
-        setdocumentNo(response.data.documentNo);
-      }
+      return transformedEntries;
     } else {
-      throw new Error(response?.message || 'Failed to save APV');
+      console.error("🔴 API responded with failure:", response.message);
+      throw new Error(response.message || "Failed to generate GL entries");
     }
   } catch (error) {
-    console.error("Error saving APV:", error);
+    console.error("🔴 Error in handleGenerateGLEntries:", error);
     Swal.fire({
       icon: 'error',
-      title: 'Save Failed',
-      text: error.message || 'An error occurred while saving the APV',
+      title: 'Generation Failed',
+      text: 'Error generating GL entries: ' + error.message,
+      confirmButtonColor: '#3085d6',
     });
+    return null;
   } finally {
-    // Re-enable controls
-    setIsSaveDisabled(false);
-    setIsResetDisabled(false);
+    setIsLoading(false);
   }
 };
 
-  
-
-
-  const getDocumentSavedData = async () => {
-    try {
-      const docPayload = {
-        json_data: {
-          "apvNo": documentNo,
-          "branchCode": branchCode
-        }};  
-      const response = await postRequest("getAPV", JSON.stringify(docPayload)); 
-      if (response.success) {
-
-        console.log(response)
-
-        const result = JSON.parse(response.data[0].result);    
-        
-        setdocumentDetail1(result.dt1);
-        setdocumentDetail2(result.dt2);
-        
-      }
-    } catch (err) {
-      console.error("Document Retrieval API error:", err);
-    }
-  }
 
 
 
-
-
-  const handleAddRow = async (index) => {
+  const handleAddRow = async () => {
   try {
     const items = await handleFetchDetail(custCode);
     const itemList = Array.isArray(items) ? items : [items];
     const newRows = await Promise.all(itemList.map(async (item) => {
 
       return {
-        lnNo: String(index + 1),
+        lnNo: "",
         billCode: "",
         billName: "",
         sviSpecs: "",
@@ -1536,7 +1340,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
   onPrint={handlePrint}
   printData={printData} 
   onReset={handleReset}
-  onSave={handleSave}
+  // onSave={handleSave}
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
 />
@@ -2452,7 +2256,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
-    onClick={handleAddRow()}
+     onClick={() =>handleAddRow()}
     className="global-tran-tab-footer-button-add-ui"
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
