@@ -163,6 +163,8 @@ export const generateGLEntries = async (
   setIsLoading(true);
   const payload = { json_data: glData };
 
+  
+
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
     console.log("Raw response from generateGL API:", response);

@@ -415,15 +415,14 @@ const handleGenerateGLEntries = async () => {
   //     icon: 'error',
   //     title: 'Generation Failed',
   //     text: 'Error generating GL entries: ' + error.message,
-  //     confirmButtonColor: '#3085d6',
-  //   });
-  //   return null;
-  // } finally {
-  //   setIsLoading(false);
+  
 
 };
 
  
+
+
+
 
 
 
