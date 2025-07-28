@@ -43,6 +43,45 @@ const APVHistory = () => {
 }, [dateRangeType]);
 
 
+const getStatusDisplay = (statusCode) => {
+  switch (statusCode) {
+    case 'F':
+      return { 
+        text: 'FINALIZED', 
+        statusColor: 'text-blue-600',
+        rowColor: 'text-black' // Keep row text black
+      };
+    case 'C':
+      return { 
+        text: 'CANCELLED', 
+        statusColor: 'text-red-600',
+        rowColor: 'text-black' // Keep row text black
+      };
+    case 'P':
+      return { 
+        text: 'POSTED', 
+        statusColor: 'text-blue-600',
+        rowColor: 'text-black' // Keep row text black
+      };
+    default:
+      return { 
+        text: 'OPEN', 
+        statusColor: 'text-black',
+        rowColor: 'text-black' // All text black for OPEN status
+      };
+  }
+};
+
+const getStatusStyle = (statusCode) => {
+  switch (statusCode) {
+    case 'P': return { text: 'POSTED', color: 'text-blue-600' };
+    case 'F': return { text: 'FINALIZED', color: 'text-blue-800' }; 
+    case 'C': return { text: 'CANCELLED', color: 'text-red-600' };
+    default: return { text: 'OPEN', color: 'text-black' };
+  }
+};
+
+
   const fetchData = async () => {
   try {
     if (!dates[0] || !dates[1]) {
@@ -86,20 +125,19 @@ const handleRowClick = async (row) => {
     const response = await axios.post("http://127.0.0.1:8000/api/getAPV", payload);
 
     if (response.data.success) {
-      // Parse the API response
       const result = JSON.parse(response.data.data[0].result);
       
-      // Navigate to the APV route with the transaction data
+      // Navigate to the APV route with the transaction data and status
       navigate("/", {  // Make sure this matches your route for the APV component
         state: {
           transactionData: result,
-          isFromHistory: true
+          isFromHistory: true,
+          transactionStatus: row.apvStatus 
         }
       });
     }
   } catch (error) {
     console.error("Error fetching transaction:", error);
-    // Add error handling (e.g., show a toast notification)
   }
 };
 
@@ -258,17 +296,21 @@ const handleSort = (key) => {
   setSortConfig({ key, direction });
 
   const sortedData = [...data].sort((a, b) => {
+    // Special handling for APV numbers
+    if (key === 'apvNo') {
+      const numA = parseInt(a[key] || '0');
+      const numB = parseInt(b[key] || '0');
+      return direction === 'asc' ? numA - numB : numB - numA;
+    }
+    
+    // Default sorting for other columns
     if (a[key] === null) return 1;
     if (b[key] === null) return -1;
     if (a[key] === b[key]) return 0;
 
     return direction === 'asc'
-      ? a[key] > b[key]
-        ? 1
-        : -1
-      : a[key] < b[key]
-      ? 1
-      : -1;
+      ? a[key] > b[key] ? 1 : -1
+      : a[key] < b[key] ? 1 : -1;
   });
 
   setData(sortedData);
@@ -276,7 +318,11 @@ const handleSort = (key) => {
 
 const columns = [
   { key: "branchCode", label: "Branch" },
-  { key: "apvNo", label: "APV No" },
+  { 
+    key: "apvNo", 
+    label: "APV No",
+    sortable: true
+  },
   { key: "apvDate", label: "APV Date" },
   { key: "vendCode", label: "Payee Code" },
   { key: "vednName", label: "Payee Name" },
@@ -285,7 +331,14 @@ const columns = [
   { key: "currCode", label: "Currency Code" },
   { key: "currRate", label: "Currency Rate" },
   { key: "remarks", label: "Particular" },
-  { key: "apvStatus", label: "Status" },
+  { 
+    key: "apvStatus", 
+    label: "Status",
+    format: (value) => {
+      const status = getStatusDisplay(value);
+      return <span className={status.color}>{status.text}</span>;
+    }
+  },
   { key: "preparedBy", label: "Prepared By" },
   { key: "dateStamp", label: "Date Stamp" },
   { key: "timeStamp", label: "Time Stamp" },
@@ -368,16 +421,16 @@ const filteredData = data.filter((row) =>
     <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
       <FontAwesomeIcon icon={faFilter} className="text-gray-400 mr-2" />
       <select
-        className="w-full h-[30px] border-none focus:ring-0 text-sm"
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-      >
-        <option>All</option>
-        <option>Open</option>
-        <option>Closed</option>
-        <option>Cancelled</option>
-        <option>Posted</option>
-      </select>
+  className="w-full h-[30px] border-none focus:ring-0 text-sm"
+  value={status}
+  onChange={(e) => setStatus(e.target.value)}
+>
+  <option value="All">All Statuses</option>
+  <option value="F">FINALIZED</option>
+  <option value="">OPEN</option>
+  <option value="C">CANCELLED</option>
+  <option value="P">POSTED</option>
+</select>
     </div>
   </div>
 
@@ -430,22 +483,22 @@ const filteredData = data.filter((row) =>
         {/* Header row for column labels */}
         <tr className="bg-blue-700 text-white sticky top-0 z-30">
           {columns.map(({ key, label }) => (
-            <th
-              key={key}
-              onClick={() => handleSort(key)}
-              className="px-3 py-2 border cursor-pointer whitespace-nowrap"
-            >
-              <div className="flex items-center justify-center gap-1">
-                {label}
-                {sortConfig.key === key && (
-                  <FontAwesomeIcon
-                    icon={sortConfig.direction === "asc" ? "arrow-up" : "arrow-down"}
-                    className="text-xs"
-                  />
-                )}
-              </div>
-            </th>
-          ))}
+  <th
+    key={key}
+    onClick={() => handleSort(key)}
+    className="px-3 py-2 border cursor-pointer whitespace-nowrap"
+  >
+    <div className="flex items-center justify-center gap-1">
+      {label}
+      {sortConfig.key === key && (
+        <FontAwesomeIcon
+          icon={sortConfig.direction === 'asc' ? "arrow-up" : "arrow-down"}
+          className="text-xs"
+        />
+      )}
+    </div>
+  </th>
+))}
         </tr>
 
         {/* Filter row */}
@@ -464,40 +517,39 @@ const filteredData = data.filter((row) =>
         </tr>
       </thead>
 
-      <tbody className="divide-y divide-gray-200">
-        {filteredData.length > 0 ? (
-          filteredData.map((row, index) => (
-            <tr
-              key={index}
-              className="hover:bg-blue-50 transition cursor-pointer"
-              onClick={() => handleRowClick(row)}
-            >
-              {columns.map(({ key }) => (
-                <td
-                  key={key}
-                  className="px-3 py-2 border whitespace-nowrap text-left text-blue-800"
-                  title={row[key]}
-                >
-                  {key === "apvDate" || key === "dateStamp"
-                    ? row[key]?.split("T")[0]
-                    : key === "convertedAmount"
-                    ? row[key] || row["apvAmount"]
-                    : row[key] || "—"}
-                </td>
-              ))}
-            </tr>
-          ))
-        ) : (
-          <tr>
+     <tbody className="divide-y divide-gray-200">
+  {filteredData.length > 0 ? (
+    filteredData.map((row, index) => {
+      const status = getStatusStyle(row.apvStatus);
+      return (
+        <tr
+          key={index}
+          className={`hover:bg-blue-50 transition cursor-pointer ${status.color}`}
+          onClick={() => handleRowClick(row)}
+        >
+          {columns.map(({ key }) => (
             <td
-              colSpan={columns.length}
-              className="text-center text-gray-500 py-4 border"
+              key={key}
+              className="px-3 py-2 border whitespace-nowrap text-left"
+              title={row[key]}
             >
-              No data available.
+              {key === "apvStatus" ? status.text : 
+               (key === "apvDate" || key === "dateStamp" 
+                ? row[key]?.split("T")[0] 
+                : row[key] || "—")}
             </td>
-          </tr>
-        )}
-      </tbody>
+          ))}
+        </tr>
+      );
+    })
+  ) : (
+    <tr>
+      <td colSpan={columns.length} className="text-center text-gray-500 py-4 border">
+        No data available.
+      </td>
+    </tr>
+  )}
+</tbody>
     </table>
   </div>
 </div>

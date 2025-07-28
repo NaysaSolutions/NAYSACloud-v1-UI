@@ -1,9 +1,6 @@
-// import {fetchData , postRequest} from 'C:/NSIApps/phpProgramming/NAYSACloud-v1-UI/src/NAYSA Cloud/Configuration/BaseURL.jsx'
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 
-
 export async function getTopCompanyRow() {
- 
   try {
     const response = await fetchData("getCompany");
     if (response.success) {
@@ -16,9 +13,6 @@ export async function getTopCompanyRow() {
     return null;
   }
 }
-
-
-
 
 export async function getTopDocControlRow(docId) {
   if (!docId) return null;
@@ -36,35 +30,45 @@ export async function getTopDocControlRow(docId) {
   }
 }
 
+export async function getTopDocDropDown(documentCode, documentCol) {
+  if (!documentCode || !documentCol) {
+    console.warn("Document code or column not provided");
+    return [];
+  }
 
-
-
-export async function getTopDocDropDown(documentCode,documentCol) {
-
-   const payload = {
-      json_data: {
-        dropdownColumn: documentCol,
-        docCode: documentCode
-      }
-    };
-  
+  const payload = {
+    json_data: {
+      dropdownColumn: documentCol,
+      docCode: documentCode
+    }
+  };
 
   try {
     const response = await postRequest("getHSDropdown", JSON.stringify(payload));
-    if (response.success) {
-      const responseData = JSON.parse(response.data[0].result);
-      return responseData.length > 0 ? responseData : null;
+    
+    // Validate response structure
+    if (!response || !response.success || !response.data || !Array.isArray(response.data)) {
+      console.warn("Invalid API response structure", response);
+      return [];
     }
-    return null;
+
+    // Safely parse the result
+    let parsedData;
+    try {
+      parsedData = JSON.parse(response.data[0]?.result || "[]");
+    } catch (parseError) {
+      console.error("Error parsing response data:", parseError);
+      return [];
+    }
+
+    // Ensure we always return an array
+    return Array.isArray(parsedData) ? parsedData : [];
+
   } catch (error) {
     console.error("Error fetching Document Dropdown:", error);
-    return null;
+    return [];
   }
 }
-
-
-
-
 
 export async function getTopVatRow(vatCode) {
   if (!vatCode) return null;
@@ -81,8 +85,6 @@ export async function getTopVatRow(vatCode) {
     return null;
   }
 }
-
-
 
 export async function getTopVatAmount(vatCode, grossAmt) {
   if (!vatCode || grossAmt === 0) return 0;
@@ -102,11 +104,6 @@ export async function getTopVatAmount(vatCode, grossAmt) {
   }
 }
 
-
-
-
-
-
 export async function getTopATCRow(atcCode) {
   if (!atcCode) return null;
 
@@ -122,7 +119,6 @@ export async function getTopATCRow(atcCode) {
     return null;
   }
 }
-
 
 export async function getTopATCAmount(atcCode, netAmount) {
   if (!atcCode || netAmount === 0) return 0;
@@ -141,12 +137,6 @@ export async function getTopATCAmount(atcCode, netAmount) {
   }
 }
 
-
-
-
-
-
-
 export async function getTopBillCodeRow(billCode) {
   if (!billCode) return null;
 
@@ -158,16 +148,10 @@ export async function getTopBillCodeRow(billCode) {
     }
     return null;
   } catch (error) {
-    console.error("Error fetching ATC row:", error);
+    console.error("Error fetching Bill Code row:", error);
     return null;
   }
 }
-
-
-
- 
-
-
 
 export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading) => {
   setIsLoading(true);
