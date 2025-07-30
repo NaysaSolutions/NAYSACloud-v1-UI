@@ -39,6 +39,7 @@ import { getTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { getTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { generateGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
+import { transactionUpsert } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
 
@@ -50,17 +51,127 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 const SVI = () => {
   const { resetFlag } = useReset();
-  const [documentName, setdocumentName] = useState("")
-  const [documentSeries, setdocumentSeries] = useState("Auto")
-  const [documentDocLen, setdocumentDocLen] = useState(8)
-  const [documentDetail1, setdocumentDetail1] = useState([]);
-  const [documentDetail2, setdocumentDetail2] = useState([]);
-  const [documentID, setdocumentID] = useState(null)
-  const [documentNo, setdocumentNo] = useState("")
+
+   const [state, setState] = useState({
+    
+    
+    // Document information
+    documentName: "",
+    documentSeries: "Auto",
+    documentDocLen: 8,
+    documentID: null,
+    documentNo: "",
+    status: "OPEN",
+
+
+    // UI state
+    activeTab: "basic",
+    GLactiveTab: "invoice",
+    isLoading: false,
+    showSpinner: false,
+    isDocNoDisabled: false,
+    isSaveDisabled: false,
+    isResetDisabled: false,
+    isFetchDisabled: false,
+
+
+     // Header information
+    header: {
+      svi_date: new Date().toISOString().split('T')[0]
+      // remarks: "",
+      // refDocNo1: "",
+      // refDocNo2: ""
+    },
+
+
+
+    branchCode: "Head Office",
+    branchName: "",
+    
+    // Vendor information
+    custCode: "",
+    custName: "",
+    attention: "",
+    
+    // Currency information
+    currencyCode: "PHP",
+    currencyName: "Philippine Peso",
+    currencyRate: "1.000000",
+
+
+    //Other Header Info
+    sviTypes :[],
+    refDocNo1: "",
+    refDocNo2: "",
+    fromDate: null,
+    toDate: null,
+    remarks: "",
+    billtermCode: "",
+    billtermName: "",
+    selectedSVIType : "REG",
+
+    //Detail 1-2
+    detailRows  :[],
+    detailRowsGL :[],
+
+
+    totalDebit:"0.00",
+    totalCredit:"0.00",
+
+ 
+    // Modal states
+    modalContext: '',
+    selectionContext: '',
+    selectedRowIndex: null,
+    accountModalSource: null,
+    showAccountModal:false,
+    showRcModal:false,
+    showVatModal:false,
+    showAtcModal:false,
+    showBillCodeModal:false,
+    showSlModal:false,
+    showBilltermModal:false,
+
+    currencyModalOpen:false,
+    branchModalOpen:false,
+    custModalOpen:false,
+
+   });
+
+
+  const updateState = (updates) => {
+      setState(prev => ({ ...prev, ...updates }));
+    };
+
+
+
+    const {
+    documentName, documentSeries, documentDocLen, documentID, documentNo, status,
+    activeTab,GLactiveTab,isLoading,showSpinner,isDocNoDisabled,isSaveDisabled,isResetDisabled,isFetchDisabled,
+    branchCode,branchName,custCode,custName,attention,currencyCode,currencyName,currencyRate,
+    sviTypes,refDocNo1,refDocNo2,fromDate,toDate,remarks,billtermCode,billtermName,selectedSVIType,
+    detailRows,detailRowsGL,totalDebit,totalCredit,
+    modalContext,selectionContext,selectedRowIndex,accountModalSource,showAccountModal,showRcModal,
+    showVatModal,showAtcModal,showBillCodeModal,showSlModal,showBilltermModal,currencyModalOpen,branchModalOpen,custModalOpen
+  } = state;
+
+
   
-  const [activeTab, setActiveTab] = useState("basic");
-  const [GLactiveTab, setGLActiveTab] = useState("invoice");
-  const [companyData, setCompanyData] = useState({});
+
+
+  // const [documentName, setdocumentName] = useState("")
+  // const [documentSeries, setdocumentSeries] = useState("Auto")
+  // const [documentDocLen, setdocumentDocLen] = useState(8)
+  // const [documentDetail1, setdocumentDetail1] = useState([]);
+  // const [documentDetail2, setdocumentDetail2] = useState([]);
+  // const [documentID, setdocumentID] = useState(null)
+  // const [documentNo, setdocumentNo] = useState("")
+  
+  // const [activeTab, setActiveTab] = useState("basic");
+  // const [GLactiveTab, setGLActiveTab] = useState("invoice");
+
+
+  
 
   //Document Global Setup
   const docType = docTypes.SVI; 
@@ -78,32 +189,32 @@ const SVI = () => {
   }
 
 
-  const [totalDebit, setTotalDebit] = useState(0);
-  const [totalCredit, setTotalCredit] = useState(0);
-  const [detailRows, setDetailRows] = useState([]);
-  const [detailRowsGL, setDetailRowsGL] = useState([]);
-  const [isFetchDisabled, setIsFetchDisabled] = useState(false); 
-  const [branchModalOpen, setBranchModalOpen] = useState(false);
-  const [custModalOpen, setcustModalOpen] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [custName, setCustName] = useState(null);
-  const [custCode, setCustCode] = useState(null);  
-  const [attention, setAttention] = useState(null);
-  const [branches, setbranches] = useState([]);
-  const [branchCode, setBranchCode] = useState("");
-  const [branchName, setBranchName] = useState("");
-  const [modalContext, setModalContext] = useState('');
-  const [selectionContext, setSelectionContext] = useState('');
-  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
-  const [coaModalOpen, setCoaModalOpen] = useState(false);
-  const [currencyCode, setCurrencyCode] = useState(null);
-  const [currencyName, setCurrencyName] = useState(null);
-  const [currencyRate, setCurrencyRate] = useState("1.000000");
-  const [refDocNo1, setRefDocNo1] = useState(null);
-  const [refDocNo2, setRefDocNo2] = useState(null);
-  const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate] = useState(null);
-  const [remarks, setRemarks] = useState("");
+  // const [totalDebit, setTotalDebit] = useState("0.00");
+  // const [totalCredit, setTotalCredit] = useState(0);
+  // const [detailRows, setDetailRows] = useState([]);
+  // const [detailRowsGL, setDetailRowsGL] = useState([]);
+  // const [isFetchDisabled, setIsFetchDisabled] = useState(false); 
+  // const [branchModalOpen, setBranchModalOpen] = useState(false);
+  // const [custModalOpen, setcustModalOpen] = useState(false);
+  // const [showModal, setShowModal] = useState(false);
+  // const [custName, setCustName] = useState(null);
+  // const [custCode, setCustCode] = useState(null);  
+  // const [attention, setAttention] = useState(null);
+  // const [branches, setbranches] = useState([]);
+  // const [branchCode, setBranchCode] = useState("");
+  // const [branchName, setBranchName] = useState("");
+  // const [modalContext, setModalContext] = useState('');
+  // const [selectionContext, setSelectionContext] = useState('');
+  // const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+  // const [coaModalOpen, setCoaModalOpen] = useState(false);
+  // const [currencyCode, setCurrencyCode] = useState(null);
+  // const [currencyName, setCurrencyName] = useState(null);
+  // const [currencyRate, setCurrencyRate] = useState("1.000000");
+  // const [refDocNo1, setRefDocNo1] = useState(null);
+  // const [refDocNo2, setRefDocNo2] = useState(null);
+  // const [fromDate, setFromDate] = useState(null);
+  // const [toDate, setToDate] = useState(null);
+  // const [remarks, setRemarks] = useState("");
 
 
   const [totals, setTotals] = useState({
@@ -118,25 +229,27 @@ const SVI = () => {
 
 
 
-  const [sviTypes, setsviTypes] = useState([]);
-  const [selectedSVIType, setselectedSVIType] = useState("REG"); // default empty or first value
-  const [billtermCode, setbilltermCode] = useState("");
-  const [billtermName, setbilltermName] = useState("");
-  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
-  const [showAccountModal, setShowAccountModal] = useState(false);
-  const [accountModalSource, setAccountModalSource] = useState(null);
-  const [showRcModal, setShowRcModal] = useState(false);
-  const [showVatModal, setShowVatModal] = useState(false);
-  const [showAtcModal, setShowAtcModal] = useState(false);
-  const [showBillCodeModal, setshowBillCodeModal] = useState(false);
-  const [showSlModal, setShowSlModal] = useState(false);
-  const [showBilltermModal, setShowBilltermModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showSpinner, setShowSpinner] = useState(false);
-  const [isDocNoDisabled, setIsDocNoDisabled] = useState(false);
-  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
-  const [isResetDisabled, setIsResetDisabled] = useState(false);
+  // const [sviTypes, setsviTypes] = useState([]);
+  //const [selectedSVIType, setSelectedSVIType] = useState("REG"); // default empty or first value
+  // const [billtermCode, setbilltermCode] = useState("");
+  // const [billtermName, setbilltermName] = useState("");
+  // const [selectedRowIndex, setSelectedRowIndex] = useState(null);
+  // const [showAccountModal, setShowAccountModal] = useState(false);
+  // const [accountModalSource, setAccountModalSource] = useState(null);
+  // const [showRcModal, setShowRcModal] = useState(false);
+  // const [showVatModal, setShowVatModal] = useState(false);
+  // const [showAtcModal, setShowAtcModal] = useState(false);
+  // const [showBillCodeModal, setshowBillCodeModal] = useState(false);
+  // const [showSlModal, setShowSlModal] = useState(false);
+  // const [showBilltermModal, setShowBilltermModal] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
+  // const [showSpinner, setShowSpinner] = useState(false);
+  // const [isDocNoDisabled, setIsDocNoDisabled] = useState(false);
+  // const [isSaveDisabled, setIsSaveDisabled] = useState(false);
+  // const [isResetDisabled, setIsResetDisabled] = useState(false);
   
+  
+
   const customParamMap = {
         arAct: glAccountFilter.ActiveAll,
         salesAcct: glAccountFilter.ActiveAll,
@@ -178,12 +291,14 @@ const SVI = () => {
 
 
 
-useEffect(() => {
-  const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0);
-  const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFloat(row.credit) || 0), 0);
 
-  setTotalDebit(debitSum);
-  setTotalCredit(creditSum);
+useEffect(() => {
+  const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
+  const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+updateState({
+  totalDebit: formatNumber(debitSum),
+  totalCredit: formatNumber(creditSum)
+})
 }, [detailRowsGL]);
 
 
@@ -199,9 +314,9 @@ useEffect(() => {
     
     let timer;
     if (isLoading) {
-      timer = setTimeout(() => setShowSpinner(true), 200);
+      timer = setTimeout(() => updateState({ showSpinner: true }), 200);
     } else {
-      setShowSpinner(false);
+      updateState({ showSpinner: false });
     } 
     return () => clearTimeout(timer);
   }, [resetFlag, isLoading]);
@@ -217,7 +332,7 @@ useEffect(() => {
         ...row,
         currency: custName.currCode
       }));
-      setDetailRows(updatedRows);
+       updateState({ detailRows: updatedRows });
     }
   }, [custName?.currCode]);
 
@@ -234,25 +349,31 @@ useEffect(() => {
   const handleReset = () => {
 
       console.log("reset")
-      const today = new Date().toISOString().split("T")[0];
-      setHeader((prev) => ({ ...prev, svi_date: today }));
-      
+
       loadDocDropDown();
       loadDocControl();
       loadCompanyData();
 
-      setRefDocNo1("");
-      setRefDocNo2("")
-      setFromDate(null);
-      setToDate(null);
-      setRemarks("");
+      updateState({
+          header:{
+            svi_date:new Date().toISOString().split("T")[0]
+          },
 
-      setCustName(null);
-      setCustCode(null);
-      setdocumentNo("");
-      setDetailRows([]);
-      setDetailRowsGL([]);
-    
+  
+      refDocNo1: "",
+      refDocNo2:"",
+      fromDate:null,
+      toDate:null,
+      remarks:"",
+
+      custName:null,
+      custCode:null,
+      documentNo: "",
+      detailRows: [],
+      detailRowsGL:[]
+      
+    });
+      updateTotalsDisplay (0,0,0, 0, 0, 0)
   };
 
 
@@ -261,9 +382,11 @@ useEffect(() => {
   const loadCompanyData = async () => {
       const data = await getTopCompanyRow();
       if(data){
-      setCurrencyCode(data.currCode);
-      setCurrencyName(data.currName);
-      setCurrencyRate(formatNumber(data.currRate,6));
+      updateState({
+      currencyCode:data.currCode,
+      currencyName:data.currName,
+      currencyRate:formatNumber(data.currRate,6)
+        });
       };
   };
 
@@ -272,9 +395,11 @@ useEffect(() => {
   const loadDocControl = async () => {
       const data = await getTopDocControlRow();
       if(data){
-      setdocumentName(data.docName);
-      setdocumentSeries(data.docName);
-      setdocumentDocLen(data.docName);
+      updateState({
+      documentName: data.docName,
+      documentSeries: data.docName,
+      tdocumentDocLen: data.docName,
+      });
       };
   };
 
@@ -283,17 +408,21 @@ useEffect(() => {
   const loadDocDropDown = async () => {
    const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
       if(data){
-         setsviTypes(data);
-         setselectedSVIType("REG");
+        updateState({
+         sviTypes: data,
+         selectedSVIType: "REG",
+          });
         };
+        
    };
  
 
+ 
+  //  const handleGenerateGLEntries = async (action) => {
 
- const handleGenerateGLEntries = async () => {
-  setIsLoading(true);
-
-  try {
+ const handleActivityOption = async (action) => {
+   
+  updateState({ isLoading: true });
     const glData = {
       branchCode: branchCode,
       sviNo: documentNo || "",
@@ -332,101 +461,53 @@ useEffect(() => {
         sviAmount: parseFormattedNumber(row.sviAmount || 0),
         salesAcct: row.salesAcct,
         arAcct: row.arAcct,
-        vatAcct: "",
+        vatAcct: row.vatAcct,
         discAcct: row.discAcct,
         rcCode:row.rcCode
       })),
-      dt2: []
+       dt2: detailRowsGL.map((entry, index) => ({
+          recNo: String(index + 1),
+          acctCode: entry.acctCode || "",
+          rcCode: entry.rcCode || "",
+          sltypeCode: entry.sltypeCode || "",
+          slCode: entry.slCode || "",
+          particular: entry.particular || "",
+          vatCode: entry.vatCode || "",
+          vatName: entry.vatName || "",
+          atcCode: entry.atcCode || "",
+          atcName: entry.atcName || "",
+          debit: parseFormattedNumber(entry.debit || 0),
+          credit: parseFormattedNumber(entry.credit || 0),
+          debitFx1: parseFormattedNumber(entry.debitFx1 || 0),
+          creditFx1: parseFormattedNumber(entry.creditFx1 || 0),
+          debitFx2: parseFormattedNumber(entry.debitFx2 || 0),
+          creditFx2: parseFormattedNumber(entry.creditFx2 || 0),
+          slrefNo: entry.slRefNo || "",
+          slrefDate: entry.slrefDate ? new Date(entry.slrefDate).toISOString().split("T")[0] : null,
+          remarks: entry.remarks || "",
+          dt1Lineno: entry.dt1Lineno || ""
+        }))
     };
 
-    const payload = { json_data: glData };
-
-
-
-
-  console.log("Payload for GL generation:", JSON.stringify(payload));
-  //  const response = await postRequest("generateGLSVI", payload);
-
-
- const apiUrl = 'http://127.0.0.1:8000/api/generateGLSVI'; // Adjust if using different port
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-
-    // const response = await postRequest("generateGLSVI", JSON.stringify(payload));
-
-    // console.log("Raw response from generateGLAPV API:", response);
-
-    if (response?.status === 'success' && Array.isArray(response.data)) {
-      let glEntries;
-
-      try {
-        glEntries = JSON.parse(response.data[0].result);
-        if (!Array.isArray(glEntries)) {
-          glEntries = [glEntries];
-        }
-      } catch (parseError) {
-        console.error("Error parsing GL entries:", parseError);
-        throw new Error("Failed to parse GL entries");
-      }
-
-      const transformedEntries = glEntries.map((entry, idx) => ({
-        id: idx + 1,
-        acctCode: entry.acctCode || "",
-        rcCode: entry.rcCode || "",
-        sltypeCode: entry.sltypeCode || "",
-        slCode: entry.slCode || "",
-        particular: entry.particular || `APV ${documentNo || ''} - ${vendName?.vendName || "Vendor"}`,
-        vatCode: entry.vatCode || "",
-        vatName: entry.vatName || "",
-        atcCode: entry.atcCode || "",
-        atcName: entry.atcName || "",
-        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
-        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-        slRefNo: entry.slrefNo || "",
-        slrefDate: entry.slrefDate || "",
-        remarks: header.remarks || "",
-        dt1Lineno: entry.dt1Lineno || ""
-      }));
-
-      setDetailRowsGL(transformedEntries);
-
-      const totalDebitValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.debit || 0),
-        0
-      );
-      const totalCreditValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.credit || 0),
-        0
-      );
-
-      setTotalDebit(totalDebitValue);
-      setTotalCredit(totalCreditValue);
-
-      return transformedEntries;
-    } else {
-      console.error("🔴 API responded with failure:", response.message);
-      throw new Error(response.message || "Failed to generate GL entries");
+    
+    if (action ==="GenerateGL") {
+      const response = await generateGLEntries (docType, glData, setDetailRowsGL, setIsLoading)
+      if(response) {
+        console.log("Successfully generated GL entries:");
+      } 
     }
-  } catch (error) {
-    console.error("🔴 Error in handleGenerateGLEntries:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Generation Failed',
-      text: 'Error generating GL entries: ' + error.message,
-      confirmButtonColor: '#3085d6',
-    });
-    return null;
-  } finally {
-    setIsLoading(false);
-  }
+    
+
+   if (action ==="Upsert") {
+
+      const response = await transactionUpsert (docType, glData, setIsLoading,updateState,documentID,documentNo)
+      if(response) {
+        console.log("Successfully Save Transaction:");
+      } 
+
+ 
+
+    }
 };
 
 
@@ -465,8 +546,12 @@ useEffect(() => {
       };
     }));
 
-    setDetailRows(prev => [...prev, ...newRows]);
-    updateTotals([...detailRows, ...newRows]);
+
+    
+      const updatedRows = [...detailRows, ...newRows];
+      updateState({ detailRows: updatedRows });
+      updateTotals(updatedRows);
+
 
     setTimeout(() => {
       const tableContainer = document.querySelector('.max-h-\\[430px\\]');
@@ -487,9 +572,10 @@ useEffect(() => {
   
 // Function to add a new row to the detail section with default empty values
 const handleAddRowGL = () => {
-  setDetailRowsGL([
-    ...detailRowsGL,
-    {
+  updateState({
+      detailRowsGL: [
+        ...detailRowsGL,
+        {
       acctCode: "",
       rcCode: "",
       sltypeCode:"CU",
@@ -508,18 +594,20 @@ const handleAddRowGL = () => {
       slRefNo: "",
       remarks: "",
     }
-  ]);
-};
+      ]
+    });
+  };
 
-const handleDeleteRowGL = (index) => {
-  const updatedRows = [...detailRowsGL];
-  updatedRows.splice(index, 1);
-  setDetailRowsGL(updatedRows); // assuming you're using useState
-};
+  
+  const handleDeleteRowGL = (index) => {
+    const updatedRows = [...detailRowsGL];
+    updatedRows.splice(index, 1);
+    updateState({ detailRowsGL: updatedRows });
+  };
 
   
   const openCurrencyModal = () => {
-    setCurrencyModalOpen(true);
+    updateState({ currencyModalOpen: true });
   };
 
   const handleSelectCurrency = async (currencyCode) => {
@@ -556,10 +644,12 @@ const handleDeleteRowGL = (index) => {
             console.error("Forex API error:", forexError);
           }
         }
-  
-        setCurrencyCode(currencyCode);
-        setCurrencyName(currData[0]?.currName);
-        setCurrencyRate(rate);
+        
+        updateState({
+        currencyCode: currencyCode,
+        currencyName:currData[0]?.currName,
+        currencyRate:rate
+        })
       }
     } catch (currError) {
       console.error("Currency API error:", currError);
@@ -577,8 +667,10 @@ const handleDeleteRowGL = (index) => {
       
       if (termResponse.data.success) {
         const termData = JSON.parse(termResponse.data.data[0].result);
-        setbilltermName(termData[0]?.billtermName || termData[0]?.billtermName || "");
-        setbilltermCode(termData[0]?.billtermCode || termData[0]?.billtermCode || "");
+        updateState({      
+        billtermName: termData[0]?.billtermName || termData[0]?.billtermName || "",
+        billtermCode: termData[0]?.billtermCode || termData[0]?.billtermCode || ""
+         })
         
       }
     } catch (error) {
@@ -800,7 +892,7 @@ const handlePaytermLookup = async (paytermCode) => {
 };
 
   const handleCloseCustModal = async (selectedData) => {
-  if (!selectedData) {
+  if (!selectedData) {9*
     setcustModalOpen(false);
     return;
   }
@@ -1288,8 +1380,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
       console.error("Error updating ATC Code:", error);
     }
   }
-  setShowAtcModal(false);
-  setSelectedRowIndex(null);
+  updateState({ showAtcModal: false });
+  updateState({ selectedRowIndex: null });
 };
 
 
@@ -1299,10 +1391,12 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
   const handleCloseBranchModal = (selectedBranch) => {
     if (selectedBranch) {
-      setBranchCode(selectedBranch.branchCode);
-      setBranchName(selectedBranch.branchName);
+      updateState({
+      branchCode: selectedBranch.branchCode,
+      branchName:selectedBranch.branchName
+      })
     }
-    setBranchModalOpen(false);
+    updateState({ branchModalOpen: false });
   };
 
 
@@ -1311,16 +1405,18 @@ const handleCloseAtcModal = async (selectedAtc) => {
     if (selectedCurrency) {
       handleSelectCurrency(selectedCurrency.currCode)
     }
-    setCurrencyModalOpen(false);
+    updateState({ currencyModalOpen: false });
   };
 
 
   const handleCloseBillTermModal = (selectedBillTerm) => {
     if (selectedBillTerm) {
-      setbilltermCode(selectedBillTerm.billtermCode);
-      setbilltermName(selectedBillTerm.billtermName);
+      updateState({ 
+      billtermCode : selectedBillTerm.billtermCode,
+      billtermName: selectedBillTerm.billtermName
+      });
     }
-    setShowBilltermModal(false);
+    updateState({ showBilltermModal: false });
   };
 
 
@@ -1340,7 +1436,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
   onPrint={handlePrint}
   printData={printData} 
   onReset={handleReset}
-  // onSave={handleSave}
+  onSave={() => handleActivityOption("Upsert")}
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
 />
@@ -1417,7 +1513,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
             {/* Button to open branch lookup modal */}
             <button
             type="button"
-            onClick={() => setBranchModalOpen(true)}
+            onClick={() => updateState({ branchModalOpen: true })}
             className={`global-tran-textbox-button-search-padding-ui ${
               isFetchDisabled 
               ? "global-tran-textbox-button-search-disabled-ui" 
@@ -1435,7 +1531,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               type="text"
               id="sviNo"
               value={documentNo}
-              onChange={(e) => setdocumentNo(e.target.value)}                  
+              onChange={(e) => updateState({ documentNo: e.target.value })}              
               placeholder=" "
               className={`peer global-tran-textbox-ui ${isDocNoDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               disabled={isDocNoDisabled}
@@ -1483,7 +1579,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
             <button
               type="button"
-              onClick={() => setcustModalOpen(true)}
+              onClick={() => updateState({ custModalOpen: true })}
               className={`global-tran-textbox-button-search-padding-ui ${
                 isFetchDisabled 
                 ? "global-tran-textbox-button-search-disabled-ui" 
@@ -1520,7 +1616,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
             <select id="sviType"
                     className="peer global-tran-textbox-ui"
                     value={selectedSVIType}
-                    onChange={(e) => setselectedSVIType(e.target.value)}
+                    onChange={(e) => setSelectedSVIType(e.target.value)}
                     disabled={sviTypes.length === 0} // Disable if no options loaded
             >
                 {sviTypes.length > 0 ? 
@@ -1594,7 +1690,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
 
           <div className="relative">
-            <input type="text" id="currName" value={currencyRate} onChange={(e) => setCurrencyRate(e.target.value)}placeholder=" "className="peer global-tran-textbox-ui  text-right"/>
+            <input type="text" id="currName" value={currencyRate} onChange={(e) => updateState({ currencyRate: e.target.value })}placeholder=" "className="peer global-tran-textbox-ui  text-right"/>
             <label htmlFor="currName" className="global-tran-floating-label"> Currency Rate
             </label>
           </div>
@@ -1620,12 +1716,12 @@ const handleCloseAtcModal = async (selectedAtc) => {
             
           
           <div className="relative">
-            <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => setRefDocNo1(e.target.value)} className="peer global-tran-textbox-ui"/>
+            <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui"/>
             <label htmlFor="refDocNo1" className="global-tran-floating-label">Ref Doc No. 1</label>
           </div>
 
-          <div className="relative">
-            <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => setRefDocNo2(e.target.value)}  className="peer global-tran-textbox-ui"/>
+          <div className="relative">  
+            <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui"/>
             <label htmlFor="refDocNo2" className="global-tran-floating-label">Ref Doc No. 2</label>
           </div>
 
@@ -1727,7 +1823,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
   rows={5} 
   className="peer global-tran-textbox-remarks-ui"
   value={remarks}
-  onChange={(e) => setRemarks(e.target.value)}
+  onChange={(e) =>  updateState({ remarks: e.target.value })}
 />
                   <label
                     htmlFor="remarks"
@@ -2334,7 +2430,8 @@ const handleCloseAtcModal = async (selectedAtc) => {
       {/* Action Button */}
       <div className="flex justify-end">
         <button
-          onClick={handleGenerateGLEntries}
+          onClick={() => handleActivityOption("GenerateGL")}
+          // onClick={handleActivityOption("GenerateGL")}
           className="global-tran-button-generateGL"
         >
           Generate GL Entries
@@ -2479,7 +2576,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debit || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'debit', e.target.value)}
@@ -2487,7 +2584,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.credit || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'credit', e.target.value)}
@@ -2496,7 +2593,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
                <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx1 || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'debitFx1', e.target.value)}
@@ -2504,7 +2601,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx1 || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'creditFx1', e.target.value)}
@@ -2513,7 +2610,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
 
                <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx2 || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'debitFx2', e.target.value)}
@@ -2521,7 +2618,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
               </td>
               <td className="global-tran-td-ui text-right">
                 <input
-                  type="number"
+                  type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx2 || "0.00"}
                   onChange={(e) => handleDetailChange(index, 'creditFx2', e.target.value)}
@@ -2608,7 +2705,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
           Total Debit:
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-  {totalDebit.toFixed(2)}
+  {totalDebit}
 </label>
       </div>
 
@@ -2618,7 +2715,7 @@ const handleCloseAtcModal = async (selectedAtc) => {
           Total Credit:
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-  {totalCredit.toFixed(2)}
+  {totalCredit}
 </label>
       </div>
     </div>

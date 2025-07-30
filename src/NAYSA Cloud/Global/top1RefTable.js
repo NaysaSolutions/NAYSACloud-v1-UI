@@ -1,4 +1,12 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
+import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
+import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
+import Swal from 'sweetalert2';
+
+
+// Company
+// ATC
+
 
 export async function getTopCompanyRow() {
   try {
@@ -153,7 +161,16 @@ export async function getTopBillCodeRow(billCode) {
   }
 }
 
-export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTotalDebit, setTotalCredit, setIsLoading) => {
+
+
+
+
+
+
+
+
+export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setIsLoading) => {
+  
   setIsLoading(true);
   const payload = { json_data: glData };
 
@@ -176,6 +193,7 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
         throw new Error("Failed to parse GL entries");
       }
 
+    
       const transformedEntries = glEntries.map((entry, idx) => ({
         id: idx + 1,
         acctCode: entry.acctCode || "",
@@ -187,12 +205,12 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
         vatName: entry.vatName || "",
         atcCode: entry.atcCode || "",
         atcName: entry.atcName || "",
-        debit: entry.debit ? parseFloat(entry.debit).toFixed(2) : "0.00",
-        credit: entry.credit ? parseFloat(entry.credit).toFixed(2) : "0.00",
-        debitFx1: entry.debit ? parseFloat(entry.debitFx1).toFixed(2) : "0.00",
-        creditFx1: entry.credit ? parseFloat(entry.creditFx1).toFixed(2) : "0.00",
-        debitFx2: entry.debit ? parseFloat(entry.debitFx2).toFixed(2) : "0.00",
-        creditFx2: entry.credit ? parseFloat(entry.creditFx2).toFixed(2) : "0.00",
+        debit: entry.debit ? formatNumber(entry.debit) : "0.00",
+        credit: entry.credit ? formatNumber(entry.credit) : "0.00",
+        debitFx1: entry.debit ? formatNumber(entry.debitFx1) : "0.00",
+        creditFx1: entry.credit ? formatNumber(entry.creditFx1) : "0.00",
+        debitFx2: entry.debit ? formatNumber(entry.debitFx2) : "0.00",
+        creditFx2: entry.credit ? formatNumber(entry.creditFx2) : "0.00",
         slRefNo: entry.slrefNo || "",
         slrefDate: entry.slrefDate || "",
         remarks: entry.remarks || "",
@@ -201,33 +219,72 @@ export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setTot
 
       setDetailRowsGL(transformedEntries);
 
-      const totalDebitValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.debit || 0),
-        0
-      );
-      const totalCreditValue = transformedEntries.reduce(
-        (sum, row) => sum + parseFloat(row.credit || 0),
-        0
-      );
-
-      setTotalDebit(totalDebitValue);
-      setTotalCredit(totalCreditValue);
-
+    
       return transformedEntries;
-    } else {
-      console.error("🔴 API responded with failure:", response.message);
+     } else {
       throw new Error(response.message || "Failed to generate GL entries");
     }
   } catch (error) {
-    console.error("🔴 Error in generateGLEntries:", error);
-    Swal.fire({
+    console.error("Error in generateGLEntries:", error);
+    swal.fire({
       icon: 'error',
       title: 'Generation Failed',
-      text: 'Error generating GL entries: ' + error.message,
+      text: error.message || 'Unknown error occurred',
       confirmButtonColor: '#3085d6',
     });
     return null;
   } finally {
     setIsLoading(false);
   }
+};
+
+
+
+
+export const transactionUpsert = async (docCode, glData, setIsLoading ,updateState,documentID,documentNo) => {
+ 
+ try {   
+      setIsLoading(true);
+      const payload = { json_data: glData };
+   
+
+      console.log("Sending data to API:", JSON.stringify(payload, null, 2));
+
+      // Call the API
+      const response = await postRequest("upsert"+docCode, JSON.stringify(payload));
+
+      if (response?.status === 'success') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: docCode + ' saved successfully!',
+        });
+
+        // If document number was auto-generated, disable editing
+        // Update document ID if returned from server
+        if (response.data?.documentID) {
+          updateState({
+            documentID: response.data.documentID,
+            documentNo: response.data.documentNo
+          });
+        }
+      } else {
+        throw new Error(response?.message || 'Failed to save Transaction');
+      }
+    } catch (error) {
+      console.error("Error saving Transaction:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: error.message || 'An error occurred while saving the Transaction',
+      });
+    } finally {
+      // Re-enable controls
+      updateState({
+        isSaveDisabled: false,
+        isResetDisabled: false
+      });
+
+       setIsLoading(false);
+    }
 };
