@@ -146,7 +146,7 @@ body {
   /* TRANSACTION TEXTBOX AND TEXT BUTTON UI */
 
   .global-tran-textbox-group-div-ui {
-      @apply space-y-4 p-2;
+      @apply space-y-3 p-2;
     }
 
   .global-tran-textbox-ui {

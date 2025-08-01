@@ -125,10 +125,12 @@ const AppContent = () => {
 
       <div className="flex-1 p-4 overflow-y-auto">
         <Routes>
+          {/* <Route path="/history" element={<JVHistory />} /> */}
           {/* <Route path="/" element={<APV />} /> */}
           {/* <Route path="/" element={<CV />} /> */}
-          {/* <Route path="/history" element={<JVHistory />} /> */}
           <Route path="/" element={<SVI/>} /> 
+          {/* <Route path="/" element={<BranchRef/>} />  */}
+          {/* <Route path="/" element={<BankRef/>} />  */}
         </Routes>
       </div>
     </div>

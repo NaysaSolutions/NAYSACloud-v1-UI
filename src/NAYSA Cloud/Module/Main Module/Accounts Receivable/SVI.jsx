@@ -295,6 +295,7 @@ updateState({
       custName:"",
       custCode:"",
       documentNo: "",
+      documentID: "",
       detailRows: [],
       detailRowsGL:[],
       
@@ -358,7 +359,7 @@ useEffect(() => {
 
 
 const fetchSviData = async (sviNo) => {
-    const { branchCode } = state; // Assuming 'state' is accessible here
+    const { branchCode } = state;
 
     if (!sviNo || !branchCode) {
         console.warn("SVI No. or Branch Code missing. Cannot fetch data.");
@@ -373,11 +374,9 @@ const fetchSviData = async (sviNo) => {
         if (response?.success && response.data && response.data.length > 0) {
             let data;
             try {
-                // Attempt to parse the 'result' string as JSON
                 data = JSON.parse(response.data[0].result);
                 console.log("Parsed SVI Data (from SPROC result):", data);
             } catch (parseError) {
-                // If JSON.parse fails (e.g., 'result' is malformed JSON), catch the error
                 console.error("JSON.parse error on response.data[0].result:", parseError);
                 Swal.fire({
                     icon: 'error',
@@ -386,16 +385,11 @@ const fetchSviData = async (sviNo) => {
                 });
                 updateState({ documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
                 updateTotals([]);
-                return; // Stop execution if data is unparsable
+                return;
             }
 
-            // *** CRITICAL CHANGE HERE: Make the `if (data)` check more specific ***
-            // Check if 'data' is a truthy object AND if it contains a primary identifier like 'sviId'.
-            // This will correctly handle cases where 'result' was "null" or "{}" from the SPROC,
-            // as 'data.sviId' will be undefined, triggering the 'else' block.
-            if (data && data.sviId) { // You could also use data.sviNo or another key that confirms a record was found
-                // --- FIX FOR RangeError: Invalid time value (already implemented) ---
-                let sviDateForHeader = ''; 
+            if (data && data.sviId) {
+                let sviDateForHeader = '';
                 if (data.sviDate) {
                     const dateObj = new Date(data.sviDate);
                     if (!isNaN(dateObj.getTime())) {
@@ -406,16 +400,42 @@ const fetchSviData = async (sviNo) => {
                 } else {
                     console.warn("sviDate property is missing from fetched SVI data. Setting svi_date to empty string.");
                 }
-                // --- END FIX ---
 
-                const retrievedDetailRows = data.dt1 || [];
+                // const retrievedDetailRows = data.dt1 || [];
+
+                const retrievedDetailRows = (data.dt1 || []).map(item => ({
+                    ...item,
+                    quantity: formatNumber(item.quantity),
+                    unitPrice: formatNumber(item.unitPrice),
+                    grossAmount: formatNumber(item.grossAmount),
+                    discRate: formatNumber(item.discRate), // Make sure discRate is also formatted
+                    discAmount: formatNumber(item.discAmount),
+                    netDisc: formatNumber(item.netDisc),
+                    vatAmount: formatNumber(item.vatAmount),
+                    atcAmount: formatNumber(item.atcAmount),
+                    sviAmount: formatNumber(item.sviAmount),
+                }));
                 console.log("Retrieved Detail Rows (dt1):", retrievedDetailRows);
+
+                // *** CRITICAL ADDITION/MODIFICATION HERE ***
+                const formattedGLRows = (data.dt2 || []).map(glRow => ({
+                    ...glRow,
+                    debit: formatNumber(glRow.debit),
+                    credit: formatNumber(glRow.credit),
+                    debitFx1: formatNumber(glRow.debitFx1), // Format foreign currency fields if they exist
+                    creditFx1: formatNumber(glRow.creditFx1),
+                    debitFx2: formatNumber(glRow.debitFx2),
+                    creditFx2: formatNumber(glRow.creditFx2),
+                    // Add any other numerical fields in dt2 that need formatting
+                }));
+                console.log("Formatted GL Entries (dt2):", formattedGLRows);
+
 
                 updateState({
                     documentID: data.sviId,
                     documentNo: data.sviNo,
                     branchCode: data.branchCode,
-                    header: { svi_date: sviDateForHeader }, // Use the validated date string here
+                    header: { svi_date: sviDateForHeader },
                     selectedSVIType: data.svitranType,
                     custCode: data.custCode,
                     custName: data.custName,
@@ -425,21 +445,26 @@ const fetchSviData = async (sviNo) => {
                     currRate: data.currRate,
                     remarks: data.remarks,
                     detailRows: retrievedDetailRows,
-                    detailRowsGL: data.dt2 || [],
+                    detailRowsGL: formattedGLRows, // Use the newly formatted GL rows here
                     isDocNoDisabled: true,
                     isFetchDisabled: true,
-                    // Keep billtermCode here or remove if it's always part of data.dt1
-                    billtermCode: data.billtermCode, 
+                    billtermCode: data.billtermCode,
+                    // totalGrossAmount: data.totalGrossAmount,
+                    // totalDiscountAmount: data.totalDiscountAmount,
+                    // totalNetAmount: data.totalNetAmount,
+                    // totalVatAmount: data.totalVatAmount,
+                    // totalAtcAmount: data.totalAtcAmount,
+                    // totalAmountDue: data.totalAmountDue,
                 });
 
-                console.log("GL ENTRIES", data.dt2);
-                updateTotals(retrievedDetailRows);
-                
-            } else {
-                // This block is now correctly hit if:
-                // 1. `data` is `null` (if result was "null")
-                // 2. `data` is an object but `data.sviId` is undefined (if result was `{"result":null}`)
-                // 3. `data` is an empty object `{}`
+                console.log("GL ENTRIES", formattedGLRows); // Log the formatted ones
+
+                updateTotals(retrievedDetailRows); // This should recalculate and set the total state variables
+
+                // updateTotals(retrievedDetailRows); // This is for main totals, not GL totals
+                // You might need a separate updateGLTotals here if your main totals function doesn't handle GL
+            } 
+            else {
                 console.warn("API response successful, but parsed SVI data was empty or did not contain a valid SVI record.");
                 Swal.fire({
                     icon: 'info',
@@ -450,7 +475,6 @@ const fetchSviData = async (sviNo) => {
                 updateTotals([]);
             }
         } else {
-            // This block is hit if `response.success` is false, or `response.data` is empty/null/undefined.
             console.warn("API response did not indicate success or returned no data.");
             Swal.fire({
                 icon: 'info',
@@ -1339,7 +1363,7 @@ const handlePaytermLookup = async (paytermCode) => {
     totalATC += atcAmount;
   });
 
-  totalAmtDue = totalNetDiscount + totalVAT - totalATC; // <--- POTENTIAL CORRECTION HERE
+  totalAmtDue = totalNetDiscount - totalATC; // <--- POTENTIAL CORRECTION HERE
 
     console.log("Calculated RAW totals (before formatting):", {
         totalGrossAmt, totalDiscAmt, totalNetDiscount, totalVAT, totalATC, totalAmtDue
@@ -1459,6 +1483,14 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
         await recalcRow(newGrossAmt, newDiscAmount);
       }
 
+      if (field === 'discAmount') {
+        const newDiscAmt = parseFormattedNumber(row.discAmount) || 0;
+        const newGrossAmt = +(origQuantity * origUnitPrice).toFixed(2);
+        const newDiscRate = +(newDiscAmt / newGrossAmt * 100).toFixed(2);
+        row.discRate = newDiscRate.toFixed(2);
+        await recalcRow(newGrossAmt, newDiscAmt);
+      }
+
 
     if (field === 'vatCode' || field === 'atcCode') {
       async function updateVatAndAtc() {
@@ -1489,29 +1521,153 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 };
 
-// You'll need an additional handler for the onBlur event
-const handleBlurGL = (index, field, value) => {
-    const updatedRowsGL = [...detailRowsGL];
+const handleDetailChangeGL = async (index, field, value) => {
+    const updatedRowsGL = [...state.detailRowsGL];
     let row = { ...updatedRowsGL[index] };
 
+    if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
+        row[field] = value;
+
+        const parsedValue = parseFormattedNumber(value);
+        if (field === 'debit' && parsedValue > 0) {
+            row.credit = "0.00";
+        } else if (field === 'credit' && parsedValue > 0) {
+            row.debit = "0.00";
+        }
+        if (field === 'debitFx1' && parsedValue > 0) {
+            row.creditFx1 = "0.00";
+        } else if (field === 'creditFx1' && parsedValue > 0) {
+            row.debitFx1 = "0.00";
+        }
+        if (field === 'debitFx2' && parsedValue > 0) {
+            row.creditFx2 = "0.00";
+        } else if (field === 'creditFx2' && parsedValue > 0) {
+            row.debitFx2 = "0.00";
+        }
+
+    } else if (field === 'acctCode') {
+        if (typeof value === 'object' && value !== null && value.acctCode) {
+            row.acctCode = value.acctCode;
+            row.acctName = value.acctName || '';
+            row.rcReq = value.rcReq || 'N';
+            row.slReq = value.slReq || 'N';
+            // DO NOT set row.particular here anymore, it will be built at the end
+
+            if (value.slReq && (value.slReq.toUpperCase() === 'Y' || value.slReq.toUpperCase() === 'YES')) {
+                row.slCode = "REQ SL";
+                row.slName = ""; // Clear slName if it's "REQ SL"
+                // row.sltypeCode = "";
+            } else {
+                row.slCode = "";
+                row.slName = ""; // Clear slName if not required
+                row.sltypeCode = "";
+            }
+            if (value.rcReq && (value.rcReq.toUpperCase() === 'Y' || value.rcReq.toUpperCase() === 'YES')) {
+                row.rcCode = "REQ RC";
+                row.rcName = ""; // Clear rcName if it's "REQ RC"
+            } else {
+                row.rcCode = "";
+                row.rcName = ""; // Clear rcName if not required
+            }
+        } else {
+            // If acctCode is cleared/invalidated
+            row.acctCode = value;
+            row.acctName = '';
+            row.rcReq = 'N';
+            row.slReq = 'N';
+            row.slCode = '';
+            row.slName = '';
+            row.rcCode = '';
+            row.rcName = '';
+            // row.sltypeCode = '';
+            // DO NOT set row.particular here, it will be built at the end
+        }
+    }
+    // Handle RC Code lookup
+    else if (field === 'rcCode') {
+        if (typeof value === 'object' && value !== null && value.rcCode) {
+            row.rcCode = value.rcCode;
+            row.rcName = value.rcName || '';
+            // DO NOT set row.particular here, it will be built at the end
+        } else {
+            row.rcCode = value;
+            row.rcName = ''; // Clear rcName if rcCode is cleared/invalidated
+            // DO NOT set row.particular here, it will be built at the end
+        }
+    }
+    // Handle SL Code lookup
+    else if (field === 'slCode') {
+        if (typeof value === 'object' && value !== null && value.slCode) {
+            row.slCode = value.slCode;
+            row.slName = value.slName || '';
+            // row.sltypeCode = value.sltypeCode || '';
+            row.sltypeCode = value.sltypeCode || 'CU';
+            // DO NOT set row.particular here, it will be built at the end
+        } else {
+            row.slCode = value;
+            row.slName = ''; // Clear slName if slCode is manually changed/cleared
+            row.sltypeCode = '';
+            // DO NOT set row.particular here, it will be built at the end
+        }
+    }
+    // Handle direct input for sltypeCode
+    else if (field === 'sltypeCode') {
+        row.sltypeCode = value;
+    }
+    // All other fields
+    else {
+        row[field] = value;
+    }
+
+    // --- NEW LOGIC: BUILD row.particular AFTER ALL FIELD UPDATES ---
+    const particularParts = [];
+
+    // Add acctName always if available
+    if (row.acctName) {
+        particularParts.push(row.acctName);
+    }
+
+    // Add rcName if it exists and rcCode is NOT "REQ RC"
+    if (row.rcName && row.rcCode !== "REQ RC") {
+        particularParts.push(row.rcName);
+    }
+
+    // Add slName if it exists and slCode is NOT "REQ SL"
+    if (row.slName && row.slCode !== "REQ SL") {
+        particularParts.push(row.slName);
+    }
+
+    // Join the parts with " / "
+    row.particular = particularParts.join(' / ');
+
+    updatedRowsGL[index] = row;
+    updateState({ detailRowsGL: updatedRowsGL });
+};
+
+// You'll need an additional handler for the onBlur event
+const handleBlurGL = (index, field, value) => {
+    const updatedRowsGL = [...state.detailRowsGL]; // Use state directly here
+    let row = { ...updatedRowsGL[index] };
+
+    // Parse the value that was entered by the user (which might be "1,234.56" or "1234.56")
     const parsedValue = parseFormattedNumber(value);
+
+    // Now format this parsed number for display
     row[field] = formatNumber(parsedValue);
 
-    // Apply zeroing logic on blur as well
+    // Apply zeroing logic on blur
     if (field === 'debit' && parsedValue > 0) {
         row.credit = formatNumber(0);
     } else if (field === 'credit' && parsedValue > 0) {
         row.debit = formatNumber(0);
     }
 
-    // Apply zeroing logic on blur as well
     if (field === 'debitFx1' && parsedValue > 0) {
         row.creditFx1 = formatNumber(0);
     } else if (field === 'creditFx1' && parsedValue > 0) {
         row.debitFx1 = formatNumber(0);
     }
 
-    // Apply zeroing logic on blur as well
     if (field === 'debitFx2' && parsedValue > 0) {
         row.creditFx2 = formatNumber(0);
     } else if (field === 'creditFx2' && parsedValue > 0) {
@@ -1520,65 +1676,6 @@ const handleBlurGL = (index, field, value) => {
 
     updatedRowsGL[index] = row;
     updateState({ detailRowsGL: updatedRowsGL });
-};
-
-
-const handleDetailChangeGL = async (index, field, value) => {
-    const updatedRowsGL = [...detailRowsGL];
-    let row = { ...updatedRowsGL[index] };
-
-    // Numerical fields that need deferrred formatting (onBlur)
-    if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-        row[field] = value;
-    }
-    // Account Code and related fields (selection from modal or direct type)
-    else if (field === 'acctCode') {
-        if (typeof value === 'object' && value !== null && value.acctCode) {
-            row.acctCode = value.acctCode;
-            row.acctName = value.acctName || '';
-            row.rcReq = value.rcReq || 'N';
-            row.slReq = value.slReq || 'N';
-            row.particular = value.acctName || '';
-
-            if (value.slReq && (value.slReq.toUpperCase() === 'Y' || value.slReq.toUpperCase() === 'YES')) {
-                row.slCode = "REQ SL";
-            } else {
-                row.slCode = "";
-            }
-            if (value.rcReq && (value.rcReq.toUpperCase() === 'Y' || value.rcReq.toUpperCase() === 'YES')) {
-                row.rcCode = "REQ RC";
-            } else {
-                row.rcCode = "";
-            }
-        } else {
-            row.acctCode = value;
-            row.acctName = '';
-            row.particular = '';
-            row.rcReq = 'N';
-            row.slReq = 'N';
-            row.slCode = '';
-            row.rcCode = '';
-        }
-    }
-    // ADD THIS BLOCK for RC Code lookup
-    else if (field === 'rcCode') {
-        if (typeof value === 'object' && value !== null && value.rcCode) {
-            row.rcCode = value.rcCode;
-            row.rcName = value.rcName || ''; // Assuming rcName is part of the object from modal
-        } else {
-            // This handles manual typing or clearing the rcCode directly
-            row.rcCode = value;
-            row.rcName = '';
-        }
-    }
-    // All other fields
-    else {
-        row[field] = value;
-    }
-
-    updatedRowsGL[index] = row;
-    updateState({ detailRowsGL: updatedRowsGL });
-    // updateTotals is handled by onBlur for numerical fields, or you can add specific calls here if needed for non-numerical changes
 };
 
 const handleDoubleClick_GL_AcctCode = async (index) => { 
@@ -1611,33 +1708,49 @@ const handleDoubleClick_GL_AcctCode = async (index) => {
 };
 
 
-const handleDoubleClick_GL_RcCode = async (index) => { 
-    const currentValue = detailRowsGL[index]?.acctCode;
+const handleDoubleClick_GL_RcCode = async (index) => {
+    // We no longer need to check currentRcCode here,
+    // as double-click will always open the modal.
+    // The UI's onDoubleClick prop already handles when it's allowed to trigger.
 
     updateState({ isLoading: true });
 
     try {
-        const updatedRows = [...detailRowsGL];
-
-        if (currentValue) {
-            updatedRows[index] = {
-                ...updatedRows[index],
-                rcCode: "",
-            };
-            updateState({ detailRowsGL: updatedRows });
-            // updateTotals(updatedRows);
-        } else {
-            updateState({
-                selectedRowIndex: index,
-                showRCModal: true,
-            });
-        }
+        // Removed the conditional logic that clears rcCode and rcName.
+        // Double-click will now ONLY open the modal.
+        updateState({
+            selectedRowIndex: index,
+            showRcModal: true,
+        });
     } catch (error) {
         console.error("Error in handleDoubleClick_GL_RcCode:", error);
     } finally {
         updateState({ isLoading: false });
     }
 };
+
+
+const handleDoubleClick_GL_SlCode = async (index) => {
+    // We no longer need to check currentSlCode here,
+    // as double-click will always open the modal.
+    // The UI's onDoubleClick prop already handles when it's allowed to trigger.
+
+    updateState({ isLoading: true });
+
+    try {
+        // Removed the conditional logic that clears slCode and slName.
+        // Double-click will now ONLY open the modal.
+        updateState({
+            selectedRowIndex: index,
+            showSlModal: true,
+        });
+    } catch (error) {
+        console.error("Error in handleDoubleClick_GL_SlCode:", error);
+    } finally {
+        updateState({ isLoading: false });
+    }
+};
+
 
   const handleAccountDoubleDtl1Click = (index) => {
     const updatedRows = [...detailRows];
@@ -1864,7 +1977,37 @@ const handleCloseAccountModal = (selectedAccount) => {
         }
     }
     updateState({
-        showRCModal: false,
+        showRcModal: false,
+        selectedRowIndex: null
+    });
+};
+
+
+  const handleCloseSlModalGL = async (selectedSl) => {
+    if (selectedSl && selectedRowIndex !== null) {
+        try {
+            // Fetch RC Name from /getRCMast API (assuming you need to fetch full details)
+            const slResponse = await fetchData("getSL", { SL_CODE: selectedSl.slCode });
+            if (slResponse.success) {
+                const slData = JSON.parse(slResponse.data[0].result);
+                const slName = slData[0]?.slName || '';
+
+                handleDetailChangeGL(selectedRowIndex, 'slCode', {
+                    slCode: selectedSl.slCode,
+                    slName: slName // Pass slName along for direct update
+                });
+
+            } else {
+                 console.warn("SL data fetch failed:", slResponse);
+                 handleDetailChangeGL(selectedRowIndex, 'slCode', { slCode: selectedSl.slCode, slName: '' });
+            }
+        } catch (error) {
+            console.error("Error fetching SL data or updating GL row:", error);
+            handleDetailChangeGL(selectedRowIndex, 'slCode', { slCode: selectedSl.slCode, slName: '' });
+        }
+    }
+    updateState({
+        showSlModal: false,
         selectedRowIndex: null
     });
 };
@@ -2289,7 +2432,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         id="remarks"
                         placeholder=""
                         rows={4}
-                        className="peer global-tran-textbox-remarks-ui"
+                        className="peer global-tran-textbox-remarks-ui pt-2"
                         value={remarks}
                         onChange={(e) => updateState({ remarks: e.target.value })}
                     />
@@ -2464,46 +2607,47 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
             </td>
 
 
-           <td className="global-tran-td-ui">
-            <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={
-                    focusedCell && focusedCell.index === index && focusedCell.field === "quantity"
-                        ? (row.quantity !== undefined && row.quantity !== null ? String(row.quantity) : "")
-                        : (row.quantity !== undefined && row.quantity !== null ? formatNumber(parseFormattedNumber(row.quantity)) : "") // Show formatted for display
-                }
-                onChange={(e) => {
-                    const inputValue = e.target.value;          
-                    const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+          
 
-                    if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                        handleDetailChange(index, "quantity", sanitizedValue, false);
-                    }
-                }}
-                onFocus={() => {
-                    setFocusedCell({ index: index, field: "quantity" });
-                }}
-                onBlur={async (e) => {
-                    const value = e.target.value;
-                    const num = parseFormattedNumber(value);
-                    if (!isNaN(num)) {
-                        await handleDetailChange(index, "quantity", num, true); 
-                    }
-                    setFocusedCell(null);
-                }}
-                onKeyDown={async (e) => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
+            <td className="global-tran-td-ui">
+                <input
+                    type="text"
+                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                    value={row.quantity || ""}
+                    onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChange(index, "quantity", sanitizedValue, false);
+                        }
+                    }}
+                    onFocus={() => {
+                        const currentQuantity = row.quantity;
+                        if (currentQuantity !== undefined && currentQuantity !== null) {
+                            const parsedNum = parseFormattedNumber(currentQuantity);
+                        }
+                        setFocusedCell({ index: index, field: "quantity" });
+                    }}
+                    onBlur={async (e) => {
                         const value = e.target.value;
                         const num = parseFormattedNumber(value);
                         if (!isNaN(num)) {
-                            await handleDetailChange(index, "quantity", num, true); 
+                            await handleDetailChange(index, "quantity", num, true);
                         }
-                          e.target.blur();
-                      }
-                  }}
-              />
+                        setFocusedCell(null);
+                    }}
+                    onKeyDown={async (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            const value = e.target.value;
+                            const num = parseFormattedNumber(value);
+                            if (!isNaN(num)) {
+                                await handleDetailChange(index, "quantity", num, true);
+                            }
+                            e.target.blur();
+                        }
+                    }}
+                />
             </td>
 
 
@@ -2517,46 +2661,45 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
               />
             </td>
 
-
-           <td className="global-tran-td-ui">
-            <input
-                type="text"
-                className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={
-                    focusedCell && focusedCell.index === index && focusedCell.field === "unitPrice"
-                        ? (row.unitPrice !== undefined && row.unitPrice !== null ? String(row.unitPrice) : "") 
-                        : (row.unitPrice !== undefined && row.unitPrice !== null ? formatNumber(parseFormattedNumber(row.unitPrice)) : "")
-                }
-                onChange={(e) => {
-                    const inputValue = e.target.value;
-                    const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                    if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                        handleDetailChange(index, "unitPrice", sanitizedValue, false);
-                    }
-                }}
-                onFocus={() => {
-                    setFocusedCell({ index: index, field: "unitPrice" });
-                }}
-                onBlur={async (e) => {
-                    const value = e.target.value;
-                    const num = parseFormattedNumber(value);
-                    if (!isNaN(num)) {
-                        await handleDetailChange(index, "unitPrice", num, true);
-                    }
-                    setFocusedCell(null); 
-                }}
-                onKeyDown={async (e) => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
+            <td className="global-tran-td-ui">
+                <input
+                    type="text"
+                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                    value={row.unitPrice || ""}
+                    onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChange(index, "unitPrice", sanitizedValue, false);
+                        }
+                    }}
+                    onFocus={() => {
+                        const currentUnitPrice = row.unitPrice;
+                        if (currentUnitPrice !== undefined && currentUnitPrice !== null) {
+                            const parsedNum = parseFormattedNumber(currentUnitPrice);
+                        }
+                        setFocusedCell({ index: index, field: "unitPrice" });
+                    }}
+                    onBlur={async (e) => {
                         const value = e.target.value;
                         const num = parseFormattedNumber(value);
                         if (!isNaN(num)) {
                             await handleDetailChange(index, "unitPrice", num, true);
                         }
-                        e.target.blur();
-                    }
-                }}
-            />
+                        setFocusedCell(null);
+                    }}
+                    onKeyDown={async (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            const value = e.target.value;
+                            const num = parseFormattedNumber(value);
+                            if (!isNaN(num)) {
+                                await handleDetailChange(index, "unitPrice", num, true);
+                            }
+                            e.target.blur();
+                        }
+                    }}
+                />
             </td>
 
 
@@ -2564,7 +2707,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0 cursor-pointer"
-                value={formatNumber(parseFormattedNumber(row.grossAmount)) || formatNumber(parseFormattedNumber(row.grossAmount)) || ""} // Show same as original amount
+                value={formatNumber(parseFormattedNumber(row.grossAmount)) || formatNumber(parseFormattedNumber(row.grossAmount)) || ""}
                 readOnly
               />
             </td>
@@ -2647,7 +2790,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.netDisc || row.netDisc || ""} // Show same as original amount
+                value={formatNumber(parseFormattedNumber(row.netDisc)) || formatNumber(parseFormattedNumber(row.netDisc)) || ""}
                 readOnly
               />
             </td>
@@ -2688,7 +2831,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.vatAmount || ""}
+                value={formatNumber(parseFormattedNumber(row.vatAmount)) || formatNumber(parseFormattedNumber(row.vatAmount)) || ""}
                 readOnly
               />
             </td>
@@ -2728,7 +2871,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                    type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                   value={row.atcAmount || ""}
+                    value={formatNumber(parseFormattedNumber(row.atcAmount)) || formatNumber(parseFormattedNumber(row.atcAmount)) || ""}
                    onChange={(e) => handleDetailChange(index, 'ewtAmount', e.target.value)}
                 />
             </td>
@@ -2738,7 +2881,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={row.sviAmount || ""}
+                value={formatNumber(parseFormattedNumber(row.sviAmount)) || formatNumber(parseFormattedNumber(row.sviAmount)) || ""}
                 readOnly
               />
             </td>
@@ -2984,7 +3127,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
             <th className="global-tran-th-ui">RC Code</th>
             <th className="global-tran-th-ui">SL Type Code</th>
             <th className="global-tran-th-ui">SL Code</th>
-            <th className="global-tran-th-ui">Particulars</th>
+            <th className="global-tran-th-ui w-[2000px]">Particulars</th>
             <th className="global-tran-th-ui">VAT Code</th>
             <th className="global-tran-th-ui">VAT Name</th>
             <th className="global-tran-th-ui">ATC Code</th>
@@ -3038,20 +3181,32 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         type="text"
                         className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                         value={row.rcCode || ""}
-                        onDoubleClick={() => handleDoubleClick_GL_RcCode(index)}
+                        onDoubleClick={() => {
+                            // Allow double click if RC is required OR an RC code is already selected
+                            if (row.rcCode === "REQ RC" || row.rcCode !== "") {
+                                handleDoubleClick_GL_RcCode(index);
+                            }
+                        }}
                         onChange={(e) => handleDetailChangeGL(index, 'rcCode', e.target.value)}
                         readOnly
                     />
-                    <FontAwesomeIcon
-                        icon={faMagnifyingGlass}
-                        className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                        onClick={() => {
-                            updateState({
-                                selectedRowIndex: index,
-                                showRCModal: true,
-                            });
-                        }}
-                    />
+                    {(row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && ( // <-- Updated condition
+                        <FontAwesomeIcon
+                            icon={faMagnifyingGlass}
+                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                            onClick={() => {
+                                // Allow click if RC is required OR an RC code is already selected
+                                if (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) { // <-- Updated condition
+                                    console.log("Magnifying glass clicked for index:", index);
+                                    updateState({
+                                        selectedRowIndex: index,
+                                        showRcModal: true,
+                                    });
+                                    console.log("State after click:", state);
+                                }
+                            }}
+                        />
+                    )}
                 </div>
             </td>
 
@@ -3060,16 +3215,45 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.sltypeCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'sltypeCode', e.target.value)}
+                  onChange={(e) => handleDetailChangeGL(index, 'sltypeCode', e.target.value)}
                 />
               </td>
+
+            
+
               <td className="global-tran-td-ui">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.slCode || ""}
-                  onChange={(e) => handleDetailChange(index, 'slCode', e.target.value)}
-                />
+                  <div className="relative w-fit">
+                      <input
+                          type="text"
+                          className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
+                          value={row.slCode || ""}
+                          onDoubleClick={() => {
+                              // Allow double click if SL is required OR an SL code is already selected
+                              if (row.slCode === "REQ SL" || row.slCode) { // Updated condition
+                                  handleDoubleClick_GL_SlCode(index);
+                              }
+                          }}
+                          onChange={(e) => handleDetailChangeGL(index, 'slCode', e.target.value)}
+                          readOnly
+                      />
+                      {/* Conditional rendering for the FontAwesomeIcon */}
+                      {/* The icon should be visible if SL is "REQ SL" OR if an actual SL code is present */}
+                      {(row.slCode === "REQ SL" || row.slCode) && ( // Updated condition
+                          <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                  // Allow click if SL is required OR an SL code is already selected
+                                  if (row.slCode === "REQ SL" || row.slCode) { // Updated condition
+                                      updateState({
+                                          selectedRowIndex: index,
+                                          showSlModal: true,
+                                      });
+                                  }
+                              }}
+                          />
+                      )}
+                  </div>
               </td>
             
               <td className="global-tran-td-ui">
@@ -3131,23 +3315,22 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 />
               </td>
 
-              <td className="global-tran-td-ui text-right">
-                <input
-                  type="text"
-                  className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  // Display the raw value for editing, but fall back to "0.00" if empty
-                  value={row.debit || "0.00"}
-                  onChange={(e) => handleDetailChangeGL(index, 'debit', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'debit', e.target.value)} // <-- Add onBlur handler
-                />
-              </td>
 
               <td className="global-tran-td-ui text-right">
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  // Display the raw value for editing, but fall back to "0.00" if empty
-                  value={row.credit || "0.00"}
+                  value={row.debit || ""}
+                  onChange={(e) => handleDetailChangeGL(index, 'debit', e.target.value)}
+                  onBlur={(e) => handleBlurGL(index, 'debit', e.target.value)}
+                />
+            </td>
+
+              <td className="global-tran-td-ui text-right">
+                <input
+                  type="text"
+                  className="w-[120px] global-tran-td-inputclass-ui text-right"
+                  value={row.credit || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'credit', e.target.value)}
                   onBlur={(e) => handleBlurGL(index, 'credit', e.target.value)} // <-- Add onBlur handler
                 />
@@ -3157,7 +3340,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  value={row.debitFx1 || "0.00"}
+                  value={row.debitFx1 || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'debitFx1', e.target.value)}
                   onBlur={(e) => handleBlurGL(index, 'debitFx1', e.target.value)} // <-- Add onBlur handler
                 />
@@ -3166,7 +3349,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  value={row.creditFx1 || "0.00"}
+                  value={row.creditFx1 || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'creditFx1', e.target.value)}
                   onBlur={(e) => handleBlurGL(index, 'creditFx1', e.target.value)} // <-- Add onBlur handler
                 />
@@ -3176,7 +3359,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  value={row.debitFx2 || "0.00"}
+                  value={row.debitFx2 || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'debitFx2', e.target.value)}
                   onBlur={(e) => handleBlurGL(index, 'debitFx2', e.target.value)} // <-- Add onBlur handler
                 />
@@ -3185,7 +3368,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
-                  value={row.creditFx2 || "0.00"}
+                  value={row.creditFx2 || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'creditFx2', e.target.value)}
                   onBlur={(e) => handleBlurGL(index, 'creditFx2', e.target.value)} // <-- Add onBlur handler
                 />
@@ -3398,10 +3581,11 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 {/* SL Code Lookup Modal */}
+{console.log("showSlModal value:", showSlModal)}
 {showSlModal && (
   <SLMastLookupModal
     isOpen={showSlModal}
-    onClose={handleCloseSlModal}
+    onClose={handleCloseSlModalGL}
     customParam="ActiveAll" //should be active_all
   />
 )}
