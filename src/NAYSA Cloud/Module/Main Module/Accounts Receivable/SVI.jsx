@@ -28,16 +28,27 @@ import { glAccountFilter } from '@/NAYSA Cloud/Global/doctype';
 import { docTypes } from '@/NAYSA Cloud/Global/doctype';
 import { docTypeVideoGuide } from '@/NAYSA Cloud/Global/doctype';
 import { docTypePDFGuide } from '@/NAYSA Cloud/Global/doctype';
-import { getTopVatRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopATCRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopCompanyRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopDocDropDown } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
-import { getTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { generateGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
-import { transactionUpsert } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopVatRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopATCRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopRCRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopSLRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopAccountRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopForexRate } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopCurrentRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useGenerateGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopHSOption } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useHandlePrint } from '@/NAYSA Cloud/Global/top1RefTable';
+
+
+
+import { useTopCompanyRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopDocDropDown } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useUpdateRowGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
+import { useTransactionUpsert } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
 
@@ -185,13 +196,9 @@ const SVI = () => {
   });
 
   const updateTotalsDisplay = (grossAmt, discAmt, netDisc, vat, atc, amtDue) => {
-
   console.log("updateTotalsDisplay received RAW totals:", { grossAmt, discAmt, netDisc, vat, atc, amtDue });
 
-  // document.getElementById('totInvoiceAmount').textContent = formatNumber(netDisc)
-  // document.getElementById('totVATAmount').textContent = formatNumber(vat);
-  // document.getElementById('totATCAmount').textContent = formatNumber(atc);
-  // document.getElementById('totAmountDue').textContent = formatNumber(amtDue);
+
 
   setTotals({
         totalGrossAmount: formatNumber(grossAmt),
@@ -315,7 +322,7 @@ updateState({
 
 
   const loadCompanyData = async () => {
-      const data = await getTopCompanyRow();
+      const data = await useTopCompanyRow();
       if(data){
       updateState({
       currencyCode:data.currCode,
@@ -327,7 +334,7 @@ updateState({
 
 
   const loadDocControl = async () => {
-      const data = await getTopDocControlRow();
+      const data = await useTopDocControlRow();
       if(data){
       updateState({
       documentName: data.docName,
@@ -340,7 +347,7 @@ updateState({
 
 
   const loadDocDropDown = async () => {
-   const data = await getTopDocDropDown(docType,"SVITRAN_TYPE");
+   const data = await useTopDocDropDown(docType,"SVITRAN_TYPE");
       if(data){
         updateState({
          sviTypes: data,
@@ -445,16 +452,10 @@ const fetchSviData = async (sviNo) => {
                     currRate: data.currRate,
                     remarks: data.remarks,
                     detailRows: retrievedDetailRows,
-                    detailRowsGL: formattedGLRows, // Use the newly formatted GL rows here
+                    detailRowsGL: formattedGLRows, 
                     isDocNoDisabled: true,
                     isFetchDisabled: true,
                     billtermCode: data.billtermCode,
-                    // totalGrossAmount: data.totalGrossAmount,
-                    // totalDiscountAmount: data.totalDiscountAmount,
-                    // totalNetAmount: data.totalNetAmount,
-                    // totalVatAmount: data.totalVatAmount,
-                    // totalAtcAmount: data.totalAtcAmount,
-                    // totalAmountDue: data.totalAmountDue,
                 });
 
                 console.log("GL ENTRIES", formattedGLRows); // Log the formatted ones
@@ -600,7 +601,7 @@ const handleSviNoBlur = () => {
 
     if (action === "GenerateGL") {
         try {
-            const newGlEntries = await generateGLEntries(docType, glData);
+            const newGlEntries = await useGenerateGLEntries(docType, glData);
 
             if (newGlEntries) {
                 console.log("Successfully generated GL entries:", newGlEntries);
@@ -616,10 +617,12 @@ const handleSviNoBlur = () => {
     }
 
 
+
+
     if (action === "Upsert") {
         try {
                 console.log("Upsert Data:",glData);
-            const response = await transactionUpsert(docType, glData, updateState, 'sviId', 'sviNo');
+            const response = await useTransactionUpsert(docType, glData, updateState, 'sviId', 'sviNo');
             if (response) { 
                 console.log("Successfully Save Transaction:");
             }
@@ -685,6 +688,9 @@ const handleSviNoBlur = () => {
 };
 
 
+
+
+
 const handleAddRowGL = () => {
   updateState({
       detailRowsGL: [
@@ -696,9 +702,9 @@ const handleAddRowGL = () => {
       slCode: "",
       particulars: "",
       vatCode: "",
-      vatDescription: "",
-      ewtCode: "",
-      ewtDescription: "",
+      vatName: "",
+      atcCode: "",
+      atcName: "",
       debit: "0.00",
       credit: "0.00",
       debitFx1: "0.00",
@@ -724,53 +730,12 @@ const handleAddRowGL = () => {
     updateState({ currencyModalOpen: true });
   };
 
+
   const openBillTermModal = () => {
     updateState({ billtermModalOpen: true });
   };
 
-  const handleSelectCurrency = async (currencyCode) => {
-    if (!currencyCode) return;
-  
-    try {
-      const currResponse = await fetchData("getCurr", { CURR_CODE: currencyCode });
-  
-      if (currResponse.success) {
-        const currData = JSON.parse(currResponse.data[0].result);
-        let rate = '1.000000';
-  
-        if (currencyCode.toUpperCase() !== 'PHP') {
-          const forexPayload = {
-            json_data: {
-              docDate: header.svi_date,
-              currCode: currencyCode,
-            },
-          };
-  
-          try {
-            const forexResponse = await postRequest("getDForex", JSON.stringify(forexPayload));
-  
-            if (forexResponse.success) {
-              const rawResult = forexResponse.data[0].result;
-              if (rawResult) {
-                const forexData = JSON.parse(rawResult);
-                rate = forexData.currRate ? parseFloat(forexData.currRate).toFixed(6) : '1.000000';
-              }
-            }
-          } catch (forexError) {
-            console.error("Forex API error:", forexError);
-          }
-        }
-        
-        updateState({
-        currencyCode: currencyCode,
-        currencyName:currData[0]?.currName,
-        currencyRate:rate
-        })
-      }
-    } catch (currError) {
-      console.error("Currency API error:", currError);
-    }
-  };
+
 
 
 const handleSelectBillTerm = async (billtermCode) => {
@@ -899,8 +864,86 @@ const handleSelectBillTerm = async (billtermCode) => {
 
 window.getSVIDataForPrint = null;
 
+
+// const handlePrint = async () => {
+//   try {
+//     // Replace these with your actual values
+//     const payload = { 
+//       tran_id: documentID
+//     };
+
+//     console.log(documentID)
+
+//     const apiUrl = 'http://127.0.0.1:8000/api/printSVI';
+      
+//     const response = await fetch(apiUrl, {
+//       method: 'POST',
+//       headers: { 
+//         'Content-Type': 'application/json',
+//         'Accept': 'application/pdf' // ask for PDF
+//       },
+//       body: JSON.stringify(payload)
+//     });
+
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       throw new Error(`Failed to generate report: ${errorText}`);
+//     }
+
+//     const blob = await response.blob();
+
+//     if (blob.type !== "application/pdf") {
+//       const text = await blob.text();
+//       throw new Error(`Expected PDF but got: ${text}`);
+//     }
+
+//     const fileURL = URL.createObjectURL(blob);
+//     window.open(fileURL, "_blank");
+
+//   } catch (error) {
+//     console.error("Error printing report:", error);
+//   }
+// };
+
+
+const handlePrint = async () => {
+  try {
+    const printWindow = window.open("", "_blank"); // open immediately
+
+    const payload = { tran_id: documentID };
+
+    const apiUrl = 'http://127.0.0.1:8000/api/printSVI';
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/pdf'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate report: ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    if (blob.type !== "application/pdf") {
+      const text = await blob.text();
+      throw new Error(`Expected PDF but got: ${text}`);
+    }
+
+    const fileURL = URL.createObjectURL(blob);
+    printWindow.location.href = fileURL; // load PDF in the already opened tab
+
+  } catch (error) {
+    console.error("Error printing report:", error);
+  }
+};
+
+
   // Inside your SVI.jsx component where you have the fetched 'data'
-const handlePrint = () => {
+const handlePrint2 = () => {
         // Check if there's data to print
         if (!state.documentID) {
             alert('No SVI data loaded to print!');
@@ -1416,18 +1459,17 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 
     if (['salesAcct', 'arAcct', 'vatAcct', 'discAcct'].includes(field)) {
-        if (typeof value === 'object' && value !== null && value.acctCode) {
-            row[field] = value.acctCode;
-            row[`${field}Name`] = value.acctName || '';
-            row[`${field}ReqRC`] = value.rcReq || 'N'; 
-            row[`${field}ReqSL`] = value.slReq || 'N';
-        } else {
-            row[field] = value; 
-            row[`${field}Name`] = '';
-            row[`${field}ReqRC`] = 'N';
-            row[`${field}ReqSL`] = 'N';
-        }
+      row[field] = value.acctCode;
     }
+
+
+
+    if (field === 'rcCode' ){
+          row.rcCode = value.rcCode   
+    };
+
+
+
 
 
     if (runCalculations) {  
@@ -1441,9 +1483,9 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       // shared calculation logic
       async function recalcRow(newGrossAmt, newDiscAmount) {
         const newNetDiscount = +(newGrossAmt - newDiscAmount).toFixed(2);
-        const newVatAmount = origVatCode ? await getTopVatAmount(origVatCode, newNetDiscount) : 0;
+        const newVatAmount = origVatCode ? await useTopVatAmount(origVatCode, newNetDiscount) : 0;
         const newNetOfVat = +(newNetDiscount - newVatAmount).toFixed(2);
-        const newATCAmount = origAtcCode ? await getTopATCAmount(origAtcCode, newNetOfVat) : 0;
+        const newATCAmount = origAtcCode ? await useTopATCAmount(origAtcCode, newNetOfVat) : 0;
         const newAmountDue = +(newNetDiscount - newATCAmount).toFixed(2);
 
 
@@ -1498,12 +1540,12 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
         let newVatAmount = parseFormattedNumber(row.vatAmount) || 0;
 
         if (field === 'vatCode') {
-          newVatAmount = row.vatCode ? await getTopVatAmount(row.vatCode, newNetDiscount) : 0;
+          newVatAmount = row.vatCode ? await useTopVatAmount(row.vatCode, newNetDiscount) : 0;
           row.vatAmount = newVatAmount.toFixed(2);
         }
 
         const newNetOfVat = +(newNetDiscount - newVatAmount).toFixed(2);
-        const newATCAmount = row.atcCode ? await getTopATCAmount(row.atcCode, newNetOfVat) : 0;
+        const newATCAmount = row.atcCode ? await useTopATCAmount(row.atcCode, newNetOfVat) : 0;
 
         row.atcAmount = newATCAmount.toFixed(2);
         row.amountDue = +(newNetDiscount - newATCAmount).toFixed(2);
@@ -1525,9 +1567,25 @@ const handleDetailChangeGL = async (index, field, value) => {
     const updatedRowsGL = [...state.detailRowsGL];
     let row = { ...updatedRowsGL[index] };
 
+
+    if (['acctCode', 'slCode', 'rcCode', 'sltypeCode', 'vatCode', 'atcCode'].includes(field)) {
+        const data = await useUpdateRowGLEntries(row,field,value,custCode,docType);
+        if(data) {
+            row.acctCode = data.acctCode
+            row.sltypeCode = data.sltypeCode
+            row.slCode = data.slCode
+            row.rcCode = data.rcCode
+            row.vatCode = data.vatCode
+            row.vatName = data.vatName
+            row.atcCode = data.atcCode
+            row.atcName = data.atcName
+            row.particular = data.particular
+        }
+    }
+    
+  
     if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
         row[field] = value;
-
         const parsedValue = parseFormattedNumber(value);
         if (field === 'debit' && parsedValue > 0) {
             row.credit = "0.00";
@@ -1544,101 +1602,9 @@ const handleDetailChangeGL = async (index, field, value) => {
         } else if (field === 'creditFx2' && parsedValue > 0) {
             row.debitFx2 = "0.00";
         }
-
-    } else if (field === 'acctCode') {
-        if (typeof value === 'object' && value !== null && value.acctCode) {
-            row.acctCode = value.acctCode;
-            row.acctName = value.acctName || '';
-            row.rcReq = value.rcReq || 'N';
-            row.slReq = value.slReq || 'N';
-            // DO NOT set row.particular here anymore, it will be built at the end
-
-            if (value.slReq && (value.slReq.toUpperCase() === 'Y' || value.slReq.toUpperCase() === 'YES')) {
-                row.slCode = "REQ SL";
-                row.slName = ""; // Clear slName if it's "REQ SL"
-                // row.sltypeCode = "";
-            } else {
-                row.slCode = "";
-                row.slName = ""; // Clear slName if not required
-                row.sltypeCode = "";
-            }
-            if (value.rcReq && (value.rcReq.toUpperCase() === 'Y' || value.rcReq.toUpperCase() === 'YES')) {
-                row.rcCode = "REQ RC";
-                row.rcName = ""; // Clear rcName if it's "REQ RC"
-            } else {
-                row.rcCode = "";
-                row.rcName = ""; // Clear rcName if not required
-            }
-        } else {
-            // If acctCode is cleared/invalidated
-            row.acctCode = value;
-            row.acctName = '';
-            row.rcReq = 'N';
-            row.slReq = 'N';
-            row.slCode = '';
-            row.slName = '';
-            row.rcCode = '';
-            row.rcName = '';
-            // row.sltypeCode = '';
-            // DO NOT set row.particular here, it will be built at the end
-        }
-    }
-    // Handle RC Code lookup
-    else if (field === 'rcCode') {
-        if (typeof value === 'object' && value !== null && value.rcCode) {
-            row.rcCode = value.rcCode;
-            row.rcName = value.rcName || '';
-            // DO NOT set row.particular here, it will be built at the end
-        } else {
-            row.rcCode = value;
-            row.rcName = ''; // Clear rcName if rcCode is cleared/invalidated
-            // DO NOT set row.particular here, it will be built at the end
-        }
-    }
-    // Handle SL Code lookup
-    else if (field === 'slCode') {
-        if (typeof value === 'object' && value !== null && value.slCode) {
-            row.slCode = value.slCode;
-            row.slName = value.slName || '';
-            // row.sltypeCode = value.sltypeCode || '';
-            row.sltypeCode = value.sltypeCode || 'CU';
-            // DO NOT set row.particular here, it will be built at the end
-        } else {
-            row.slCode = value;
-            row.slName = ''; // Clear slName if slCode is manually changed/cleared
-            row.sltypeCode = '';
-            // DO NOT set row.particular here, it will be built at the end
-        }
-    }
-    // Handle direct input for sltypeCode
-    else if (field === 'sltypeCode') {
-        row.sltypeCode = value;
-    }
-    // All other fields
-    else {
-        row[field] = value;
-    }
-
-    // --- NEW LOGIC: BUILD row.particular AFTER ALL FIELD UPDATES ---
-    const particularParts = [];
-
-    // Add acctName always if available
-    if (row.acctName) {
-        particularParts.push(row.acctName);
-    }
-
-    // Add rcName if it exists and rcCode is NOT "REQ RC"
-    if (row.rcName && row.rcCode !== "REQ RC") {
-        particularParts.push(row.rcName);
-    }
-
-    // Add slName if it exists and slCode is NOT "REQ SL"
-    if (row.slName && row.slCode !== "REQ SL") {
-        particularParts.push(row.slName);
-    }
-
-    // Join the parts with " / "
-    row.particular = particularParts.join(' / ');
+    } 
+    
+   
 
     updatedRowsGL[index] = row;
     updateState({ detailRowsGL: updatedRowsGL });
@@ -1676,79 +1642,6 @@ const handleBlurGL = (index, field, value) => {
 
     updatedRowsGL[index] = row;
     updateState({ detailRowsGL: updatedRowsGL });
-};
-
-const handleDoubleClick_GL_AcctCode = async (index) => { 
-    const currentValue = detailRowsGL[index]?.acctCode;
-
-    updateState({ isLoading: true });
-
-    try {
-        const updatedRows = [...detailRowsGL];
-
-        if (currentValue) {
-            updatedRows[index] = {
-                ...updatedRows[index],
-                acctCode: "",
-                acctName: "",
-            };
-            updateState({ detailRowsGL: updatedRows });
-            // updateTotals(updatedRows);
-        } else {
-            updateState({
-                selectedRowIndex: index,
-                showAccountModal: true,
-            });
-        }
-    } catch (error) {
-        console.error("Error in handleDoubleClick_GL_AcctCode:", error);
-    } finally {
-        updateState({ isLoading: false });
-    }
-};
-
-
-const handleDoubleClick_GL_RcCode = async (index) => {
-    // We no longer need to check currentRcCode here,
-    // as double-click will always open the modal.
-    // The UI's onDoubleClick prop already handles when it's allowed to trigger.
-
-    updateState({ isLoading: true });
-
-    try {
-        // Removed the conditional logic that clears rcCode and rcName.
-        // Double-click will now ONLY open the modal.
-        updateState({
-            selectedRowIndex: index,
-            showRcModal: true,
-        });
-    } catch (error) {
-        console.error("Error in handleDoubleClick_GL_RcCode:", error);
-    } finally {
-        updateState({ isLoading: false });
-    }
-};
-
-
-const handleDoubleClick_GL_SlCode = async (index) => {
-    // We no longer need to check currentSlCode here,
-    // as double-click will always open the modal.
-    // The UI's onDoubleClick prop already handles when it's allowed to trigger.
-
-    updateState({ isLoading: true });
-
-    try {
-        // Removed the conditional logic that clears slCode and slName.
-        // Double-click will now ONLY open the modal.
-        updateState({
-            selectedRowIndex: index,
-            showSlModal: true,
-        });
-    } catch (error) {
-        console.error("Error in handleDoubleClick_GL_SlCode:", error);
-    } finally {
-        updateState({ isLoading: false });
-    }
 };
 
 
@@ -1902,108 +1795,58 @@ const handlePaytermNameDoubleClick = (index) => {
   setDetailRows(updatedRows);
 };
 
-  // const handleCloseAccountModal = (selectedAccount) => {
-  //   if (selectedAccount && selectedRowIndex !== null) {
-  //     const updatedRows = [...detailRows];
-  //     updatedRows[selectedRowIndex] = {
-  //       ...updatedRows[selectedRowIndex],
-  //       acctCode: selectedAccount.acctCode,
-  //       acctName: selectedAccount.acctName,
-  //     };
-  //     updateState({ detailRows: updatedRows });
-  //   }
-  //   updateState({ 
-  //     showAccountModal: false,
-  //     selectedRowIndex: null 
-  //   });
-  // };
+
+
 
 const handleCloseAccountModal = (selectedAccount) => {
+
     if (selectedAccount && selectedRowIndex !== null) {
-        handleDetailChangeGL(selectedRowIndex, 'acctCode', selectedAccount);
+
+        const specialAccounts = ['salesAcct', 'arAcct', 'discAcct', 'vatAcct'];
+        if (specialAccounts.includes(accountModalSource)) {
+          handleDetailChange(selectedRowIndex, accountModalSource, selectedAccount,false);
+        } else {
+          handleDetailChangeGL(selectedRowIndex, 'acctCode', selectedAccount);
+        }      
     }
     updateState({
         showAccountModal: false,
-        selectedRowIndex: null
+        selectedRowIndex: null,
+        accountModalSource: null
     });
 };
 
-  const handleCloseRcModal = async (selectedRc) => {
-    if (selectedRc && selectedRowIndex !== null) {
-      try {
-        // Fetch RC Name from /getRCMast API
-        const rcResponse = await fetchData("getRCMast", { RC_CODE: selectedRc.rcCode });
-        if (rcResponse.success) {
-          const rcData = JSON.parse(rcResponse.data[0].result);
-          const rcName = rcData[0]?.rcName || '';
-          
-          const updatedRows = [...detailRows];
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            rcCode: selectedRc.rcCode,
-            rcName: rcName,
-          };
-          setDetailRows(updatedRows);
-        }
-      } catch (error) {
-        console.error("Error fetching RC data:", error);
-      }
-    }
-    setShowRcModal(false);
-    setSelectedRowIndex(null);
-  };
+
+
+
 
   const handleCloseRcModalGL = async (selectedRc) => {
     if (selectedRc && selectedRowIndex !== null) {
-        try {
-            // Fetch RC Name from /getRCMast API (assuming you need to fetch full details)
-            const rcResponse = await fetchData("getRCMast", { RC_CODE: selectedRc.rcCode });
-            if (rcResponse.success) {
-                const rcData = JSON.parse(rcResponse.data[0].result);
-                const rcName = rcData[0]?.rcName || '';
-
-                handleDetailChangeGL(selectedRowIndex, 'rcCode', {
-                    rcCode: selectedRc.rcCode,
-                    rcName: rcName // Pass rcName along for direct update
-                });
-
-            } else {
-                 console.warn("RC data fetch failed:", rcResponse);
-                 handleDetailChangeGL(selectedRowIndex, 'rcCode', { rcCode: selectedRc.rcCode, rcName: '' });
+      if (accountModalSource !== null) {
+        handleDetailChange(selectedRowIndex, 'rcCode', selectedRc, false);
+     
+     
+      } else {
+           const result = await useTopRCRow(selectedRc.rcCode);
+            if (result) {
+              handleDetailChangeGL(selectedRowIndex, 'rcCode', result);
             }
-        } catch (error) {
-            console.error("Error fetching RC data or updating GL row:", error);
-            handleDetailChangeGL(selectedRowIndex, 'rcCode', { rcCode: selectedRc.rcCode, rcName: '' });
-        }
     }
     updateState({
         showRcModal: false,
-        selectedRowIndex: null
-    });
+        selectedRowIndex: null,
+        accountModalSource: null
+    })};
 };
+
+
 
 
   const handleCloseSlModalGL = async (selectedSl) => {
     if (selectedSl && selectedRowIndex !== null) {
-        try {
-            // Fetch RC Name from /getRCMast API (assuming you need to fetch full details)
-            const slResponse = await fetchData("getSL", { SL_CODE: selectedSl.slCode });
-            if (slResponse.success) {
-                const slData = JSON.parse(slResponse.data[0].result);
-                const slName = slData[0]?.slName || '';
 
-                handleDetailChangeGL(selectedRowIndex, 'slCode', {
-                    slCode: selectedSl.slCode,
-                    slName: slName // Pass slName along for direct update
-                });
-
-            } else {
-                 console.warn("SL data fetch failed:", slResponse);
-                 handleDetailChangeGL(selectedRowIndex, 'slCode', { slCode: selectedSl.slCode, slName: '' });
-            }
-        } catch (error) {
-            console.error("Error fetching SL data or updating GL row:", error);
-            handleDetailChangeGL(selectedRowIndex, 'slCode', { slCode: selectedSl.slCode, slName: '' });
+        if (selectedSl) {
+          handleDetailChangeGL(selectedRowIndex, 'slCode', selectedSl);
         }
     }
     updateState({
@@ -2012,7 +1855,9 @@ const handleCloseAccountModal = (selectedAccount) => {
     });
 };
 
-  const handleDeleteRow = (index) => {
+
+
+const handleDeleteRow = (index) => {
   const updatedRows = [...detailRows];
   updatedRows.splice(index, 1);
   // setDetailRows(updatedRows);
@@ -2021,68 +1866,67 @@ const handleCloseAccountModal = (selectedAccount) => {
 };
   
 
-// Invoice Detail VAT Code Change
-const handleCloseBillCodeModal = async (selectedBillCode) => {
-  
-  if (selectedBillCode && selectedRowIndex !== null) {
-   try {
 
-    const result = await getTopBillCodeRow(selectedBillCode.billCode);
+
+
+
+const handleCloseBillCodeModal = async (selectedBillCode) => {  
+  if (selectedBillCode && selectedRowIndex !== null) {
+    const result = await useTopBillCodeRow(selectedBillCode.billCode);
      if (result) {
        handleDetailChange(selectedRowIndex, 'billCode', result);
-    }
-
-    } catch (error) {
-      console.error("Error updating Bill Code:", error);
-    }
+    }  
   }
-
   updateState({ showBillCodeModal: false });
   updateState({ selectedRowIndex: null });
-
 };
 
 
-// Invoice Detail VAT Code Change
-const handleCloseVatModal = async (selectedVat) => {
-  
+
+
+
+
+const handleCloseVatModal = async (selectedVat) => { 
   if (selectedVat && selectedRowIndex !== null) {
-    try {
+    
+     const result = await useTopVatRow(selectedVat.vatCode);
+      if (!result) return;
 
-    const result = await getTopVatRow(selectedVat.vatCode);
-    if (result) {
-       handleDetailChange(selectedRowIndex, 'vatCode', result);
-    }
-
-    } catch (error) {
-      console.error("Error updating VAT Code:", error);
-    }
+      accountModalSource !== null
+        ? handleDetailChange(selectedRowIndex, 'vatCode', result, true)
+        : handleDetailChangeGL(selectedRowIndex, 'vatCode', result);   
   }
-
-  updateState({ showVatModal: false });
-  updateState({ selectedRowIndex: null });
-
+  updateState({ showVatModal: false ,
+                selectedRowIndex: null,
+                accountModalSource: null });
 };
 
- // Invoice Detail ATC Code Change
+
+
+
+
+
 const handleCloseAtcModal = async (selectedAtc) => {
-  if (selectedAtc && selectedRowIndex !== null) {
-    try {
+  if (selectedAtc && selectedRowIndex !== null) {  
 
-    const result = await getTopATCRow(selectedAtc.atcCode);
-    if (result) {
-       handleDetailChange(selectedRowIndex, 'atcCode', result);
-    }
+    const result = await useTopATCRow(selectedAtc.atcCode);
+      if (!result) return;
 
-    } catch (error) {
-      console.error("Error updating ATC Code:", error);
-    }
+      accountModalSource !== null
+        ? handleDetailChange(selectedRowIndex, 'atcCode', result, true)
+        : handleDetailChangeGL(selectedRowIndex, 'atcCode', result);   
   }
-  updateState({ showAtcModal: false });
-  updateState({ selectedRowIndex: null });
+  updateState({ showAtcModal: false ,
+                selectedRowIndex: null,
+                accountModalSource: null });
 };
 
-  const handleCloseBranchModal = (selectedBranch) => {
+
+
+  
+
+
+const handleCloseBranchModal = (selectedBranch) => {
     if (selectedBranch) {
       updateState({
       branchCode: selectedBranch.branchCode,
@@ -2092,12 +1936,36 @@ const handleCloseAtcModal = async (selectedAtc) => {
     updateState({ branchModalOpen: false });
   };
 
-  const handleCloseCurrencyModal = (selectedCurrency) => {
+
+
+
+
+  const handleCloseCurrencyModal = async (selectedCurrency) => {
     if (selectedCurrency) {
-      handleSelectCurrency(selectedCurrency.currCode)
-    }
-    updateState({ currencyModalOpen: false });
+    handleSelectCurrency(selectedCurrency.currCode);
   };
+    updateState({ currencyModalOpen: false });
+  }
+
+
+
+  const handleSelectCurrency = async (currCode) => {
+    if (currCode) {
+
+     const result = await useTopCurrentRow(currCode);
+      if (result) {
+      updateState({
+        currencyCode:result.currCode,
+        currencyName:result.currName,
+        currencyRate:await useTopForexRate(currCode, header.svi_date) 
+        })     
+      }
+    }
+  };
+
+
+
+
 
 
 const handleCloseBillTermModal = async (selectedBillTerm) => { 
@@ -2159,7 +2027,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   docType={docType} 
   pdfLink={pdfLink} 
   videoLink={videoLink}
-  onPrint={handlePrint}
+  onPrint={() => useHandlePrint(documentID,docType)}
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
@@ -2804,15 +2672,15 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.vatCode || ""}
                   readOnly
-                  onDoubleClick={() => handleDoubleClick_Dtl_VatCode(index)}
                 />
             
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    updateState({ selectedRowIndex: index });
-                    updateState({ showVATModal: true }); 
+                    updateState({ selectedRowIndex: index,
+                                  showVatModal: true,
+                                  accountModalSource: "vatCode" }); 
                   }}
                 />
               </div>
@@ -2843,14 +2711,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.atcCode || ""}
                   readOnly
-                  onDoubleClick={() => handleAtcDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    updateState({ selectedRowIndex: index });
-                    updateState({ ShowAtcModal: true }); 
+                    updateState({ selectedRowIndex: index ,
+                                  showAtcModal: true,
+                                  accountModalSource: "atcCode" }); 
                   }}
                 />
               </div>
@@ -2863,7 +2731,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 className="w-[200px] global-tran-td-inputclass-ui"
                 value={row.atcName || ""}
                 readOnly
-                onDoubleClick={() => handleAtcNameDoubleClick(index)}
               />
             </td>
 
@@ -2893,17 +2760,17 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.salesAcct || ""}
-
                   readOnly
-                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowAccountModal(true);
-                    setAccountModalSource("salesAcct");
+                  updateState({ selectedRowIndex: index,
+                                showAccountModal: true,
+                                accountModalSource: "salesAcct" }); 
+
+                  
                   }}
                 />
               </div>
@@ -2916,15 +2783,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.arAcct || ""}
                   readOnly
-                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowAccountModal(true);
-                    setAccountModalSource("arAcct");
+                  updateState({ selectedRowIndex: index,
+                                showAccountModal: true,
+                                accountModalSource: "arAcct" }); 
                   }}
                 />
               </div>
@@ -2938,15 +2804,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.vatAcct || ""}
                   readOnly
-                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowAccountModal(true);
-                    setAccountModalSource("vatAcct");
+                  updateState({ selectedRowIndex: index,
+                                showAccountModal: true,
+                                accountModalSource: "vatAcct" }); 
                   }}
                 />
               </div>
@@ -2959,15 +2824,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.discAcct || ""}
                   readOnly
-                  onDoubleClick={() => handleAccountDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowAccountModal(true);
-                    setAccountModalSource("discAcct");
+                  updateState({ selectedRowIndex: index,
+                                showAccountModal: true,
+                                accountModalSource: "discAcct" }); 
                   }}
                 />
               </div>
@@ -2980,14 +2844,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
                   value={row.rcCode || ""}
                   readOnly
-                  onDoubleClick={() => handleRcDoubleDtl1Click(index)}
                 />
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                   onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowRcModal(true);
+                  updateState({ selectedRowIndex: index,
+                                showRcModal: true,
+                                accountModalSource: "rcCode"}); 
                   }}
                 />
               </div>
@@ -3157,7 +3021,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     type="text"
                     className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                     value={row.acctCode || ""}
-                    onDoubleClick={() => handleDoubleClick_GL_AcctCode(index)}
                     onChange={(e) => handleDetailChangeGL(index, 'acctCode', e.target.value)}      
       
                   />
@@ -3175,34 +3038,27 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 </div>
               </td>
 
+
+
               <td className="global-tran-td-ui">
                 <div className="relative w-fit">
                     <input
                         type="text"
                         className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                         value={row.rcCode || ""}
-                        onDoubleClick={() => {
-                            // Allow double click if RC is required OR an RC code is already selected
-                            if (row.rcCode === "REQ RC" || row.rcCode !== "") {
-                                handleDoubleClick_GL_RcCode(index);
-                            }
-                        }}
                         onChange={(e) => handleDetailChangeGL(index, 'rcCode', e.target.value)}
                         readOnly
                     />
-                    {(row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && ( // <-- Updated condition
+                    {(row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && ( 
                         <FontAwesomeIcon
                             icon={faMagnifyingGlass}
                             className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                             onClick={() => {
-                                // Allow click if RC is required OR an RC code is already selected
-                                if (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) { // <-- Updated condition
-                                    console.log("Magnifying glass clicked for index:", index);
+                                if (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) { 
                                     updateState({
                                         selectedRowIndex: index,
                                         showRcModal: true,
                                     });
-                                    console.log("State after click:", state);
                                 }
                             }}
                         />
@@ -3210,7 +3066,9 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 </div>
             </td>
 
-          <td className="global-tran-td-ui">
+
+
+              <td className="global-tran-td-ui">
                 <input
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
@@ -3227,24 +3085,16 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.slCode || ""}
-                          onDoubleClick={() => {
-                              // Allow double click if SL is required OR an SL code is already selected
-                              if (row.slCode === "REQ SL" || row.slCode) { // Updated condition
-                                  handleDoubleClick_GL_SlCode(index);
-                              }
-                          }}
                           onChange={(e) => handleDetailChangeGL(index, 'slCode', e.target.value)}
                           readOnly
                       />
-                      {/* Conditional rendering for the FontAwesomeIcon */}
-                      {/* The icon should be visible if SL is "REQ SL" OR if an actual SL code is present */}
-                      {(row.slCode === "REQ SL" || row.slCode) && ( // Updated condition
+
+                      {(row.slCode === "REQ SL" || row.slCode) && ( 
                           <FontAwesomeIcon
                               icon={faMagnifyingGlass}
                               className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                               onClick={() => {
-                                  // Allow click if SL is required OR an SL code is already selected
-                                  if (row.slCode === "REQ SL" || row.slCode) { // Updated condition
+                                  if (row.slCode === "REQ SL" || row.slCode) { 
                                       updateState({
                                           selectedRowIndex: index,
                                           showSlModal: true,
@@ -3256,55 +3106,84 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   </div>
               </td>
             
+              
+             
+              <td className="global-tran-td-ui">
+                      <input
+                        type="text"
+                        className="w-[300px] global-tran-td-inputclass-ui"
+                        value={row.particular || ""}
+                        onChange={(e) => handleDetailChange(index, 'particular', e.target.value)}
+                      />
+                </td>
+             
+
+               <td className="global-tran-td-ui">
+                  <div className="relative w-fit">
+                      <input
+                          type="text"
+                          className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
+                          value={row.vatCode || ""}
+                          onChange={(e) => handleDetailChangeGL(index, 'vatCode', e.target.value)}
+                          readOnly
+                      />
+
+                      {row.vatCode && row.vatCode.length > 0 && (
+                          <FontAwesomeIcon
+                            icon={faMagnifyingGlass}
+                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                            onClick={() => {
+                              updateState({
+                                selectedRowIndex: index,
+                                showVatModal: true,
+                              });
+                            }}
+                          />
+                        )}
+                    </div>
+               </td>
+
+
+
+
               <td className="global-tran-td-ui">
                 <input
                   type="text"
-                  className="w-[300px] global-tran-td-inputclass-ui"
-                  value={row.particular || ""}
-                  onChange={(e) => handleDetailChange(index, 'particular', e.target.value)}
+                  className="w-[200px] global-tran-td-inputclass-ui"
+                  value={row.vatName || ""}
+                  readOnly
                 />
               </td>
-              <td className="global-tran-td-ui">
-                <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.vatCode || ""}
-      readOnly
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowVatModal(true);
-      }}
-    />
-              </td>
-              <td className="global-tran-td-ui">
-  <input
-    type="text"
-    className="w-[200px] global-tran-td-inputclass-ui"
-    value={row.vatName || ""}
-    readOnly
-    onDoubleClick={() => handleVatNameDoubleClick(index)}
-  />
-</td>
-              <td className="global-tran-td-ui">
-                <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
-      value={row.atcCode || ""}
-      readOnly
-    />
-    <FontAwesomeIcon 
-      icon={faMagnifyingGlass} 
-      className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900 hover:text-blue-900"
-      onClick={() => {
-        setSelectedRowIndex(index);
-        setShowAtcModal(true);
-      }}
-    />
-              </td>
+             
+
+
+               <td className="global-tran-td-ui">
+                  <div className="relative w-fit">
+                      <input
+                          type="text"
+                          className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
+                          value={row.atcCode || ""}
+                          onChange={(e) => handleDetailChangeGL(index, 'atcCode', e.target.value)}
+                          readOnly
+                      />
+
+                      {(row.atcCode !== "" || row.atcCode) && ( 
+                          <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                  if (row.atcCode !== "" || row.atcCode) { 
+                                      updateState({
+                                          selectedRowIndex: index,
+                                          showAtcModal: true,
+                                      });
+                                  }
+                              }}
+                          />
+                      )}
+                  </div>
+               </td>
+
 
               <td className="global-tran-td-ui">
                 <input
@@ -3314,6 +3193,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   onChange={(e) => handleDetailChange(index, 'atcName', e.target.value)}
                 />
               </td>
+
+
 
 
               <td className="global-tran-td-ui text-right">
@@ -3388,19 +3269,20 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.slrefDate || ""}
                   onChange={(e) => handleDetailChange(index, 'slrefDate', e.target.value)}
                 />
+
               </td>
-              <td className="global-tran-td-ui">
-  <input
-    type="text"
-    className="w-[100px] global-tran-td-inputclass-ui"
-    value={row.remarks || header.remarks || ""}
-    onChange={(e) => {
-      const updatedRows = [...detailRowsGL];
-      updatedRows[index].remarks = e.target.value;
-      setDetailRowsGL(updatedRows);
-    }}
-  />
-</td>
+                <td className="global-tran-td-ui">
+                <input
+                  type="text"
+                  className="w-[100px] global-tran-td-inputclass-ui"
+                  value={row.remarks || header.remarks || ""}
+                  onChange={(e) => {
+                    const updatedRows = [...detailRowsGL];
+                    updatedRows[index].remarks = e.target.value;
+                    setDetailRowsGL(updatedRows);
+                  }}
+                />
+             </td>
               
               <td className="global-tran-td-ui text-center sticky right-10">
                 <button
@@ -3517,20 +3399,11 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 {/* COA Account Modal */}
-{/* {showAccountModal && (
-  <COAMastLookupModal
-    isOpen={showAccountModal}
-    onClose={handleCloseAccountModal}
-    source={accountModalSource}
-    customParam={customParam}     
-  />
-)} */}
-
-{/* COA Account Modal */}
       {showAccountModal && (
         <COAMastLookupModal
           isOpen={showAccountModal}
           onClose={handleCloseAccountModal}
+          source={accountModalSource}
           customParam="svi_dt2"
         />
       )}
@@ -3541,6 +3414,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   <RCLookupModal 
     isOpen={showRcModal}
     onClose={handleCloseRcModalGL}
+    source={accountModalSource}
     customParam="apv_hd"
     apiEndpoint="getRCMast"
   />
@@ -3570,18 +3444,18 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 {/* ATC Code Modal Invoice Detail */}
+
 {showAtcModal && (
   <ATCLookupModal  
     isOpen={showAtcModal}
     onClose={handleCloseAtcModal}
-    customParam="apv_dtl"
     apiEndpoint="getATC"
+    customParam="ActiveAll"
   />
 )}
 
 
 {/* SL Code Lookup Modal */}
-{console.log("showSlModal value:", showSlModal)}
 {showSlModal && (
   <SLMastLookupModal
     isOpen={showSlModal}
@@ -3593,7 +3467,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 {showSpinner && <LoadingSpinner />}
-
     </div>
   );
 };

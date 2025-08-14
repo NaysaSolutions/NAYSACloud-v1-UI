@@ -1,4 +1,4 @@
-import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
+import { fetchData, postRequest,printRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
 import Swal from 'sweetalert2';
@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 // ATC
 
 
-export async function getTopCompanyRow() {
+export async function useTopCompanyRow() {
   try {
     const response = await fetchData("getCompany");
     if (response.success) {
@@ -22,7 +22,29 @@ export async function getTopCompanyRow() {
   }
 }
 
-export async function getTopDocControlRow(docId) {
+
+
+
+
+
+export async function useTopHSOption() {
+  try {
+    const response = await fetchData("getHSOption");
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching HS Option row:", error);
+    return null;
+  }
+}
+
+
+
+
+export async function useTopDocControlRow(docId) {
   if (!docId) return null;
 
   try {
@@ -38,7 +60,9 @@ export async function getTopDocControlRow(docId) {
   }
 }
 
-export async function getTopDocDropDown(documentCode, documentCol) {
+
+
+export async function useTopDocDropDown(documentCode, documentCol) {
   if (!documentCode || !documentCol) {
     console.warn("Document code or column not provided");
     return [];
@@ -78,7 +102,10 @@ export async function getTopDocDropDown(documentCode, documentCol) {
   }
 }
 
-export async function getTopVatRow(vatCode) {
+
+
+
+export async function useTopVatRow(vatCode) {
   if (!vatCode) return null;
 
   try {
@@ -94,7 +121,9 @@ export async function getTopVatRow(vatCode) {
   }
 }
 
-export async function getTopVatAmount(vatCode, grossAmt) {
+
+
+export async function useTopVatAmount(vatCode, grossAmt) {
   if (!vatCode || grossAmt === 0) return 0;
 
   try {
@@ -112,7 +141,9 @@ export async function getTopVatAmount(vatCode, grossAmt) {
   }
 }
 
-export async function getTopATCRow(atcCode) {
+
+
+export async function useTopATCRow(atcCode) {
   if (!atcCode) return null;
 
   try {
@@ -128,7 +159,7 @@ export async function getTopATCRow(atcCode) {
   }
 }
 
-export async function getTopATCAmount(atcCode, netAmount) {
+export async function useTopATCAmount(atcCode, netAmount) {
   if (!atcCode || netAmount === 0) return 0;
 
   try {
@@ -145,7 +176,7 @@ export async function getTopATCAmount(atcCode, netAmount) {
   }
 }
 
-export async function getTopBillCodeRow(billCode) {
+export async function useTopBillCodeRow(billCode) {
   if (!billCode) return null;
 
   try {
@@ -162,88 +193,82 @@ export async function getTopBillCodeRow(billCode) {
 }
 
 
+export async function useTopRCRow(rcCode) {
+  if (!rcCode) return null;
+
+  try {
+    const response = await fetchData("getRCMast", { RC_CODE: rcCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching RC row:", error);
+    return null;
+  }
+}
+
+
+
+
+export async function useTopSLRow(slCode) {
+  if (!slCode) return null;
+
+  try {
+    const response = await fetchData("getSL", { SL_CODE: slCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching SL row:", error);
+    return null;
+  }
+}
+
+
+export async function useTopAccountRow(acctCode) {
+  if (!acctCode) return null;
+
+  try {
+    const response = await fetchData("getCOA", { ACCT_CODE: acctCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Account row:", error);
+    return null;
+  }
+}
+
+
+
+export async function useTopCurrentRow(currCode) {
+  if (!currCode) return null;
+
+  try {
+    const response = await fetchData("getCurr", { CURR_CODE: currCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Currency row:", error);
+    return null;
+  }
+}
 
 
 
 
 
 
-
-// export const generateGLEntries = async (docCode, glData, setDetailRowsGL, setIsLoading) => {
-  
-//   setIsLoading(true);
-//   const payload = { json_data: glData };
-
-//   console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
-
-//   try {
-//     const response = await postRequest("generateGL"+docCode, JSON.stringify(payload));
-//     console.log("Raw response from generateGL API:", response);
-
-//     if (response?.status === 'success' && Array.isArray(response.data)) {
-//       let glEntries;
-
-//       try {
-//         glEntries = JSON.parse(response.data[0].result);
-//         if (!Array.isArray(glEntries)) {
-//           glEntries = [glEntries];
-//         }
-//       } catch (parseError) {
-//         console.error("Error parsing GL entries:", parseError);
-//         throw new Error("Failed to parse GL entries");
-//       }
-
-    
-//       const transformedEntries = glEntries.map((entry, idx) => ({
-//         id: idx + 1,
-//         acctCode: entry.acctCode || "",
-//         rcCode: entry.rcCode || "",
-//         sltypeCode: entry.sltypeCode || "",
-//         slCode: entry.slCode || "",
-//         particular: entry.particular || "",
-//         vatCode: entry.vatCode || "",
-//         vatName: entry.vatName || "",
-//         atcCode: entry.atcCode || "",
-//         atcName: entry.atcName || "",
-//         debit: entry.debit ? formatNumber(entry.debit) : "0.00",
-//         credit: entry.credit ? formatNumber(entry.credit) : "0.00",
-//         debitFx1: entry.debit ? formatNumber(entry.debitFx1) : "0.00",
-//         creditFx1: entry.credit ? formatNumber(entry.creditFx1) : "0.00",
-//         debitFx2: entry.debit ? formatNumber(entry.debitFx2) : "0.00",
-//         creditFx2: entry.credit ? formatNumber(entry.creditFx2) : "0.00",
-//         slRefNo: entry.slrefNo || "",
-//         slrefDate: entry.slrefDate || "",
-//         remarks: entry.remarks || "",
-//         dt1Lineno: entry.dt1Lineno || ""
-//       }));
-
-//       setDetailRowsGL(transformedEntries);
-
-    
-//       return transformedEntries;
-//      } else {
-//       throw new Error(response.message || "Failed to generate GL entries");
-//     }
-//   } catch (error) {
-//     console.error("Error in generateGLEntries:", error);
-//     swal.fire({
-//       icon: 'error',
-//       title: 'Generation Failed',
-//       text: error.message || 'Unknown error occurred',
-//       confirmButtonColor: '#3085d6',
-//     });
-//     return null;
-//   } finally {
-//     setIsLoading(false);
-//   }
-// };
-
-// NAYSA Cloud/Global/top1RefTable.js
-
-// Assuming postRequest, formatNumber, swal, etc. are imported or defined elsewhere in this file
-
-
-export const generateGLEntries = async (docCode, glData) => {
+export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
   console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
@@ -318,57 +343,9 @@ export const generateGLEntries = async (docCode, glData) => {
 
 
 
-// export const transactionUpsert = async (docCode, glData, setIsLoading ,updateState,documentID,documentNo) => {
- 
-//  try {   
-//       setIsLoading(true);
-//       const payload = { json_data: glData };
-   
-
-//       console.log("Sending data to API:", JSON.stringify(payload, null, 2));
-
-//       // Call the API
-//       const response = await postRequest("upsert"+docCode, JSON.stringify(payload));
-
-//       if (response?.status === 'success') {
-//         Swal.fire({
-//           icon: 'success',
-//           title: 'Success',
-//           text: docCode + ' saved successfully!',
-//         });
-
-//         // If document number was auto-generated, disable editing
-//         // Update document ID if returned from server
-//         if (response.data?.documentID) {
-//           updateState({
-//             documentID: response.data.documentID,
-//             documentNo: response.data.documentNo
-//           });
-//         }
-//       } else {
-//         throw new Error(response?.message || 'Failed to save Transaction');
-//       }
-//     } catch (error) {
-//       console.error("Error saving Transaction:", error);
-//       Swal.fire({
-//         icon: 'error',
-//         title: 'Save Failed',
-//         text: error.message || 'An error occurred while saving the Transaction',
-//       });
-//     } finally {
-//       // Re-enable controls
-//       updateState({
-//         isSaveDisabled: false,
-//         isResetDisabled: false
-//       });
-
-//        setIsLoading(false);
-//     }
-// };
-
 
 // Add idKey and noKey as parameters
-export const transactionUpsert = async (docCode, glData, updateState, idKey, noKey) => {
+export const useTransactionUpsert = async (docCode, glData, updateState, idKey, noKey) => {
     try {
         updateState({ isLoading: true });
 
@@ -426,3 +403,144 @@ export const transactionUpsert = async (docCode, glData, updateState, idKey, noK
         });
     }
 };
+
+
+
+
+
+
+// global update of GL Entries per record
+export const useUpdateRowGLEntries = async (row, field, value, custVendCode,docCode) => {
+  const payload = {
+    json_data: {
+      acctCode: field === "acctCode" ? value.acctCode : row.acctCode,
+      slCode: field === "slCode" ? value.slCode : row.slCode,
+      rcCode: field === "rcCode" ? value.rcCode : row.rcCode,
+      sltypeCode: field === "slCode" ? value.sltypeCode : row.sltypeCode, 
+      vatCode: field === "vatCode" ? value.vatCode : row.vatCode, 
+      vatName: row.vatName,
+      atcCode: field === "atcCode" ? value.atcCode : row.atcCode,  
+      atcName: row.atcName,
+      atcName: row.atcName,
+      custVendCode:custVendCode,
+      docCode: docCode
+    }
+  };
+
+
+  try {
+    const response = await postRequest("lookupGL", JSON.stringify(payload));
+
+    // ✅ Match actual API format
+    if (!response || response.status !== "success" || !Array.isArray(response.data)) {
+      console.warn("Invalid API response structure", response);
+      return [];
+    }
+
+
+
+    // ✅ Parse the JSON string inside result
+    let parsedData;
+    try {
+      parsedData = JSON.parse(response.data[0]?.result || "[]");
+    } catch (parseError) {
+      console.error("Error parsing response data:", parseError);
+      return [];
+    }
+
+    // ✅ Always return array (even if backend sends a single object)
+     return Array.isArray(parsedData) && parsedData.length > 0
+      ? parsedData[0]
+      : null;
+
+  } catch (error) {
+    console.error("Error fetching LookupGL:", error);
+    return [];
+  }
+};
+
+
+
+
+//global curreny update
+export const useTopForexRate = async (currencyCode, documentDate) => {
+    if (!currencyCode) return '1.000000'
+  
+    try {
+      const currResponse = await fetchData("getCurr", { CURR_CODE: currencyCode });
+  
+      if (currResponse.success) {
+        const currData = JSON.parse(currResponse.data[0].result);
+       
+        if (currencyCode.toUpperCase() !== 'PHP') {
+          const forexPayload = {
+            json_data: {
+              docDate: documentDate,
+              currCode: currencyCode,
+            },
+          };
+          try {
+            const forexResponse = await postRequest("getDForex", JSON.stringify(forexPayload));
+  
+            if (forexResponse.success) {
+              const rawResult = forexResponse.data[0].result;
+              if (rawResult) {
+                const forexData = JSON.parse(rawResult);
+               return forexData.currRate ? parseFloat(forexData.currRate).toFixed(6) : '1.000000';
+              }
+            }
+          } catch (forexError) {
+            console.error("Forex API error:", forexError);
+            return '1.000000'
+          }
+        }
+        
+      }
+    } catch (currError) {
+      console.error("Currency API error:", currError);
+      return '1.000000'
+    }
+};
+
+
+
+
+
+
+
+export async function useHandlePrint(documentID,docCode) {
+  try {
+    const printWindow = window.open("", "_blank");
+
+    const payload = { tran_id: documentID };
+
+    const apiUrl = 'http://127.0.0.1:8000/api/print'+docCode;
+
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/pdf'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate report: ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    if (blob.type !== "application/pdf") {
+      const text = await blob.text();
+      throw new Error(`Expected PDF but got: ${text}`);
+    }
+
+    const fileURL = URL.createObjectURL(blob);
+    printWindow.location.href = fileURL;
+
+  } catch (error) {
+    console.error("Error printing report:", error);
+  }
+}
