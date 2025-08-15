@@ -35,11 +35,7 @@ import { useTopSLRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopAccountRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopForexRate } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopCurrentRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { useGenerateGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopHSOption } from '@/NAYSA Cloud/Global/top1RefTable';
-import { useHandlePrint } from '@/NAYSA Cloud/Global/top1RefTable';
-
-
 
 import { useTopCompanyRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
@@ -47,8 +43,12 @@ import { useTopDocDropDown } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopVatAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopATCAmount } from '@/NAYSA Cloud/Global/top1RefTable';
 import { useTopBillCodeRow } from '@/NAYSA Cloud/Global/top1RefTable';
-import { useUpdateRowGLEntries } from '@/NAYSA Cloud/Global/top1RefTable';
-import { useTransactionUpsert } from '@/NAYSA Cloud/Global/top1RefTable';
+
+import { useUpdateRowGLEntries } from '@/NAYSA Cloud/Global/procedure';
+import { useTransactionUpsert } from '@/NAYSA Cloud/Global/procedure';
+import { useGenerateGLEntries } from '@/NAYSA Cloud/Global/procedure';
+import { useHandlePrint } from '@/NAYSA Cloud/Global/procedure';
+
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
 
@@ -333,8 +333,9 @@ updateState({
   };
 
 
+  
   const loadDocControl = async () => {
-      const data = await useTopDocControlRow();
+      const data = await useTopDocControlRow(docType);
       if(data){
       updateState({
       documentName: data.docName,
@@ -361,6 +362,9 @@ useEffect(() => {
     updateState({ isDocNoDisabled: !!state.documentID });
 }, [state.documentID]);
  
+
+
+
 
 
 
@@ -781,540 +785,22 @@ const handleSelectBillTerm = async (billtermCode) => {
     }
   };
 
-  // const handlePrint = async () => {
-  //   try {
-  //     // Validate inputs
-  //     if (!documentNo || !branchCode) {
-  //       alert("Please enter Document Number and select Branch before printing");
-  //       return;
-  //     }
-  
-  //     const idResponse = await fetchData("getPrintingID");
-  //     if (!idResponse?.success) {
-  //       throw new Error("Failed to get printing ID");
-  //     }
-  //     const tranID = idResponse.data[0]?.generatedID;
-  
-  //     if (!tranID) {
-  //       throw new Error("No printing ID generated");
-  //     }
-  
-  //     const payload = {
-  //       json_data: {
-  //         generatedID: tranID,
-  //         docCode: docType,
-  //         branchCode: branchCode,
-  //         docNo: documentNo,
-  //         Instance: "NAYSA-GERARD",
-  //         Catalog: "NAYSAFinancials",
-  //         checkedBy: "xxxx",
-  //         notedBy: "xxxxx",
-  //         approvedBy: "xxxxx"
-  //       }
-  //     };
-  
-  //     // Use full API URL with your server's base URL
-  //     const apiUrl = 'http://127.0.0.1:8000/api/printForm'; // Adjust if using different port
-      
-  //     const response = await fetch(apiUrl, {
-  //       method: 'POST',
-  //       headers: { 
-  //         'Content-Type': 'application/json',
-  //         'Accept': 'application/json'
-  //       },
-  //       body: JSON.stringify(payload)
-  //     });
-  
-  //     // Improved error handling
-  //     if (!response.ok) {
-  //       const errorText = await response.text();
-  //       console.error('Full error response:', errorText);
-  //       throw new Error(`Server error: ${response.status} - ${response.statusText}`);
-  //     }
-  
-  //     // Handle response
-  //     const contentType = response.headers.get('content-type');
-      
-  //     if (contentType?.includes('application/pdf')) {
-  //       // PDF handling
-  //       const blob = await response.blob();
-  //       const url = URL.createObjectURL(blob);
-        
-  //       const a = document.createElement('a');
-  //       a.href = url;
-  //       a.download = `APV_${documentNo}.pdf`;
-  //       document.body.appendChild(a);
-  //       a.click();
-  //       document.body.removeChild(a);
-        
-  //       setTimeout(() => URL.revokeObjectURL(url), 100);
-  //     } else {
-  //       // JSON handling
-  //       const result = await response.json();
-  //       if (!result.success) {
-  //         throw new Error(result.message || "Printing failed");
-  //       }
-  //       console.log("Print result:", result);
-  //     }
-  //   } catch (error) {
-  //     console.error("Printing Error:", error);
-  //     alert(`Printing failed: ${error.message}`);
-  //   }
-  // };
-
-window.getSVIDataForPrint = null;
-
-
-// const handlePrint = async () => {
-//   try {
-//     // Replace these with your actual values
-//     const payload = { 
-//       tran_id: documentID
-//     };
-
-//     console.log(documentID)
-
-//     const apiUrl = 'http://127.0.0.1:8000/api/printSVI';
-      
-//     const response = await fetch(apiUrl, {
-//       method: 'POST',
-//       headers: { 
-//         'Content-Type': 'application/json',
-//         'Accept': 'application/pdf' // ask for PDF
-//       },
-//       body: JSON.stringify(payload)
-//     });
-
-//     if (!response.ok) {
-//       const errorText = await response.text();
-//       throw new Error(`Failed to generate report: ${errorText}`);
-//     }
-
-//     const blob = await response.blob();
-
-//     if (blob.type !== "application/pdf") {
-//       const text = await blob.text();
-//       throw new Error(`Expected PDF but got: ${text}`);
-//     }
-
-//     const fileURL = URL.createObjectURL(blob);
-//     window.open(fileURL, "_blank");
-
-//   } catch (error) {
-//     console.error("Error printing report:", error);
-//   }
-// };
 
 
 const handlePrint = async () => {
-  try {
-    const printWindow = window.open("", "_blank"); // open immediately
-
-    const payload = { tran_id: documentID };
-
-    const apiUrl = 'http://127.0.0.1:8000/api/printSVI';
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/pdf'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to generate report: ${errorText}`);
-    }
-
-    const blob = await response.blob();
-    if (blob.type !== "application/pdf") {
-      const text = await blob.text();
-      throw new Error(`Expected PDF but got: ${text}`);
-    }
-
-    const fileURL = URL.createObjectURL(blob);
-    printWindow.location.href = fileURL; // load PDF in the already opened tab
-
-  } catch (error) {
-    console.error("Error printing report:", error);
-  }
+  updateState({ showSpinner: true });
+  await useHandlePrint(documentID, docType);
+  updateState({ showSpinner: false });
 };
 
 
-  // Inside your SVI.jsx component where you have the fetched 'data'
-const handlePrint2 = () => {
-        // Check if there's data to print
-        if (!state.documentID) {
-            alert('No SVI data loaded to print!');
-            return;
-        }
 
-        // Create a new window to host the print content
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-
-        // Construct the HTML content for the print window
-        const printContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <title>Sales Voucher Invoice (SVI) Print Form</title>
-            <style>
-                /* Copy all the CSS from the provided sample HTML here */
-                ${document.querySelector('style').innerHTML} /* This is a hacky way for demo. Better to copy directly. */
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 9pt;
-                    margin: 0;
-                    padding: 15mm;
-                    box-sizing: border-box;
-                }
-                .print-container { width: 100%; max-width: 8.5in; margin: 0 auto; padding: 10px; }
-                .header, .footer { text-align: center; margin-bottom: 15px; }
-                .header h1 { margin: 0; font-size: 16pt; color: #333; }
-                .header h2 { margin: 5px 0 10px 0; font-size: 14pt; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-                .header p { margin: 2px 0; font-size: 8pt; color: #666; }
-                .transaction-info { display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #ddd; }
-                .transaction-info > div { flex: 1; min-width: 30%; padding: 5px 10px; box-sizing: border-box; }
-                .transaction-info label { font-weight: bold; color: #555; display: inline-block; width: 90px; margin-right: 5px; font-size: 8.5pt; }
-                .transaction-info span { font-size: 8.5pt; color: #000; display: inline-block; max-width: calc(100% - 100px); vertical-align: top; }
-                .table-section { margin-bottom: 20px; }
-                .table-section h3 { font-size: 11pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px; }
-                .details-table { width: 100%; border-collapse: collapse; }
-                .details-table th, .details-table td { border: 1px solid #eee; padding: 6px 8px; text-align: left; font-size: 8.5pt; }
-                .details-table th { background-color: #f8f8f8; font-weight: bold; color: #333; white-space: nowrap; }
-                .details-table .text-right { text-align: right; }
-                .details-table .text-center { text-align: center; }
-                .totals-summary { display: flex; justify-content: flex-end; margin-top: 15px; }
-                .totals-summary > div { width: 300px; border-top: 2px solid #333; padding-top: 10px; }
-                .totals-summary div > div { display: flex; justify-content: space-between; padding: 2px 0; }
-                .totals-summary label { font-weight: bold; color: #333; font-size: 9pt; }
-                .totals-summary span { font-weight: bold; color: #000; font-size: 9.5pt; }
-                .remarks-section { margin-top: 20px; padding: 10px; border-top: 1px dashed #ddd; font-size: 8.5pt; color: #555; }
-                .remarks-section label { font-weight: bold; display: block; margin-bottom: 5px; }
-                .footer-signatures { margin-top: 40px; border-top: 1px dashed #ccc; padding-top: 15px; display: flex; justify-content: space-around; text-align: center; }
-                .footer-signatures div { flex: 1; margin: 0 10px; }
-                .footer-signatures .signature-line { display: block; width: 80%; margin: 50px auto 5px auto; border-bottom: 1px solid #000; }
-                .footer-signatures span { font-size: 8pt; color: #555; }
-                .print-button-container { display: none; } /* Hide the button in the print window itself */
-                @media print {
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; font-size: 8.5pt; }
-                    .print-container { border: none; padding: 0; max-width: none; width: 100%; }
-                    .details-table th, .details-table td { padding: 4px 6px; }
-                    .transaction-info label, .transaction-info span { font-size: 8pt; }
-                    .remarks-section, .footer-signatures span { font-size: 8pt; }
-                }
-            </style>
-            </head>
-            <body>
-                <div class="print-container">
-                    <div class="header">
-                        <h1>NAYSA SOLUTIONS INC.</h1>
-                        <p>123 Main Street, Makati City, Metro Manila, Philippines</p>
-                        <p>Contact: (02) 1234-5678 | Email: info@yourcompany.com</p>
-                    </div>
-                    <div class="header">
-                        <h2>SERVICE INVOICE</h2>
-                    </div>
-                    <div class="transaction-info">
-                        <div><label>SVI No.:</label><span id="sviNo"></span></div>
-                        <div><label>SVI Date:</label><span id="sviDate"></span></div>
-                        <div><label>Branch Code:</label><span id="branchCode"></span></div>
-                        <div><label>Customer Code:</label><span id="custCode"></span></div>
-                        <div><label>Customer Name:</label><span id="custName"></span></div>
-                        <div><label>Ref Doc No. 1:</label><span id="refDocNo1"></span></div>
-                        <div><label>Ref Doc No. 2:</label><span id="refDocNo2"></span></div>
-                        <div><label>Currency:</label><span id="currCode"></span></div>
-                        <div><label>Currency Rate:</label><span id="currRate"></span></div>
-                        <div><label>SVI Type:</label><span id="sviTranType"></span></div>
-                        <div><label>Bill Term:</label><span id="billTermCode"></span></div>
-                    </div>
-                    <div class="table-section">
-                        <h3>Invoice Details</h3>
-                        <table class="details-table">
-                            <thead>
-                                <tr>
-                                    <th>Line No.</th><th>Bill Code</th><th>Bill Name</th><th>UOM</th><th>Qty</th><th>Unit Price</th>
-                                    <th>Gross Amount</th><th>Disc. Amount</th><th>Net Amount</th><th>VAT Amount</th><th>ATC Amount</th><th>SVI Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dt1TableBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="totals-summary">
-                        <div>
-                            <div><label>Total Gross Amount:</label><span id="totalGrossAmount"></span></div>
-                            <div><label>Total Discount Amount:</label><span id="totalDiscountAmount"></span></div>
-                            <div><label>Total Net Amount:</label><span id="totalNetAmount"></span></div>
-                            <div><label>Total VAT Amount:</label><span id="totalVatAmount"></span></div>
-                            <div><label>Total ATC Amount:</label><span id="totalAtcAmount"></span></div>
-                            <div><label>Total Amount Due:</label><span id="totalAmountDue"></span></div>
-                        </div>
-                    </div>
-                    <div class="table-section">
-                        <h3>General Ledger Entries</h3>
-                        <table class="details-table">
-                            <thead>
-                                <tr>
-                                    <th>Rec No.</th><th>Account Code</th><th>Particulars</th><th>RC Code</th><th>SL Type</th><th>SL Code</th>
-                                    <th>VAT Code</th><th>ATC Code</th><th class="text-right">Debit</th><th class="text-right">Credit</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dt2TableBody"></tbody>
-                            <tfoot>
-                                <tr><th colspan="8" class="text-right">Total Debit:</th><th class="text-right" id="totalDebitGL"></th><th></th></tr>
-                                <tr><th colspan="8" class="text-right">Total Credit:</th><th></th><th class="text-right" id="totalCreditGL"></th></tr>
-                                <tr><th colspan="8" class="text-right">Balance:</th><th class="text-right" colspan="2" id="glBalance"></th></tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    <div class="remarks-section">
-                        <label>Remarks:</label>
-                        <p id="remarks"></p>
-                    </div>
-                    <div class="footer-signatures">
-                        <div><span class="signature-line"></span><span>Prepared By</span></div>
-                        <div><span class="signature-line"></span><span>Checked By</span></div>
-                        <div><span class="signature-line"></span><span>Approved By</span></div>
-                    </div>
-                </div>
-                <script>
-                    // Helper functions (same as in your main component)
-                    function formatCurrency(amount) {
-                        if (amount === null || amount === undefined) return '';
-                        const num = parseFloat(amount);
-                        if (isNaN(num)) return '';
-                        return num.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
-                    }
-                    function formatDate(isoString) {
-                        if (!isoString) return '';
-                        const date = new Date(isoString);
-                        if (isNaN(date.getTime())) return '';
-                        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                    }
-
-                    // Function to populate the print form
-                    function populatePrintForm(printData) {
-                        document.getElementById('sviNo').textContent = printData.sviNo || '';
-                        document.getElementById('sviDate').textContent = formatDate(printData.sviDate);
-                        document.getElementById('branchCode').textContent = printData.branchCode || '';
-                        document.getElementById('custCode').textContent = printData.custCode || '';
-                        document.getElementById('custName').textContent = printData.custName || '';
-                        document.getElementById('refDocNo1').textContent = printData.refDocNo1 || 'N/A';
-                        document.getElementById('refDocNo2').textContent = printData.refDocNo2 || 'N/A';
-                        document.getElementById('currCode').textContent = printData.currCode || '';
-                        document.getElementById('currRate').textContent = printData.currRate !== null ? printData.currRate.toFixed(6) : '';
-                        document.getElementById('sviTranType').textContent = printData.svitranType || '';
-                        document.getElementById('billTermCode').textContent = printData.billtermCode || '';
-                        document.getElementById('remarks').textContent = printData.remarks || 'None';
-
-                        const dt1Body = document.getElementById('dt1TableBody');
-                        dt1Body.innerHTML = '';
-                        if (printData.dt1 && printData.dt1.length > 0) {
-                            printData.dt1.forEach(item => {
-                                const row = dt1Body.insertRow();
-                                row.insertCell().textContent = item.lnNo || '';
-                                row.insertCell().textContent = item.billCode || '';
-                                row.insertCell().textContent = item.billName || '';
-                                row.insertCell().textContent = item.uomCode || '';
-                                row.insertCell().textContent = item.quantity !== null ? parseFloat(item.quantity).toFixed(2) : '';
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.unitPrice);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.grossAmount);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.discAmount);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.netDisc);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.vatAmount);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.atcAmount);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.sviAmount);
-                            });
-                        } else {
-                            const row = dt1Body.insertRow();
-                            const cell = row.insertCell();
-                            cell.colSpan = 12;
-                            cell.textContent = "No invoice details found.";
-                            cell.classList.add('text-center');
-                            cell.style.fontStyle = 'italic';
-                            cell.style.color = '#888';
-                        }
-
-                        const dt2Body = document.getElementById('dt2TableBody');
-                        dt2Body.innerHTML = '';
-                        let totalDebitGL = 0;
-                        let totalCreditGL = 0;
-                        if (printData.dt2 && printData.dt2.length > 0) {
-                            printData.dt2.forEach(item => {
-                                const row = dt2Body.insertRow();
-                                row.insertCell().textContent = item.recNo || '';
-                                row.insertCell().textContent = item.acctCode || '';
-                                row.insertCell().textContent = item.particular || '';
-                                row.insertCell().textContent = item.rcCode || '';
-                                row.insertCell().textContent = item.sltypeCode || '';
-                                row.insertCell().textContent = item.slCode || '';
-                                row.insertCell().textContent = item.vatCode || '';
-                                row.insertCell().textContent = item.atcCode || '';
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.debit);
-                                row.insertCell().classList.add('text-right');
-                                row.insertCell().textContent = formatCurrency(item.credit);
-                                totalDebitGL += (item.debit || 0);
-                                totalCreditGL += (item.credit || 0);
-                            });
-                        } else {
-                            const row = dt2Body.insertRow();
-                            const cell = row.insertCell();
-                            cell.colSpan = 10;
-                            cell.textContent = "No GL entries found.";
-                            cell.classList.add('text-center');
-                            cell.style.fontStyle = 'italic';
-                            cell.style.color = '#888';
-                        }
-
-                        document.getElementById('totalGrossAmount').textContent = formatCurrency(printData.totalGrossAmount);
-                        document.getElementById('totalDiscountAmount').textContent = formatCurrency(printData.totalDiscountAmount);
-                        document.getElementById('totalNetAmount').textContent = formatCurrency(printData.totalNetAmount);
-                        document.getElementById('totalVatAmount').textContent = formatCurrency(printData.totalVatAmount);
-                        document.getElementById('totalAtcAmount').textContent = formatCurrency(printData.totalAtcAmount);
-                        document.getElementById('totalAmountDue').textContent = formatCurrency(printData.totalAmountDue);
-                        document.getElementById('totalDebitGL').textContent = formatCurrency(totalDebitGL);
-                        document.getElementById('totalCreditGL').textContent = formatCurrency(totalCreditGL);
-                        document.getElementById('glBalance').textContent = formatCurrency(totalDebitGL - totalCreditGL);
-                    }
-
-                    // Get the data from the opener window (your main app)
-                    const transactionData = window.opener.getSVIDataForPrint();
-                    if (transactionData) {
-                        populatePrintForm(transactionData);
-                        // Give the browser a moment to render before printing
-                        setTimeout(() => {
-                            window.print();
-                            // Close the print window after printing
-                            window.onafterprint = () => window.close();
-                        }, 500);
-                    } else {
-                        document.body.innerHTML = '<h1>Error: No SVI data to print.</h1>';
-                    }
-                </script>
-            </body>
-            </html>
-        `;
-
-        printWindow.document.write(printContent);
-        printWindow.document.close(); // Important: closes the document stream and forces rendering
-    };
-
-// ... then attach handlePrint to a button
-// <button onClick={handlePrint}>Print SVI</button>
-
-  const downloadPDFDirectly = async () => {
-    const response = await fetch('/api/printForm/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        docType,
-        branchCode,
-        documentNo
-      })
-    });
-    
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `APV_${documentNo}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-  };
 
   const printData = {
     apv_no: documentNo,
     branch: branchCode,
     doc_id: docType
   };
-
-  const handleSelectAPAccount = async (accountCode) => {
-    if (accountCode) {
-    try {
-      const coaResponse = await axios.post("http://127.0.0.1:8000/api/getCOA", { 
-        ACCT_CODE: accountCode 
-      });
-      
-      if (coaResponse.data.success) {
-        const coaData = JSON.parse(coaResponse.data.data[0].result);
-        setApAccountName(coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "");
-        setApAccountCode(coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "");
-        // Add REC_RC to the row data if available
-        const updatedRows = [...detailRows];
-        if (selectedRowIndex !== null) {
-          updatedRows[selectedRowIndex] = {
-            ...updatedRows[selectedRowIndex],
-            debitAcct: coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "",
-            REC_RC: coaData[0]?.REC_RC || 'N' // Default to 'N' if not specified
-          };
-          setDetailRows(updatedRows);
-        }
-      }
-    } catch (error) {
-      console.error("COA API error:", error);
-    }
-  }
-};
-
-  // SL Code Lookup Handler
-const handleSlLookup = async (slCode) => {
-  if (slCode) {
-    try {
-      const slResponse = await axios.post("http://127.0.0.1:8000/api/getSLMast", {
-        SL_CODE: slCode 
-      });
-      
-      if (slResponse.data.success) {
-        const slData = JSON.parse(slResponse.data.data[0].result);
-        return {
-          slCode: slData[0]?.slCode || slData[0]?.SL_CODE || "",
-          slName: slData[0]?.slName || slData[0]?.SL_NAME || ""
-        };
-      }
-    } catch (error) {
-      console.error("SL API error:", error);
-      return null;
-    }
-  }
-  return null;
-};
-
-// Payment Terms Lookup Handler
-const handlePaytermLookup = async (paytermCode) => {
-  if (paytermCode) {
-    try {
-      const paytermResponse = await axios.post("http://127.0.0.1:8000/api/getPayTerm", {
-        PAYTERM_CODE: paytermCode 
-      });
-      
-      if (paytermResponse.data.success) {
-        const paytermData = JSON.parse(paytermResponse.data.data[0].result);
-        return {
-          paytermCode: paytermData[0]?.paytermCode || paytermData[0]?.PAYTERM_CODE || "",
-          paytermName: paytermData[0]?.paytermName || paytermData[0]?.PAYTERM_NAME || "",
-          daysDue: paytermData[0]?.daysDue || paytermData[0]?.DAYS_DUE || 0
-        };
-      }
-    } catch (error) {
-      console.error("Payterm API error:", error);
-      return null;
-    }
-  }
-  return null;
-};
 
   const handleCloseCustModal = async (selectedData) => {
     if (!selectedData) {
@@ -2027,7 +1513,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   docType={docType} 
   pdfLink={pdfLink} 
   videoLink={videoLink}
-  onPrint={() => useHandlePrint(documentID,docType)}
+  // onPrint={() => useHandlePrint(documentID,docType)}
+  onPrint={handlePrint} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}

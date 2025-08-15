@@ -33,42 +33,6 @@ export const postRequest = async (endpoint, data = {}, config = {}) => {
 };
 
 
-export const printRequest = async (endpoint, data = {}, config = {}) => {
-  try {
-    const options = {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/pdf',
-        ...config.headers // merge any extra headers
-      },
-      body: JSON.stringify(data),
-      ...config // merge other config like credentials, mode, etc.
-    };
-
-    const response = await fetch(endpoint, options);
-
-    
-  if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to generate report: ${errorText}`);
-    }
-
-    const blob = await response.blob();
-    if (blob.type !== "application/pdf") {
-      const text = await blob.text();
-      throw new Error(`Expected PDF but got: ${text}`);
-    }
-
-    const fileURL = URL.createObjectURL(blob);
-    printWindow.location.href = fileURL;
-
-  } catch (error) {
-    console.error("API POST Error:", error);
-    throw error;
-  }
-};
-
 
 // No need for default export unless you want to export `apiClient`
 export default apiClient;
