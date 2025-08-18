@@ -265,7 +265,7 @@ import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCi
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
-const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel }) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel, onCopy }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { triggerReset } = useReset(); // Destructure triggerReset from useReset
@@ -290,23 +290,23 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
     }, []);
 
     const handleSave = () => {
-        setLoading(true);
+        // setLoading(true);
         console.log("Save button clicked");
         if (onSave) {
             onSave(); // Call the save handler from parent
         }
         // Simulate API call or processing time
-        setTimeout(() => setLoading(false), 1500);
+        // setTimeout(() => setLoading(false), 1500);
     };
 
     const handlePost = () => {
-        setLoading(true); // Assuming post also has a loading state
+        // setLoading(true); // Assuming post also has a loading state
         console.log("Post button clicked");
         if (onPost) {
             onPost(); // Call the post handler from parent
         }
         // Simulate API call or processing time
-        setTimeout(() => setLoading(false), 1500);
+        // setTimeout(() => setLoading(false), 1500);
     };
 
     const handleReset = () => {
@@ -314,7 +314,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         if (onReset) {
             onReset(); // Call the reset handler from parent
         }
-        triggerReset(); // Trigger the context reset
+        // triggerReset(); // Trigger the context reset
     };
 
     const handleCancel = () => {
@@ -323,7 +323,14 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         }
     };
 
-    
+
+    const handleCopy = () => {
+        if (onCopy) {
+            onCopy();
+        }
+    };
+
+
 
     const handlePDFGuide = () => {
         if (pdfLink) {
@@ -417,7 +424,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                     </button>
 
                     <button
-                        onClick={handleReset} // Assuming copy also triggers a reset or similar action for now
+                        onClick={handleCopy} // Assuming copy also triggers a reset or similar action for now
                         className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-purple-700 dark:hover:bg-purple-600"
                     >
                         <FontAwesomeIcon icon={faCopy} className="mr-2" />

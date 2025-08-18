@@ -12,11 +12,11 @@ import Swal from 'sweetalert2';
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+  // console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
-    console.log("Raw response from generateGL API:", response);
+    // console.log("Raw response from generateGL API:", response);
 
     if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
       let glEntries;
@@ -92,7 +92,7 @@ export const useTransactionUpsert = async (docCode, glData, updateState, idKey, 
 
         const payload = { json_data: glData };
 
-        console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
+        // console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
 
         const response = await postRequest("upsert" + docCode, JSON.stringify(payload));
 
@@ -306,7 +306,40 @@ printWindow.document.write(`
 
 
 
-export async function useHandleCancel(documentID, docCode) {
 
+export async function useHandleCancel(docCode, documentID, userCode, reason, updateState) {
+  const payload = {
+    json_data: {
+      docCode,
+      documentID,
+      userCode,
+      reason,
+    },
+  };
 
+  updateState({ isLoading: true });
+
+  try {
+    const response = await postRequest("cancel" + docCode, JSON.stringify(payload));
+
+      if (response?.status === "success") {
+        return { success: true, message: `${docCode} cancelled successfully!`, data: response };
+      } else {
+        return { success: false, message: response?.message || "Failed to cancel transaction" };
+      }
+
+  } catch (error) {
+    console.error("Error cancelling transaction:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Cancel Failed",
+      text: error.message || "An error occurred while cancelling the transaction",
+    });
+  } finally {
+    updateState({
+      isSaveDisabled: false,
+      isResetDisabled: false,
+      isLoading: false,
+    });
+  }
 }

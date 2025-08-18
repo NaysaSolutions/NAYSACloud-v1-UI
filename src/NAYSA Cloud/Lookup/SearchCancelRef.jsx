@@ -1,22 +1,23 @@
 import React, { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
-const CancelTranModal = ({ isOpen, onClose, customParam }) => {
-  const [loading, setLoading] = useState(false);
+const CancelTranModal = ({ isOpen, onClose }) => {
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      alert("Document cancelled successfully!");
-      onClose(); // close modal after success
-    }, 1500);
+  const handleSubmit = (confirmation) => {
+    if (!reason.trim() || !password.trim()) {
+      setError("Reason and password are required.");
+      return;
+    }
+
+    setError("");
+    onClose(confirmation);
+    setReason("");
+    setPassword("");
   };
 
-  if (!isOpen) return null; // don't render when closed
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -49,26 +50,21 @@ const CancelTranModal = ({ isOpen, onClose, customParam }) => {
           />
         </div>
 
+        {/* Validation error */}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
         <div className="flex justify-end gap-2">
           <button
-            onClick={onClose} // close on cancel
+            onClick={() => onClose(false)} // pass false when cancelled
             className="px-4 py-1 border rounded-md text-sm hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+            onClick={() => handleSubmit({ reason })}
+            className="px-4 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
           >
-            {loading ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                Please wait...
-              </>
-            ) : (
-              "OK"
-            )}
+            OK
           </button>
         </div>
       </div>

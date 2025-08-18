@@ -52,6 +52,7 @@ import {
   useTransactionUpsert,
   useGenerateGLEntries,
   useHandlePrint,
+  useHandleCancel
 } from '@/NAYSA Cloud/Global/procedure';
 
 
@@ -84,6 +85,7 @@ const SVI = () => {
     documentDocLen: 8,
     documentID: null,
     documentNo: "",
+    documentStatus:"",
     status: "OPEN",
 
 
@@ -169,6 +171,7 @@ const SVI = () => {
   documentSeries,
   documentDocLen,
   documentID,
+  documentStatus,
   documentNo,
   status,
 
@@ -253,12 +256,16 @@ const SVI = () => {
 
   //Status Global Setup
   const displayStatus = status || 'OPEN';
-  let statusColor = 'global-tran-stat-text-open-ui';
-  if (displayStatus === 'FINALIZED') {
-    statusColor = 'global-tran-stat-text-finalized-ui';
-  } else if (['CANCELLED', 'CLOSED'].includes(displayStatus)) {
-    statusColor = 'global-tran-stat-text-closed-ui';
-  }
+  const statusMap = {
+    FINALIZED: "global-tran-stat-text-finalized-ui",
+    CANCELLED: "global-tran-stat-text-closed-ui",
+    CLOSED: "global-tran-stat-text-closed-ui",
+  };
+  const statusColor = statusMap[displayStatus] || "";
+  const isFormDisabled = ["FINALIZED", "CANCELLED", "CLOSED"].includes(displayStatus);
+  
+
+
 
   const [totals, setTotals] = useState({
   totalGrossAmount: '0.00',
@@ -553,6 +560,8 @@ const fetchTranData = async (sviNo,branchCode) => {
 
                 // Retrieve Header Info
                 updateState({
+                    documentStatus:data.sviStatus,
+                    status:data.docStatus,
                     documentID: data.sviId,
                     documentNo: data.sviNo,
                     branchCode: data.branchCode,
@@ -564,7 +573,7 @@ const fetchTranData = async (sviNo,branchCode) => {
                     refDocNo2: data.refDocNo2,
                     currCode: data.currCode,
                     currName: data.currName,
-                    currRate: data.currRate,
+                    currRate:formatNumber(data.currRate,6),
                     remarks: data.remarks,
                     billtermCode:data.billtermCode,
                     billtermName:data.billtermName,
@@ -612,6 +621,7 @@ const fetchTranData = async (sviNo,branchCode) => {
     }
 };
 
+
 const handleSviNoBlur = () => {
     if (!state.documentID && state.documentNo && state.branchCode) { 
         fetchTranData(state.documentNo,state.branchCode);
@@ -620,6 +630,7 @@ const handleSviNoBlur = () => {
 
 
  const handleActivityOption = async (action) => {
+  if (documentStatus === '') {
    
   updateState({ isLoading: true });
 
@@ -746,6 +757,7 @@ const handleSviNoBlur = () => {
             updateState({ isLoading: false });
         }
     }
+  }
 
 };
 
@@ -887,9 +899,22 @@ const handlePrint = async () => {
 
 
 const handleCancel = async () => {
-   updateState({ showCancelModal: true });
+  if (documentID && (documentStatus === '')) {
+    updateState({ showCancelModal: true });
+  }
 };
 
+
+
+const handleCopy = async () => {
+  if (documentID ) {
+    updateState({ documentNo:"",
+                  documentID:"",
+                  documentStatus:"",
+                  status:"OPEN"
+     });
+  }
+};
 
 
 
@@ -899,6 +924,7 @@ const handleCancel = async () => {
     branch: branchCode,
     doc_id: docType
   };
+
 
   const handleCloseCustModal = async (selectedData) => {
     if (!selectedData) {
@@ -1290,7 +1316,20 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
-  const handleCloseCancel = async () => {
+  const handleCloseCancel = async (confirmation) => {
+    if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
+
+      const result = await useHandleCancel(docType,documentID,"NSI",confirmation.reason,updateState);
+      if (result.success) 
+      {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: result.message,
+        });       
+      } 
+     await fetchTranData(documentNo,branchCode);
+    }
     updateState({showCancelModal: false});
 };
 
@@ -1433,12 +1472,12 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   docType={docType} 
   pdfLink={pdfLink} 
   videoLink={videoLink}
-  // onPrint={() => useHandlePrint(documentID,docType)}
   onPrint={handlePrint} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
   onCancel={handleCancel} 
+  onCopy={handleCopy} 
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
 />
@@ -1510,6 +1549,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
+                        disabled={isFormDisabled} 
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1554,6 +1594,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         className="peer global-tran-textbox-ui"
                         value={header.svi_date}
                         onChange={(e) => setHeader((prev) => ({ ...prev, svi_date: e.target.value }))}
+                        disabled={isFormDisabled} 
                     />
                     <label htmlFor="SVIDate" className="global-tran-floating-label">SVI Date</label>
                 </div>
@@ -1578,6 +1619,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
+                        disabled={isFormDisabled} 
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1599,7 +1641,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         className="peer global-tran-textbox-ui"
                         value={selectedSVIType}
                         onChange={(e) => setSelectedSVIType(e.target.value)}
-                        disabled={sviTypes.length === 0}
+                        disabled={isFormDisabled} 
                     >
                         {sviTypes.length > 0 ?
                         (
@@ -1635,15 +1677,17 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
+                        disabled={isFormDisabled} 
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
                 </div>
 
                 <div className="relative">
-                    <input type="text" id="attention" placeholder=" " value={attention} className="peer global-tran-textbox-ui"/>
+                    <input type="text" id="attention" placeholder=" " value={attention} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
                     <label htmlFor="attention" className="global-tran-floating-label">Attention</label>
                 </div>
+
 
                 {/* NEW FLEX CONTAINER FOR CURRENCY AND CURRENCY RATE */}
                 <div className="flex space-x-4"> {/* Added flex container with spacing */}
@@ -1667,6 +1711,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 ? "global-tran-textbox-button-search-disabled-ui"
                                 : "global-tran-textbox-button-search-enabled-ui"
                             } global-tran-textbox-button-search-ui`}
+                            disabled={isFormDisabled} 
                         >
                             <FontAwesomeIcon icon={faMagnifyingGlass} />
                         </button>
@@ -1683,7 +1728,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                               withCurr3:glCurrMode === "T"
                                              })}
                             placeholder=" "
-                            className="peer global-tran-textbox-ui text-right"/>
+                            className="peer global-tran-textbox-ui text-right" disabled={isFormDisabled} />
+                            
                         <label htmlFor="currName" className="global-tran-floating-label"> Currency Rate
                         </label>
                     </div>
@@ -1693,12 +1739,12 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
             {/* Column 3 */}
             <div className="global-tran-textbox-group-div-ui">
                 <div className="relative">
-                    <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui"/>
+                    <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} />
                     <label htmlFor="refDocNo1" className="global-tran-floating-label">Ref Doc No. 1</label>
                 </div>
 
                 <div className="relative">
-                    <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui"/>
+                    <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
                     <label htmlFor="refDocNo2" className="global-tran-floating-label">Ref Doc No. 2</label>
                 </div>
 
@@ -1706,6 +1752,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     <input type="date"
                         id="fromDate" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
                         className="peer global-tran-textbox-ui"
+                        disabled={isFormDisabled} 
                     />
                     <label htmlFor="fromDate" className="global-tran-floating-label">From Date</label>
                 </div>
@@ -1714,6 +1761,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     <input type="date"
                         id="toDate" value={toDate} onChange={(e) => setToDate(e.target.value)}
                         className="peer global-tran-textbox-ui"
+                        disabled={isFormDisabled} 
                     />
                     <label htmlFor="toDate" className="global-tran-floating-label">To Date</label>
                 </div>
@@ -1729,6 +1777,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         className="peer global-tran-textbox-remarks-ui pt-2"
                         value={remarks}
                         onChange={(e) => updateState({ remarks: e.target.value })}
+                        disabled={isFormDisabled} 
                     />
                     <label
                         htmlFor="remarks"
@@ -1783,7 +1832,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 </div>
       
       {/* APV Detail Section */}
-      <div id="apv_dtl" className="global-tran-tab-div-ui">
+      <div id="apv_dtl" className="global-tran-tab-div-ui" >
 
       {/* Tab Navigation */}
       <div className="global-tran-tab-nav-ui">
@@ -1800,17 +1849,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
         >
           Invoice Details
         </button>
-      </div>
-
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <button
-          // onClick={handleAddRow}
-          className="global-tran-button-lookup"
-        >
-          Get Reference RR
-        </button>
-        
       </div>
     </div>
 
@@ -1842,9 +1880,19 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
           <th className="global-tran-th-ui">AR Account</th>
           <th className="global-tran-th-ui">VAT Account</th>
           <th className="global-tran-th-ui">Discount Account</th>
-          <th className="global-tran-th-ui">RC Code</th>        
-          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
-          <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
+          <th className="global-tran-th-ui">RC Code</th> 
+                 
+         {!isFormDisabled && (
+          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+            Add
+          </th>
+        )}
+
+        {!isFormDisabled && (
+          <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+            Delete
+          </th>
+        )}
         </tr>
       </thead>
 
@@ -1866,6 +1914,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 value={row.billCode || ""}
                 readOnly
               />
+              {!isFormDisabled && (
               <FontAwesomeIcon 
                 icon={faMagnifyingGlass} 
                 className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -1874,7 +1923,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   updateState({ showBillCodeModal: true }); 
               
                 }}
-              />
+                
+              />)}
             </div>
           </td>
 
@@ -2098,7 +2148,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.vatCode || ""}
                   readOnly
                 />
-            
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2107,7 +2157,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                   showVatModal: true,
                                   accountModalSource: "vatCode" }); 
                   }}
-                />
+                />)}
               </div>
             </td>
 
@@ -2137,6 +2187,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.atcCode || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2145,7 +2196,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                   showAtcModal: true,
                                   accountModalSource: "atcCode" }); 
                   }}
-                />
+                />)}
               </div>
             </td>
 
@@ -2187,6 +2238,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.salesAcct || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2197,7 +2249,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
                   
                   }}
-                />
+                />)}
               </div>
             </td>
          
@@ -2209,6 +2261,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.arAcct || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2217,7 +2270,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 showAccountModal: true,
                                 accountModalSource: "arAcct" }); 
                   }}
-                />
+                />)}
               </div>
             </td>
 
@@ -2230,6 +2283,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.vatAcct || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2238,7 +2292,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 showAccountModal: true,
                                 accountModalSource: "vatAcct" }); 
                   }}
-                />
+                />)}
               </div>
             </td>
 
@@ -2250,6 +2304,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.discAcct || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2258,7 +2313,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 showAccountModal: true,
                                 accountModalSource: "discAcct" }); 
                   }}
-                />
+                />)}
               </div>
             </td>
  
@@ -2270,6 +2325,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   value={row.rcCode || ""}
                   readOnly
                 />
+                {!isFormDisabled && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2278,29 +2334,33 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 showRcModal: true,
                                 accountModalSource: "rcCode"}); 
                   }}
-                />
+                />)}
               </div>
             </td>
+            
 
+            {!isFormDisabled && (
             <td className="global-tran-td-ui text-center sticky right-12">
-                          <button
-                            className="global-tran-td-button-add-ui"
-                            onClick={() => handleAddRow(index)}
-                            >
-                              {/* Add */}
-                               <FontAwesomeIcon icon={faPlus} />
-                            </button>
-                        </td>
-                        <td className="global-tran-td-ui text-center sticky right-0">
-                          <button
-                            className="global-tran-td-button-delete-ui"
-                            onClick={() => handleDeleteRow(index)}
-                            
-                            >
-                              {/* Delete                  */}
-                              <FontAwesomeIcon icon={faMinus} />
-                            </button>
-                        </td>
+              <button
+                className="global-tran-td-button-add-ui"
+                onClick={() => handleAddRow(index)}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+            </td>
+          )}
+
+          {!isFormDisabled && (
+            <td className="global-tran-td-ui text-center sticky right-0">
+              <button
+                className="global-tran-td-button-delete-ui"
+                onClick={() => handleDeleteRow(index)}
+              >
+                <FontAwesomeIcon icon={faMinus} />
+              </button>
+            </td>
+          )}
+                    
           </tr>
         ))}
       </tbody>
@@ -2313,15 +2373,19 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
  {/* Invoice Details Footer */}
  <div className="global-tran-tab-footer-main-div-ui">
 
+
 {/* Add Button */}
 <div className="global-tran-tab-footer-button-div-ui">
   <button
      onClick={() =>handleAddRow()}
-    className="global-tran-tab-footer-button-add-ui"
+     className="global-tran-tab-footer-button-add-ui"
+     style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
   >
     <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
   </button>
 </div>
+
+
 
 {/* Totals Section */}
 <div className="global-tran-tab-footer-total-main-div-ui">
@@ -2398,6 +2462,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
           onClick={() => handleActivityOption("GenerateGL")}
           className="global-tran-button-generateGL"
           disabled={isLoading} // Optionally disable button while loading
+          style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
         >
           {isLoading ? 'Generating...' : 'Generate GL Entries'}
         </button>
@@ -2433,8 +2498,18 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
             <th className="global-tran-th-ui">SL Ref. No.</th>
             <th className="global-tran-th-ui">SL Ref. Date</th>
             <th className="global-tran-th-ui">Remarks</th>
-            <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
-            <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
+            
+            {!isFormDisabled && (
+              <>
+                <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+                  Add
+                </th>
+                <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+                  Delete
+                </th>
+              </>
+            )}
+
           </tr>
         </thead>
         <tbody className="relative">
@@ -2452,6 +2527,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     onChange={(e) => handleDetailChangeGL(index, 'acctCode', e.target.value)}      
       
                   />
+                  {!isFormDisabled && (
                   <FontAwesomeIcon 
                     icon={faMagnifyingGlass} 
                     className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2462,7 +2538,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             accountModalSource: "acctCode" 
                         });
                     }}
-                  />
+                  />)}
                 </div>
               </td>
 
@@ -2477,20 +2553,19 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         onChange={(e) => handleDetailChangeGL(index, 'rcCode', e.target.value)}
                         readOnly
                     />
-                    {(row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && ( 
-                        <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                            onClick={() => {
-                                if (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) { 
-                                    updateState({
-                                        selectedRowIndex: index,
-                                        showRcModal: true,
-                                    });
-                                }
-                            }}
-                        />
+                   {!isFormDisabled && (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && (
+                      <FontAwesomeIcon
+                        icon={faMagnifyingGlass}
+                        className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                        onClick={() => {
+                          updateState({
+                            selectedRowIndex: index,
+                            showRcModal: true,
+                          });
+                        }}
+                      />
                     )}
+
                 </div>
             </td>
 
@@ -2517,7 +2592,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                           readOnly
                       />
 
-                      {(row.slCode === "REQ SL" || row.slCode) && ( 
+                      {!isFormDisabled && (row.slCode === "REQ SL" || row.slCode) && ( 
                           <FontAwesomeIcon
                               icon={faMagnifyingGlass}
                               className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2556,7 +2631,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                           readOnly
                       />
 
-                      {row.vatCode && row.vatCode.length > 0 && (
+                      {!isFormDisabled && row.vatCode && row.vatCode.length > 0 && (
                           <FontAwesomeIcon
                             icon={faMagnifyingGlass}
                             className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2595,7 +2670,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                           readOnly
                       />
 
-                      {(row.atcCode !== "" || row.atcCode) && ( 
+                      {!isFormDisabled && (row.atcCode !== "" || row.atcCode) && ( 
                           <FontAwesomeIcon
                               icon={faMagnifyingGlass}
                               className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2712,24 +2787,28 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 />
              </td>
               
+             {!isFormDisabled && (
               <td className="global-tran-td-ui text-center sticky right-10">
                 <button
                   className="global-tran-td-button-add-ui"
                   onClick={() => handleAddRowGL(index)}
-                  >
-                    {/* Add */}
-                    <FontAwesomeIcon icon={faPlus} />
-                  </button>
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
               </td>
+            )}
+
+            {!isFormDisabled && (
               <td className="global-tran-td-ui text-center sticky right-0">
                 <button
-                  className="global-tran-td-button-delete-ui "
+                  className="global-tran-td-button-delete-ui"
                   onClick={() => handleDeleteRowGL(index)}
-                  >
-                    {/* Delete */}
-                    <FontAwesomeIcon icon={faMinus} />
-                  </button>
+                >
+                  <FontAwesomeIcon icon={faMinus} />
+                </button>
               </td>
+            )}
+
 
             </tr>
           ))}
@@ -2748,8 +2827,9 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
         <button
           onClick={handleAddRowGL}
           className="global-tran-tab-footer-button-add-ui"
+          style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
         >
-    <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
+        <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
         </button>
       </div>
 
@@ -2764,8 +2844,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
           Total Debit:
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-  {totalDebit}
-</label>
+      {totalDebit}
+      </label>
       </div>
 
       {/* Total Credit */}
@@ -2774,12 +2854,14 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
           Total Credit:
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-  {totalCredit}
-</label>
+      {totalCredit}
+      </label>
       </div>
     </div>
 
-    </div>
+    
+
+  </div>
 
 
 
