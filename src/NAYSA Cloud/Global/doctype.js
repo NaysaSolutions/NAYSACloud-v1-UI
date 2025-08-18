@@ -72,6 +72,11 @@ export const docTypeNames = {
 
 
 
+
+
+
+
+
   export const glAccountFilter = {
     ActiveAll: "ActiveAll",
     PayableAcct: "APGL",

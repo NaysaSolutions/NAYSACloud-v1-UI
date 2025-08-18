@@ -265,7 +265,7 @@ import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCi
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
-const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost }) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { triggerReset } = useReset(); // Destructure triggerReset from useReset
@@ -318,11 +318,12 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
     };
 
     const handleCancel = () => {
-        setCancelLoading(true);
-        console.log("Cancel button clicked");
-        // Simulate cancellation process
-        setTimeout(() => setCancelLoading(false), 1500);
+        if (onCancel) {
+            onCancel();
+        }
     };
+
+    
 
     const handlePDFGuide = () => {
         if (pdfLink) {
@@ -350,6 +351,9 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
             onPrint(printData);
         }
     };
+
+
+   
 
     return (
         <div className="fixed top-[55px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">

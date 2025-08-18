@@ -1,5 +1,8 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
+import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
+import Swal from 'sweetalert2';
 
 
 
@@ -301,3 +304,9 @@ printWindow.document.write(`
   }
 }
 
+
+
+export async function useHandleCancel(documentID, docCode) {
+
+
+}
