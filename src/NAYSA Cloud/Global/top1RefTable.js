@@ -273,7 +273,7 @@ export async function useTopAccountRow(acctCode) {
 
 
 
-export async function useTopCurrentRow(currCode) {
+export async function useTopCurrencyRow(currCode) {
   if (!currCode) return null;
 
   try {

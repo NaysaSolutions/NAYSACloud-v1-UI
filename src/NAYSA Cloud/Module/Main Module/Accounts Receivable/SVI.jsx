@@ -17,6 +17,7 @@ import SLMastLookupModal from "../../../Lookup/SearchSLMast.jsx";
 import BillTermLookupModal from "../../../Lookup/SearchBillTermRef.jsx";
 import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
+import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -37,7 +38,7 @@ import {
   useTopRCRow,
   useTopBillTermRow,
   useTopForexRate,
-  useTopCurrentRow,
+  useTopCurrencyRow,
   useTopHSOption,
   useTopCompanyRow,
   useTopDocControlRow,
@@ -51,14 +52,17 @@ import {
   useUpdateRowGLEntries,
   useTransactionUpsert,
   useGenerateGLEntries,
+  useUpdateRowEditEntries,
+  useFetchTranData,
   useHandlePrint,
-  useHandleCancel
+  useHandleCancel,
 } from '@/NAYSA Cloud/Global/procedure';
 
 
 import { 
   formatNumber,
-  parseFormattedNumber 
+  parseFormattedNumber,
+  useSwalshowSaveSuccessDialog,
 } from '@/NAYSA Cloud/Global/behavior';
 
 
@@ -77,6 +81,9 @@ const SVI = () => {
     glCurrDefault:"PHP",
     withCurr2:false,
     withCurr3:false,
+    glCurrGlobal1:"",
+    glCurrGlobal2:"",
+    glCurrGlobal3:"",
 
     
     // Document information
@@ -114,9 +121,10 @@ const SVI = () => {
     attention: "",
     
     // Currency information
-    currCode: "PHP",
-    currName: "Philippine Peso",
-    currRate: "1.000000",
+    currCode: "",
+    currName: "",
+    currRate: "",
+    defaultCurrRate:"1.000000",
 
 
     //Other Header Info
@@ -158,6 +166,7 @@ const SVI = () => {
     custModalOpen:false,
     billtermModalOpen:false,
     showCancelModal:false,
+    showAttachModal:false,
 
    });
 
@@ -189,11 +198,16 @@ const SVI = () => {
 
 
 
+
   // Currency
   glCurrMode,
   glCurrDefault,
   withCurr2,
   withCurr3,
+  glCurrGlobal1,
+  glCurrGlobal2,
+  glCurrGlobal3,
+  defaultCurrRate,
 
   // Transaction Header
   branchCode,
@@ -241,6 +255,10 @@ const SVI = () => {
   custModalOpen,
   billtermModalOpen,
   showCancelModal,
+  showAttachModal,
+
+
+
 } = state;
 
 
@@ -265,6 +283,7 @@ const SVI = () => {
   const isFormDisabled = ["FINALIZED", "CANCELLED", "CLOSED"].includes(displayStatus);
   
 
+  //Variables
 
 
   const [totals, setTotals] = useState({
@@ -304,11 +323,6 @@ const SVI = () => {
   };
 
 
-  
-  useEffect(() => {
-    handleReset();
-  }, []);
-
 
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
@@ -340,9 +354,13 @@ const SVI = () => {
 
 
 
+
   useEffect(() => {
-    loadCurrencyMode();
-  }, [currCode, glCurrMode, glCurrDefault]);
+  if (glCurrMode && glCurrDefault && currCode) {
+    loadCurrencyMode(glCurrMode, glCurrDefault, currCode);
+  }
+}, [glCurrMode, glCurrDefault, currCode]);
+
 
 
   useEffect(() => {
@@ -357,12 +375,14 @@ const SVI = () => {
 
 
   useEffect(() => {
-      updateState({ isDocNoDisabled: !!state.documentID });
+      updateState({isDocNoDisabled: !!state.documentID });
   }, [state.documentID]);
   
 
 
-
+  useEffect(() => {
+    handleReset();
+  }, []);
 
 
   
@@ -379,7 +399,6 @@ const SVI = () => {
 
   
   const handleReset = () => {
-
 
       loadDocDropDown();
       loadDocControl();
@@ -401,6 +420,8 @@ const SVI = () => {
       documentID: "",
       detailRows: [],
       detailRowsGL:[],
+      documentStatus:"",
+      
       
       // UI state
       activeTab: "basic",
@@ -411,50 +432,54 @@ const SVI = () => {
       isSaveDisabled: false,
       isResetDisabled: false,
       isFetchDisabled: false,
+      status:"Open"
 
     });
       updateTotalsDisplay (0, 0, 0, 0, 0, 0)
   };
 
-
-  const loadCompanyData = async () => {
-      const data = await useTopCompanyRow();
-      if(data){
-      updateState({
-      currCode:data.currCode,
-      currName:data.currName,
-      currRate:formatNumber(data.currRate,6)
-        });
-      }
-
-      const hsOption = await useTopHSOption();
-      if(hsOption){
-        updateState({
-          glCurrMode:hsOption.glCurrMode,
-          glCurrDefault:hsOption.glCurrDefault
-        });
-
-      loadCurrencyMode();
-
-      };
-  };
-
-
-
-  const loadCurrencyMode = () => {
+const loadCompanyData = async () => {
+  const hsOption = await useTopHSOption();
+  if (hsOption) {
     updateState({
-      withCurr2:
-        (glCurrMode === "M" && glCurrDefault !== currCode) ||
-         glCurrMode === "D",
-      withCurr3: glCurrMode === "T",
+      glCurrMode: hsOption.glCurrMode,
+      glCurrDefault: hsOption.glCurrDefault,
+      currCode: hsOption.glCurrDefault,
+      glCurrGlobal1:hsOption.glCurrGlobal1,
+      glCurrGlobal2:hsOption.glCurrGlobal2,
+      glCurrGlobal3:hsOption.glCurrGlobal3,
     });
-  };
+
+    const curr = await useTopCurrencyRow(hsOption.glCurrDefault);
+    if (curr) {
+      updateState({
+        currName: curr.currName,
+        currRate: formatNumber(1, 6)
+      });
+    }
+  }
+};
 
 
 
+const loadCurrencyMode = (
 
+      mode = glCurrMode,
+      defaultCurr = glCurrDefault,
+      curr = currCode
+    ) => {
 
-  
+    const calcWithCurr3 = mode === "T";
+    const calcWithCurr2 = (mode === "M" && defaultCurr !== curr) || mode === "D" || calcWithCurr3;
+
+      updateState({
+        glCurrMode: mode,
+        withCurr2: calcWithCurr2,
+        withCurr3: calcWithCurr3,
+      });
+
+};
+
   const loadDocControl = async () => {
       const data = await useTopDocControlRow(docType);
       if(data){
@@ -481,155 +506,123 @@ const SVI = () => {
 
 
 
+const fetchTranData = async (documentNo, branchCode) => {
+  const resetState = () => {
+    updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
+    updateTotals([]);
+  };
 
+  updateState({ isLoading: true });
 
-const fetchTranData = async (sviNo,branchCode) => {
+  try {
+    const data = await useFetchTranData(documentNo, branchCode,docType,"sviNo");
+
+    if (!data?.sviId) {
+      Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
+      return resetState();
+    }
+
+    // Format header date
+    let sviDateForHeader = '';
+    if (data.sviDate) {
+      const d = new Date(data.sviDate);
+      sviDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
+    }
+
+    // Format rows
+    const retrievedDetailRows = (data.dt1 || []).map(item => ({
+      ...item,
+      quantity: formatNumber(item.quantity),
+      unitPrice: formatNumber(item.unitPrice),
+      grossAmount: formatNumber(item.grossAmount),
+      discRate: formatNumber(item.discRate),
+      discAmount: formatNumber(item.discAmount),
+      netDisc: formatNumber(item.netDisc),
+      vatAmount: formatNumber(item.vatAmount),
+      atcAmount: formatNumber(item.atcAmount),
+      sviAmount: formatNumber(item.sviAmount),
+    }));
+
+    const formattedGLRows = (data.dt2 || []).map(glRow => ({
+      ...glRow,
+      debit: formatNumber(glRow.debit),
+      credit: formatNumber(glRow.credit),
+      debitFx1: formatNumber(glRow.debitFx1),
+      creditFx1: formatNumber(glRow.creditFx1),
+      debitFx2: formatNumber(glRow.debitFx2),
+      creditFx2: formatNumber(glRow.creditFx2),
+    }));
+
+    // Update state with fetched data
+    updateState({
+      documentStatus: data.sviStatus,
+      status: data.docStatus,
+      documentID: data.sviId,
+      documentNo: data.sviNo,
+      branchCode: data.branchCode,
+      header: { svi_date: sviDateForHeader },
+      selectedSVIType: data.svitranType,
+      custCode: data.custCode,
+      custName: data.custName,
+      refDocNo1: data.refDocNo1,
+      refDocNo2: data.refDocNo2,
+      currCode: data.currCode,
+      currName: data.currName,
+      currRate: formatNumber(data.currRate, 6),
+      remarks: data.remarks,
+      billtermCode: data.billtermCode,
+      billtermName: data.billtermName,
+      detailRows: retrievedDetailRows,
+      detailRowsGL: formattedGLRows,
+      isDocNoDisabled: true,
+      isFetchDisabled: true,
+    });
+
    
+    updateTotals(retrievedDetailRows);
 
-    if (!sviNo || !branchCode) {
-        console.warn("SVI No. or Branch Code missing. Cannot fetch data.");
-        return;
-    }
-
-
-    updateState({ isLoading: true });
-    try {
-        const response = await fetchData(`getSVI?sviNo=${sviNo}&branchCode=${branchCode}`);
-        //console.log("API Response:", response);
-
-        if (response?.success && response.data && response.data.length > 0) {
-            let data;
-            try {
-                data = JSON.parse(response.data[0].result);
-                //console.log("Parsed SVI Data (from SPROC result):", data);
-            } catch (parseError) {
-                console.error("JSON.parse error on response.data[0].result:", parseError);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Data Format Error',
-                    text: 'Received malformed data from the server. Please contact support.',
-                });
-                updateState({ documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
-                updateTotals([]);
-                return;
-            }
-
-            if (data && data.sviId) {
-                let sviDateForHeader = '';
-                if (data.sviDate) {
-                    const dateObj = new Date(data.sviDate);
-                    if (!isNaN(dateObj.getTime())) {
-                        sviDateForHeader = dateObj.toISOString().split("T")[0];
-                    } else {
-                        console.warn(`Invalid sviDate value received from API: "${data.sviDate}". Setting svi_date to empty string.`);
-                    }
-                } else {
-                    console.warn("sviDate property is missing from fetched SVI data. Setting svi_date to empty string.");
-                }
-
-
-                // Format Detail1 Number Field
-                const retrievedDetailRows = (data.dt1 || []).map(item => ({
-                    ...item,
-                    quantity: formatNumber(item.quantity),
-                    unitPrice: formatNumber(item.unitPrice),
-                    grossAmount: formatNumber(item.grossAmount),
-                    discRate: formatNumber(item.discRate), 
-                    discAmount: formatNumber(item.discAmount),
-                    netDisc: formatNumber(item.netDisc),
-                    vatAmount: formatNumber(item.vatAmount),
-                    atcAmount: formatNumber(item.atcAmount),
-                    sviAmount: formatNumber(item.sviAmount),
-                }));
-                // console.log("Retrieved Detail Rows (dt1):", retrievedDetailRows);
-
-
-                // Format Detail2 Number Field
-                const formattedGLRows = (data.dt2 || []).map(glRow => ({
-                    ...glRow,
-                    debit: formatNumber(glRow.debit),
-                    credit: formatNumber(glRow.credit),
-                    debitFx1: formatNumber(glRow.debitFx1), 
-                    creditFx1: formatNumber(glRow.creditFx1),
-                    debitFx2: formatNumber(glRow.debitFx2),
-                    creditFx2: formatNumber(glRow.creditFx2),
-                }));
-                // console.log("Formatted GL Entries (dt2):", formattedGLRows);
-
-                
-
-                // Retrieve Header Info
-                updateState({
-                    documentStatus:data.sviStatus,
-                    status:data.docStatus,
-                    documentID: data.sviId,
-                    documentNo: data.sviNo,
-                    branchCode: data.branchCode,
-                    header: { svi_date: sviDateForHeader },
-                    selectedSVIType: data.svitranType,
-                    custCode: data.custCode,
-                    custName: data.custName,
-                    refDocNo1: data.refDocNo1,
-                    refDocNo2: data.refDocNo2,
-                    currCode: data.currCode,
-                    currName: data.currName,
-                    currRate:formatNumber(data.currRate,6),
-                    remarks: data.remarks,
-                    billtermCode:data.billtermCode,
-                    billtermName:data.billtermName,
-                    detailRows: retrievedDetailRows,
-                    detailRowsGL: formattedGLRows, 
-                    isDocNoDisabled: true,
-                    isFetchDisabled: true,
-                });
-
-                 
-                // Update Detail1 Total
-                updateTotals(retrievedDetailRows); 
-            } 
-            else {
-                console.warn("API response successful, but parsed SVI data was empty or did not contain a valid SVI record.");
-                Swal.fire({
-                    icon: 'info',
-                    title: 'No Records Found',
-                    text: 'Transaction does not exist.',
-                });
-                updateState({ documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
-                updateTotals([]);
-            }
-        } else {
-            console.warn("API response did not indicate success or returned no data.");
-            Swal.fire({
-                icon: 'info',
-                title: 'No Records Found',
-                text: 'Transaction does not exist.',
-            });
-            updateState({ documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
-            updateTotals([]);
-        }
-    } catch (error) {
-        console.error("Error fetching SVI data:", error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Fetch Error',
-            text: error.message || 'An unexpected error occurred while fetching SVI data. Please try again.',
-        });
-        updateState({ documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
-        updateTotals([]);
-    } finally {
-        updateState({ isLoading: false });
-    }
+  } catch (error) {
+    console.error("Error fetching transaction data:", error);
+    Swal.fire({ icon: 'error', title: 'Fetch Error', text: error.message });
+    resetState();
+  } finally {
+    updateState({ isLoading: false });
+  }
 };
 
 
 const handleSviNoBlur = () => {
+
     if (!state.documentID && state.documentNo && state.branchCode) { 
         fetchTranData(state.documentNo,state.branchCode);
     }
 };
 
 
+
+
+const handleCurrRateNoBlur = (e) => {
+  
+  const num = formatNumber(e.target.value, 6);
+  updateState({ 
+        currRate: isNaN(num) ? "0.000000" : num,  
+        withCurr2:((glCurrMode === "M" && glCurrDefault !== currCode) || glCurrMode === "D"),
+        withCurr3:glCurrMode === "T"
+        })
+
+};
+
+
+
+
  const handleActivityOption = async (action) => {
+   
+    if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+
+
   if (documentStatus === '') {
    
   updateState({ isLoading: true });
@@ -672,7 +665,7 @@ const handleSviNoBlur = () => {
       fromDate: fromDate,
       toDate: toDate,
       currCode: currCode || "PHP",
-      currRate: parseFormattedNumber(currRate) || 1,
+      currRate: parseFormattedNumber(currRate),
       remarks: remarks|| "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
@@ -717,8 +710,8 @@ const handleSviNoBlur = () => {
           creditFx1: parseFormattedNumber(entry.creditFx1 || 0),
           debitFx2: parseFormattedNumber(entry.debitFx2 || 0),
           creditFx2: parseFormattedNumber(entry.creditFx2 || 0),
-          slrefNo: entry.slRefNo || "",
-          slrefDate: entry.slrefDate ? new Date(entry.slrefDate).toISOString().split("T")[0] : null,
+          slRefNo: entry.slRefNo || "",
+          slRefDate: entry.slRefDate ? new Date(entry.slRefDate).toISOString().split("T")[0] : null,
           remarks: entry.remarks || "",
           dt1Lineno: entry.dt1Lineno || ""
         }))
@@ -729,7 +722,7 @@ const handleSviNoBlur = () => {
             const newGlEntries = await useGenerateGLEntries(docType, glData);
 
             if (newGlEntries) {
-                console.log("Successfully generated GL entries:", newGlEntries);
+                //console.log("Successfully generated GL entries:", newGlEntries);
                 updateState({ detailRowsGL: newGlEntries });
             } else {
                 console.warn("GL entries generation failed or returned no data.");
@@ -746,16 +739,18 @@ const handleSviNoBlur = () => {
 
     if (action === "Upsert") {
         try {
-                console.log("Upsert Data:",glData);
+            //console.log("Upsert Data:",glData);
             const response = await useTransactionUpsert(docType, glData, updateState, 'sviId', 'sviNo');
-            if (response) { 
-                console.log("Successfully Save Transaction:");
-            }
+             if (response ) { 
+            useSwalshowSaveSuccessDialog(() => { handleReset() }, () => { handlePrint() });
+             }
         } catch (error) {
             console.error("Error during transaction upsert:", error);
         } finally {
-            updateState({ isLoading: false });
+            updateState({ isLoading: false});
         }
+
+        updateState({isDocNoDisabled: true,isFetchDisabled: true,});
     }
   }
 
@@ -891,6 +886,11 @@ const handleAddRowGL = () => {
 
 
 const handlePrint = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+
   updateState({ showSpinner: true });
   await useHandlePrint(documentID, docType);
   updateState({ showSpinner: false });
@@ -899,6 +899,11 @@ const handlePrint = async () => {
 
 
 const handleCancel = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+
   if (documentID && (documentStatus === '')) {
     updateState({ showCancelModal: true });
   }
@@ -906,7 +911,27 @@ const handleCancel = async () => {
 
 
 
+
+const handleAttach = async () => {
+//  if (!detailRows || detailRows.length === 0) {
+//       return;
+//       }
+
+
+//   if (documentID ) {
+    updateState({ showAttachModal: true });
+  // }
+};
+
+
+
+
 const handleCopy = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+
   if (documentID ) {
     updateState({ documentNo:"",
                   documentID:"",
@@ -1032,7 +1057,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       ...updatedRows[index],
       [field]: value,
     }
-
+   
      const row = updatedRows[index];
 
       if (field === 'vatCode') {
@@ -1137,7 +1162,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       if (field === 'discAmount') {
         const newDiscAmt = parseFormattedNumber(row.discAmount) || 0;
         const newGrossAmt = +(origQuantity * origUnitPrice).toFixed(2);
-        const newDiscRate = +(newDiscAmt / newGrossAmt * 100).toFixed(2);
+        const newDiscRate = +((newDiscAmt / newGrossAmt) * 100).toFixed(2);
         row.discRate = newDiscRate.toFixed(2);
         await recalcRow(newGrossAmt, newDiscAmt);
       }
@@ -1172,6 +1197,8 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 };
 
+
+
 const handleDetailChangeGL = async (index, field, value) => {
     const updatedRowsGL = [...state.detailRowsGL];
     let row = { ...updatedRowsGL[index] };
@@ -1192,65 +1219,81 @@ const handleDetailChangeGL = async (index, field, value) => {
         }
     }
     
-  
     if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
         row[field] = value;
         const parsedValue = parseFormattedNumber(value);
-        if (field === 'debit' && parsedValue > 0) {
-            row.credit = "0.00";
-        } else if (field === 'credit' && parsedValue > 0) {
-            row.debit = "0.00";
-        }
-        if (field === 'debitFx1' && parsedValue > 0) {
-            row.creditFx1 = "0.00";
-        } else if (field === 'creditFx1' && parsedValue > 0) {
-            row.debitFx1 = "0.00";
-        }
-        if (field === 'debitFx2' && parsedValue > 0) {
-            row.creditFx2 = "0.00";
-        } else if (field === 'creditFx2' && parsedValue > 0) {
-            row.debitFx2 = "0.00";
-        }
-    } 
+        const pairs = {
+          debit: "credit",
+          credit: "debit",
+          debitFx1: "creditFx1",
+          creditFx1: "debitFx1",
+          debitFx2: "creditFx2",
+          creditFx2: "debitFx2"
+        };
+
+    if (parsedValue > 0 && pairs[field]) {
+      row[pairs[field]] = "0.00";
+    }
+  }
+
+    if (['slRefNo', 'slRefDate', 'remarks'].includes(field)) {
+        row[field] = value;
+    }
+    
     updatedRowsGL[index] = row;
     updateState({ detailRowsGL: updatedRowsGL });
 };
 
 
 
-// You'll need an additional handler for the onBlur event
-const handleBlurGL = (index, field, value) => {
-    const updatedRowsGL = [...state.detailRowsGL]; // Use state directly here
-    let row = { ...updatedRowsGL[index] };
 
-    // Parse the value that was entered by the user (which might be "1,234.56" or "1234.56")
-    const parsedValue = parseFormattedNumber(value);
+const handleBlurGL = async (index, field, value, autoCompute = false) => {
+  
+  const updatedRowsGL = [...state.detailRowsGL];
+  const row = { ...updatedRowsGL[index] };
 
-    // Now format this parsed number for display
-    row[field] = formatNumber(parsedValue);
+  const parsedValue = parseFormattedNumber(value);
+  row[field] = formatNumber(parsedValue);
 
-    // Apply zeroing logic on blur
-    if (field === 'debit' && parsedValue > 0) {
-        row.credit = formatNumber(0);
-    } else if (field === 'credit' && parsedValue > 0) {
-        row.debit = formatNumber(0);
+  if(autoCompute && ((withCurr2 && currCode !== glCurrDefault) || (withCurr3))){
+  if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
+    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,header.svi_date); 
+        if(data) {
+           row.debit = formatNumber(data.debit)
+           row.credit = formatNumber(data.credit)
+           row.debitFx1 = formatNumber(data.debitFx1)
+           row.creditFx1 = formatNumber(data.creditFx1)
+           row.debitFx2 = formatNumber(data.debitFx2)
+           row.creditFx2 = formatNumber(data.creditFx2)
+        }
     }
+  }
+  else{
+    const pairs = [
+      ["debit", "credit"],
+      ["debitFx1", "creditFx1"],
+      ["debitFx2", "creditFx2"]
+    ];
 
-    if (field === 'debitFx1' && parsedValue > 0) {
-        row.creditFx1 = formatNumber(0);
-    } else if (field === 'creditFx1' && parsedValue > 0) {
-        row.debitFx1 = formatNumber(0);
-    }
+    pairs.forEach(([a, b]) => {
+      if (field === a && parsedValue > 0) {
+        row[b] = formatNumber(0);
+      } else if (field === b && parsedValue > 0) {
+        row[a] = formatNumber(0);
+      }
+    });
+  }
 
-    if (field === 'debitFx2' && parsedValue > 0) {
-        row.creditFx2 = formatNumber(0);
-    } else if (field === 'creditFx2' && parsedValue > 0) {
-        row.debitFx2 = formatNumber(0);
-    }
-
-    updatedRowsGL[index] = row;
-    updateState({ detailRowsGL: updatedRowsGL });
+  updatedRowsGL[index] = row;
+  updateState({ detailRowsGL: updatedRowsGL });
 };
+
+
+
+
+
+
+
 
 
 
@@ -1420,13 +1463,17 @@ const handleCloseBranchModal = (selectedBranch) => {
   const handleSelectCurrency = async (currCode) => {
     if (currCode) {
 
-     const result = await useTopCurrentRow(currCode);
+     const result = await useTopCurrencyRow(currCode);
       if (result) {
-      updateState({
-        currCode:result.currCode,
-        currName:result.currName,
-        currRate:await useTopForexRate(currCode, header.svi_date) 
-        })     
+        const rate = currCode === glCurrDefault
+          ? defaultCurrRate
+          : await useTopForexRate(currCode, header.svi_date);
+
+        updateState({
+          currCode: result.currCode,
+          currName: result.currName,
+          currRate: formatNumber(parseFormattedNumber(rate),6)
+        });
       }
     }
   };
@@ -1478,6 +1525,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   onSave={() => handleActivityOption("Upsert")}
   onCancel={handleCancel} 
   onCopy={handleCopy} 
+  onAttach={handleAttach}
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
 />
@@ -1528,7 +1576,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
             {/* Column 1 */}
             <div className="global-tran-textbox-group-div-ui">
                 {/* Branch Name Input with lookup button */}
-                <div className="relative" onClick={() => updateState({ branchModalOpen: true })}>
+                <div className="relative">
                     <input
                         type="text"
                         id="branchName"
@@ -1543,13 +1591,12 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     </label>
                     <button
                         type="button"
-                        onClick={() => updateState({ branchModalOpen: true })}
                         className={`global-tran-textbox-button-search-padding-ui ${
                             isFetchDisabled
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
-                        disabled={isFormDisabled} 
+                        disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1563,6 +1610,11 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         value={state.documentNo}
                         onChange={(e) => updateState({ documentNo: e.target.value })}
                         onBlur={handleSviNoBlur}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            document.getElementById("SVIDate")?.focus();
+                          }}}
                         placeholder=" "
                         className={`peer global-tran-textbox-ui ${state.isDocNoDisabled ? 'bg-blue-100 cursor-not-allowed' : ''}`}
                         disabled={state.isDocNoDisabled}
@@ -1684,7 +1736,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 </div>
 
                 <div className="relative">
-                    <input type="text" id="attention" placeholder=" " value={attention} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                    <input type="text" id="attention" placeholder=" " value={attention} onChange={(e) => updateState({ attention: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
                     <label htmlFor="attention" className="global-tran-floating-label">Attention</label>
                 </div>
 
@@ -1722,13 +1774,26 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     {/* Currency Rate */}
                     <div className="relative flex-grow"> {/* Used flex-grow to take remaining space (or you can use w-1/3) */}
                         <input type="text" id="currRate" value={currRate} 
-                            onChange={(e) => updateState({ 
-                                              currRate: e.target.value,
-                                              withCurr2:((glCurrMode === "M" && glCurrDefault !== currCode) || glCurrMode === "D"),
-                                              withCurr3:glCurrMode === "T"
-                                             })}
+                            onChange={(e) => {
+                            const inputValue = e.target.value;
+                            const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                            if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                                updateState({ currRate: sanitizedValue })
+                            }}}
+                            onBlur={handleCurrRateNoBlur}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault(); 
+                                document.getElementById("refDocNo1")?.focus();
+                              }}}
+                            onFocus={(e) => {
+                              if (parseFormattedNumber(e.target.value) === 0) {
+                                e.target.value = "";
+                              }
+                            }} 
+
                             placeholder=" "
-                            className="peer global-tran-textbox-ui text-right" disabled={isFormDisabled} />
+                            className="peer global-tran-textbox-ui text-right" disabled={isFormDisabled || glCurrDefault === currCode} />
                             
                         <label htmlFor="currName" className="global-tran-floating-label"> Currency Rate
                         </label>
@@ -1941,13 +2006,13 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
              {/* Specification */}
            <td className="global-tran-td-ui">
-              <input
-                type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
-                value={row.sviSpecs || ""}
-                // onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value)}
-              />
-            </td>
+            <input
+              type="text"
+              className="w-[100px] global-tran-td-inputclass-ui"
+              value={row.sviSpecs || ""}
+              onChange={(e) => handleDetailChange(index, "sviSpecs", e.target.value)}
+            />
+          </td>
 
 
           
@@ -1963,14 +2028,12 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                         if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
                             handleDetailChange(index, "quantity", sanitizedValue, false);
                         }
-                    }}
-                    onFocus={() => {
-                        const currentQuantity = row.quantity;
-                        if (currentQuantity !== undefined && currentQuantity !== null) {
-                            const parsedNum = parseFormattedNumber(currentQuantity);
+                    }}                   
+                     onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
                         }
-                        setFocusedCell({ index: index, field: "quantity" });
-                    }}
+                      }}                   
                     onBlur={async (e) => {
                         const value = e.target.value;
                         const num = parseFormattedNumber(value);
@@ -2016,13 +2079,11 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             handleDetailChange(index, "unitPrice", sanitizedValue, false);
                         }
                     }}
-                    onFocus={() => {
-                        const currentUnitPrice = row.unitPrice;
-                        if (currentUnitPrice !== undefined && currentUnitPrice !== null) {
-                            const parsedNum = parseFormattedNumber(currentUnitPrice);
+                     onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
                         }
-                        setFocusedCell({ index: index, field: "unitPrice" });
-                    }}
+                      }}   
                     onBlur={async (e) => {
                         const value = e.target.value;
                         const num = parseFormattedNumber(value);
@@ -2057,45 +2118,42 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
             <td className="global-tran-td-ui">
-            <input
+              <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                value={
-                    focusedCell && focusedCell.index === index && focusedCell.field === "discRate"
-                        ? (row.discRate !== undefined && row.discRate !== null ? String(row.discRate) : "")
-                        : (row.discRate !== undefined && row.discRate !== null ? formatNumber(parseFormattedNumber(row.discRate)) : "")
-                }
+                value={row.discRate || ""}
                 onChange={(e) => {
-                    const inputValue = e.target.value;
-                    const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                    if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                        handleDetailChange(index, "discRate", sanitizedValue, false);
-                    }
-                }}
-                onFocus={() => {
-                    setFocusedCell({ index: index, field: "discRate" });
-                }}
-                onBlur={async (e) => {
-                    const value = e.target.value;
-                    const num = parseFormattedNumber(value); 
-                    if (!isNaN(num)) {
-                        await handleDetailChange(index, "discRate", num, true); 
-                    }
-                    setFocusedCell(null);
+                  const value = e.target.value;
+                  if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
+                    handleDetailChange(index, "discRate", value, false); // Update value only, no calculations
+                  }
                 }}
                 onKeyDown={async (e) => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        const value = e.target.value;
-                        const num = parseFormattedNumber(value); 
-                        if (!isNaN(num)) {
-                            await handleDetailChange(index, "discRate", num, true); 
-                        }
-                        e.target.blur();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const value = e.target.value;
+                    const num = parseFormattedNumber(value);
+                    if (!isNaN(num)) {
+                      await handleDetailChange(index, "discRate", num.toFixed(2), true);
                     }
+                  }
                 }}
-            />
-            </td>    
+                onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                        }
+                      }}   
+                onBlur={async (e) => {
+                  const value = e.target.value;
+                  const num = parseFormattedNumber(value);
+                  if (!isNaN(num)) {
+                    await handleDetailChange(index, "discRate", num.toFixed(2), true);
+                  }
+                }}
+
+                
+                />
+            </td>   
 
             <td className="global-tran-td-ui">
               <input
@@ -2105,27 +2163,32 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 onChange={(e) => {
                   const value = e.target.value;
                   if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
-                    handleDetailChange(index, "discAmount", value, false); // Update value only, no calculations
+                    handleDetailChange(index, "discAmount", value, false); 
                   }
                 }}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     const value = e.target.value;
-                    const num = parseFloat(value);
+                    const num = parseFormattedNumber(value);
                     if (!isNaN(num)) {
                       await handleDetailChange(index, "discAmount", num.toFixed(2), true);
                     }
                   }
                 }}
+                onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                        }
+                      }}   
                 onBlur={async (e) => {
                   const value = e.target.value;
-                  const num = parseFloat(value);
+                  const num = parseFormattedNumber(value);
                   if (!isNaN(num)) {
                     await handleDetailChange(index, "discAmount", num.toFixed(2), true);
                   }
-                }}
-              />
+                }}                
+                />
             </td>
 
 
@@ -2490,10 +2553,19 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
             <th className="global-tran-th-ui">Debit ({glCurrDefault})</th>
             <th className="global-tran-th-ui">Credit ({glCurrDefault})</th>
-            <th className={`global-tran-th-ui ${withCurr2? "": "hidden"}`}>Debit ({currCode})</th>
-            <th className={`global-tran-th-ui ${withCurr2? "": "hidden"}`}>Credit ({currCode})</th>
-            <th className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}>Debit FX2</th>
-            <th className={`global-tran-th-ui ${withCurr3? "" : "hidden"}`}>Credit FX2</th>
+            
+            <th className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}>
+              Debit ({withCurr3 ? glCurrGlobal2 : currCode})
+            </th>
+            <th className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}>
+              Credit ({withCurr3 ? glCurrGlobal2 : currCode})
+            </th>
+            <th className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}>
+              Debit ({glCurrGlobal3})
+            </th>
+            <th className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}>
+              Credit ({glCurrGlobal3})
+            </th>
 
             <th className="global-tran-th-ui">SL Ref. No.</th>
             <th className="global-tran-th-ui">SL Ref. Date</th>
@@ -2700,14 +2772,32 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 
-              <td className="global-tran-td-ui text-right">
-                <input
+              <td className="global-tran-td-ui text-right">             
+              <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debit || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'debit', e.target.value)}
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "debit", sanitizedValue);
+                        }}}
+
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'debit', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "debit", "");
+                        }
+                      }}
                   onBlur={(e) => handleBlurGL(index, 'debit', e.target.value)}
-                />
+                  
+                /> 
             </td>
 
               <td className="global-tran-td-ui text-right">
@@ -2715,27 +2805,75 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.credit || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'credit', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'credit', e.target.value)} // <-- Add onBlur handler
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "credit", sanitizedValue);
+                        }}}
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'credit', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "credit", "");
+                        }
+                      }}
+                  onBlur={(e) => handleBlurGL(index, 'credit', e.target.value)}
                 />
               </td>
 
-               <td className={`global-tran-td-ui text-right ${withCurr2? "": "hidden"}`}>
+               <td className={`global-tran-td-ui text-right ${withCurr2? "" : "hidden"}`}>
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx1 || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'debitFx1', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'debitFx1', e.target.value)} // <-- Add onBlur handler
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "debitFx1", sanitizedValue);
+                        }}}
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'debitFx1', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "debitFx1", "");
+                        }
+                      }}
+                  onBlur={(e) => handleBlurGL(index, 'debitFx1', e.target.value)}
                 />
               </td>
-               <td className={`global-tran-td-ui text-right ${withCurr2? "": "hidden"}`}>
+               <td className={`global-tran-td-ui text-right ${withCurr2? "" : "hidden"}`}>
                 <input
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx1 || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'creditFx1', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'creditFx1', e.target.value)} // <-- Add onBlur handler
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "creditFx1", sanitizedValue);
+                        }}}
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'creditFx1', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "creditFx1", "");
+                        }
+                      }}
+                  onBlur={(e) => handleBlurGL(index, 'creditFx1', e.target.value)}
                 />
               </td>
 
@@ -2744,8 +2882,24 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx2 || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'debitFx2', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'debitFx2', e.target.value)} // <-- Add onBlur handler
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "debitFx2", sanitizedValue);
+                        }}}
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'debitFx2', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "debitFx2", "");
+                        }
+                      }}
+                  onBlur={(e) => handleBlurGL(index, 'debitFx2', e.target.value)}
                 />
               </td>
               <td className={`global-tran-td-ui text-right ${withCurr3? "": "hidden"}`}>
@@ -2753,8 +2907,24 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx2 || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'creditFx2', e.target.value)}
-                  onBlur={(e) => handleBlurGL(index, 'creditFx2', e.target.value)} // <-- Add onBlur handler
+                  onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            handleDetailChangeGL(index, "creditFx2", sanitizedValue);
+                        }}}
+                  onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); 
+                            handleBlurGL(index, 'creditFx2', e.target.value,true);
+                          }}}
+                  onFocus={(e) => {
+                        if (e.target.value === "0.00" || e.target.value === "0") {
+                          e.target.value = "";
+                          handleDetailChangeGL(index, "creditFx2", "");
+                        }
+                      }}
+                  onBlur={(e) => handleBlurGL(index, 'creditFx2', e.target.value)}
                 />
               </td>
               <td className="global-tran-td-ui">
@@ -2762,15 +2932,16 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.slRefNo || ""}
-                  onChange={(e) => handleDetailChange(index, 'slRefNo', e.target.value)}
+                  maxLength={25}
+                  onChange={(e) => handleDetailChangeGL(index, 'slRefNo', e.target.value)}
                 />
               </td>
               <td className="global-tran-td-ui">
                 <input
                   type="date"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.slrefDate || ""}
-                  onChange={(e) => handleDetailChange(index, 'slrefDate', e.target.value)}
+                  value={row.slRefDate || ""}
+                  onChange={(e) => handleDetailChangeGL(index, 'slRefDate', e.target.value)}
                 />
 
               </td>
@@ -2779,11 +2950,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.remarks || header.remarks || ""}
-                  onChange={(e) => {
-                    const updatedRows = [...detailRowsGL];
-                    updatedRows[index].remarks = e.target.value;
-                    setDetailRowsGL(updatedRows);
-                  }}
+                  onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                 />
              </td>
               
@@ -2963,10 +3130,21 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 )}
 
 
-{/* SL Code Lookup Modal */}
+{/* Cancellation Modal */}
 {showCancelModal && (
   <CancelTranModal
     isOpen={showCancelModal}
+    onClose={handleCloseCancel}
+  />
+)}
+
+
+
+
+{/* Attachment Modal */}
+{showAttachModal && (
+  <AttachDocumentModal
+    isOpen={showAttachModal}
     onClose={handleCloseCancel}
   />
 )}

@@ -603,6 +603,14 @@ const APV = () => {
   };
 
   const handleGenerateGLEntries = async () => {
+      console.log(detailRows.length )
+   if (!detailRows || detailRows.length === 0) {
+    console.log(detailRows.length )
+      return;
+      }
+
+
+
     updateState({ isLoading: true });
 
     try {

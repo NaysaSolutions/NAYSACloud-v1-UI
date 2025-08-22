@@ -1,8 +1,11 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
-import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
+import { useSwalValidationAlert,} from '@/NAYSA Cloud/Global/behavior';
 import Swal from 'sweetalert2';
+import { parseFormattedNumber } from './behavior';
+
+
 
 
 
@@ -12,7 +15,7 @@ import Swal from 'sweetalert2';
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-  // console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+   //console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
@@ -97,17 +100,22 @@ export const useTransactionUpsert = async (docCode, glData, updateState, idKey, 
         const response = await postRequest("upsert" + docCode, JSON.stringify(payload));
 
         if (response?.status === 'success') {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: docCode + ' saved successfully!',
-            });
-
-            if (response.data && response.data.length > 0) {
+           
+             if (response.data && response.data.length > 0) {
                 const returnedId = response.data[0][idKey];
                 const returnedNo = response.data[0][noKey];
+                const returnedErrorCount = response.data[0]['errorCount'];
+                const returnedErrorMsg = response.data[0]['errorMsg'];
 
                 const wasNewDocCreated = !glData[idKey] && !!returnedId;
+                if (returnedErrorMsg && returnedErrorCount >0) {
+                  useSwalValidationAlert({
+                        icon: "error",
+                        title: "Save Failed",
+                        message: returnedErrorMsg || "An error occurred while saving the Transaction"
+                      });    
+                  return null;
+                }
 
                 if (returnedNo && returnedId) {
                     const updates = {
@@ -124,9 +132,17 @@ export const useTransactionUpsert = async (docCode, glData, updateState, idKey, 
             } else {
                 console.warn("Upsert successful, but no document ID/No returned from SPROC data.");
             }
+
+            
             return response;
         } else {
-            throw new Error(response?.message || 'Failed to save Transaction');
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Save Failed',
+                  text: response.details || response.message || 'An error occurred while saving the Transaction',
+                });
+            // console.error("❌ SQL Error:", response?.error || response?.message);
+            // throw new Error(response?.error || response?.message || 'Failed to save Transaction');
         }
     } catch (error) {
         console.error("Error saving Transaction:", error);
@@ -198,6 +214,83 @@ export const useUpdateRowGLEntries = async (row, field, value, custVendCode,docC
     console.error("Error fetching LookupGL:", error);
     return [];
   }
+};
+
+
+
+
+
+
+// global update of GL Entries per record
+export const useUpdateRowEditEntries = async (row, field, value,currCode,currRate,docDate) => {
+  const payload = {
+    json_data: {
+      fieldName:field,
+      debit: parseFormattedNumber(row.debit),
+      credit: parseFormattedNumber(row.credit),
+      debitFx1: parseFormattedNumber(row.debitFx1),
+      creditFx1: parseFormattedNumber(row.creditFx1),
+      debitFx2:parseFormattedNumber(row.debitFx2),
+      creditFx2:parseFormattedNumber(row.creditFx2),
+      currCode: currCode,
+      currRate: currRate,
+      docDate: docDate
+    }
+  };
+  
+
+  try {
+    const response = await postRequest("editEntries", JSON.stringify(payload));
+
+    // ✅ Match actual API format
+    if (!response || response.status !== "success" || !Array.isArray(response.data)) {
+      console.warn("Invalid API response structure", response);
+      return [];
+    }
+
+
+
+    // ✅ Parse the JSON string inside result
+    let parsedData;
+    try {
+      parsedData = JSON.parse(response.data[0]?.result || "[]");
+    } catch (parseError) {
+      console.error("Error parsing response data:", parseError);
+      return [];
+    }
+
+    // ✅ Always return array (even if backend sends a single object)
+     return Array.isArray(parsedData) && parsedData.length > 0
+      ? parsedData[0]
+      : null;
+
+  } catch (error) {
+    console.error("Error fetching editEntries:", error);
+    return [];
+  }
+};
+
+
+
+
+
+
+
+// global update of GL Entries per record
+export const useFetchTranData = async (documentNo,branchCode,docType,fieldName) => {
+  
+if (!documentNo || !branchCode) {
+    throw new Error("Document No. or Branch Code missing.");
+  }
+
+  const response = await fetchData(`get${docType}?${fieldName}=${documentNo}&branchCode=${branchCode}`);
+  if (!response?.success || !response.data?.length) {
+    return null; // no record
+  }
+
+  let data = JSON.parse(response.data[0].result || "{}");
+  return data;
+
 };
 
 
