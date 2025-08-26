@@ -1,166 +1,255 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import {fetchData} from '../Configuration/BaseURL';
+import { faTimes, faSpinner, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons'; // Added faSpinner, faSort, faSortUp, faSortDown
+import { fetchData } from '../Configuration/BaseURL';
 
 const BillCodeLookupModal = ({ isOpen, onClose, customParam }) => {
-  const [billcode, setBillCodes] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [filters, setFilters] = useState({ billCode: '', billName: '', uomCode: '' });
-  const [loading, setLoading] = useState(false);
+    const [billcode, setBillCodes] = useState([]);
+    const [filtered, setFiltered] = useState([]);
+    const [filters, setFilters] = useState({ billCode: '', billName: '', uomCode: '' });
+    const [loading, setLoading] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' }); // Added for consistency, even if not fully used for sorting yet
 
-  useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-
-      const params = {
-        PARAMS: JSON.stringify({
-          search: "",
-          page: 1,
-          pageSize: 10,
-        }),
-      };
-  
-      fetchData("/lookupBillcode", params)
-      .then((result) => {
-        if (result.success) {
-          const resultData = JSON.parse(result.data[0].result);
-          setBillCodes(resultData);
-          setFiltered(resultData);
-        } else {
-          alert(result.message || "Failed to fetch Billing Code");
+    useEffect(() => {
+        if (!isOpen) {
+            // Reset state when modal closes
+            setBillCodes([]);
+            setFiltered([]);
+            setFilters({ billCode: '', billName: '', uomCode: '' });
+            setSortConfig({ key: '', direction: 'asc' });
+            return; // Exit early if not open
         }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch Billing Code", err);
-        alert(`Error: ${err.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }   
-  }, [isOpen]);
-  
 
-  
+        setLoading(true);
 
-  useEffect(() => {
-    const newFiltered = billcode.filter(item =>
-      (item.billCode || '').toLowerCase().includes((filters.billCode || '').toLowerCase()) &&
-      (item.billName || '').toLowerCase().includes((filters.billName || '').toLowerCase()) &&
-      (item.uomCode || '').toLowerCase().includes((filters.uomCode || '').toLowerCase())
-    );
-    setFiltered(newFiltered);
-  }, [filters, billcode]);
+        const params = {
+            PARAMS: JSON.stringify({
+                search: "",
+                page: 1,
+                pageSize: 100, // Increased pageSize to fetch more data initially for filtering
+            }),
+        };
 
-  const handleApply = (billcode) => {
-    onClose(billcode);
-  };
+        fetchData("/lookupBillcode", params)
+            .then((result) => {
+                if (result.success && result.data && result.data.length > 0 && result.data[0].result) {
+                    const resultData = JSON.parse(result.data[0].result);
+                    setBillCodes(resultData);
+                    setFiltered(resultData); // Initialize filtered with all data
+                } else {
+                    console.warn(result.message || "No Billing Code found.");
+                    setBillCodes([]); // Ensure state is empty if no data
+                    setFiltered([]);
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to fetch Billing Code", err);
+                // Optionally, display a user-friendly error message in the UI
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, [isOpen]); // Depend on isOpen to re-fetch when it changes
 
-  
-  const handleFilterChange = (e, key) => {
-    setFilters({ ...filters, [key]: e.target.value });
-  };
+    useEffect(() => {
+        let currentFiltered = [...billcode];
 
-  if (!isOpen) return null;
+        // Apply filters
+        currentFiltered = currentFiltered.filter(item =>
+            (item.billCode || '').toLowerCase().includes((filters.billCode || '').toLowerCase()) &&
+            (item.billName || '').toLowerCase().includes((filters.billName || '').toLowerCase()) &&
+            (item.uomCode || '').toLowerCase().includes((filters.uomCode || '').toLowerCase())
+        );
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-auto relative">
-        {/* Close Icon */}
-        <button
-          onClick={() => onClose(null)}
-          className="absolute top-3 right-3 text-red-500 hover:text-red-700"
-        >
-          <FontAwesomeIcon icon={faTimes} size="lg" />
-        </button>
+        // No sorting logic applied here yet, but the `sortConfig` state is ready if you add it.
+        // If sorting is added later, implement it here:
+        // if (sortConfig.key) {
+        //     currentFiltered.sort((a, b) => { /* sorting logic */ });
+        // }
 
-        <h2 className="text-lg font-semibold mb-4 uppercase">Select Bill Code</h2>
+        setFiltered(currentFiltered);
+    }, [filters, billcode, sortConfig]); // Add sortConfig as dependency for future sorting
 
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto max-h-[60vh] rounded">
-            <table className="min-w-full border-collapse text-sm border border-gray-200">
-              <thead className='text-gray-700 uppercase bg-gray-100 sticky top-0 z-10'>
-                <tr>
-                  <th className="px-2 py-2 border">Bill Code</th>
-                  <th className="px-10 py-2 border">Description</th>
-                  <th className="px-4 py-2 border text-right">UOM</th>
-                  <th className="px-4 py-2 border">Action</th>
-                </tr>
-                <tr className="bg-white">
-                  <th className="border px-4 py-1">
-                    <input
-                      type="text"
-                      value={filters.billCode}
-                      onChange={(e) => handleFilterChange(e, 'billCode')}
-                      className="w-full border px-2 py-1 rounded text-sm"
-                    />
-                  </th>
-                  <th className="border px-4 py-1">
-                    <input
-                      type="text"
-                      value={filters.billName}
-                      onChange={(e) => handleFilterChange(e, 'billName')}
-                      className="w-full border px-2 py-1 rounded text-sm"
-                    />
-                  </th>
-                  <th className="border px-4 py-1">
-                    <input
-                      type="text"
-                      value={filters.uomCode}
-                      onChange={(e) => handleFilterChange(e, 'uomCode')}
-                      className="w-full border px-2 py-1 rounded text-sm"
-                    />
-                  </th>              
-                  <th className="border px-4 py-1"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-  {loading ? (
-    <tr>
-      <td colSpan="3" className="py-10 text-center">
-        <div className="w-8 h-8 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <div className="text-sm text-gray-500 mt-2">Loading Billing Code...</div>
-      </td>
-    </tr>
-  ) : filtered.length > 0 ? (
-    filtered.map((billcode, index) => (
-      <tr key={index} className="bg-white hover:bg-gray-100 transition">
-        <td className="px-4 py-2 border">{billcode.billCode}</td>
-        <td className="px-4 py-2 border">{billcode.billName}</td>
-        <td className="px-4 py-2 border">{billcode.uomCode}</td>
-        <td className="border px-4 py-2">
-          <button
-            onClick={() => handleApply(billcode)}
-            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-          >
-            Apply
-          </button>
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="3" className="px-4 py-6 text-center text-gray-500">
-        No matching Billing Code found.
-      </td>
-    </tr>
-  )}
-</tbody>
+    const handleApply = (selectedBillcode) => {
+        onClose(selectedBillcode);
+    };
 
-            </table>
-            <div className="p-3 text-sm text-gray-600">
-              Showing <strong>{filtered.length}</strong> of {billcode.length} entries
+    const handleFilterChange = (e, key) => {
+        setFilters({ ...filters, [key]: e.target.value });
+    };
+
+    // Placeholder for sorting, if you decide to implement it later
+    const handleSort = (key) => {
+        // Implement sorting logic here if needed
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const renderSortIcon = (column) => {
+        if (sortConfig.key === column) {
+            return sortConfig.direction === 'asc' ? <FontAwesomeIcon icon={faSortUp} className="ml-1 text-blue-500" /> : <FontAwesomeIcon icon={faSortDown} className="ml-1 text-blue-500" />;
+        }
+        return <FontAwesomeIcon icon={faSort} className="ml-1 text-gray-400" />;
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-6 lg:p-8 animate-fade-in">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col relative overflow-hidden transform scale-95 animate-scale-in">
+                {/* Close Icon */}
+                <button
+                    onClick={() => onClose(null)}
+                    className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-gray-100"
+                    aria-label="Close modal"
+                >
+                    <FontAwesomeIcon icon={faTimes} size="lg" />
+                </button>
+
+                <h2 className="text-lg font-semibold text-blue-800 p-3 border-b border-gray-100">Select Bill Code</h2>
+
+                <div className="flex-grow overflow-hidden">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-full min-h-[200px] text-blue-500">
+                            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mr-3" />
+                            <span>Loading Bill Codes...</span>
+                        </div>
+                    ) : (
+                        <div className="overflow-auto max-h-[calc(90vh-160px)] custom-scrollbar">
+                            <table className="min-w-full divide-y divide-gray-100">
+                                <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        {/* Headers - onClick for sorting is commented out, but ready */}
+                                        <th
+                                            className="px-4 py-2 text-left text-sm font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200"
+                                            // onClick={() => handleSort('billCode')} // Uncomment to enable sorting
+                                        >
+                                            Bill Code {renderSortIcon('billCode')}
+                                        </th>
+                                        <th
+                                            className="px-4 py-2 text-left text-sm font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200"
+                                            // onClick={() => handleSort('billName')} // Uncomment to enable sorting
+                                        >
+                                            Description {renderSortIcon('billName')}
+                                        </th>
+                                        <th
+                                            className="px-4 py-2 text-left text-sm font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200"
+                                            // onClick={() => handleSort('uomCode')} // Uncomment to enable sorting
+                                        >
+                                            UOM {renderSortIcon('uomCode')}
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-sm font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200">
+                                            Action
+                                        </th>
+                                    </tr>
+                                    {/* Filter Row */}
+                                    <tr className="bg-gray-100">
+                                        <th className="px-3 py-1">
+                                            <input
+                                                type="text"
+                                                value={filters.billCode}
+                                                onChange={(e) => handleFilterChange(e, 'billCode')}
+                                                placeholder="Filter..."
+                                                className="block w-full px-3 py-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </th>
+                                        <th className="px-3 py-1">
+                                            <input
+                                                type="text"
+                                                value={filters.billName}
+                                                onChange={(e) => handleFilterChange(e, 'billName')}
+                                                placeholder="Filter..."
+                                                className="block w-full px-3 py-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </th>
+                                        <th className="px-3 py-1">
+                                            <input
+                                                type="text"
+                                                value={filters.uomCode}
+                                                onChange={(e) => handleFilterChange(e, 'uomCode')}
+                                                placeholder="Filter..."
+                                                className="block w-full px-3 py-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </th>
+                                        <th className="px-3 py-1"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filtered.length > 0 ? (
+                                        filtered.map((item, index) => (
+                                            <tr key={index}
+                                                className="hover:bg-blue-50 transition-colors duration-150 cursor-pointer text-sm"
+                                                onClick={() => handleApply(item)} // Allow clicking row to apply
+                                            >
+                                                <td className="px-4 py-1 whitespace-nowrap">{item.billCode}</td>
+                                                <td className="px-4 py-1 whitespace-nowrap">{item.billName}</td>
+                                                <td className="px-4 py-1 whitespace-nowrap">{item.uomCode}</td>
+                                                <td className="px-4 py-1 whitespace-nowrap">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleApply(item); }} // Stop propagation to prevent row click
+                                                        className="px-6 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-150"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="4" className="px-4 py-6 text-center text-gray-500 text-lg">
+                                                No matching Bill Codes found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 border-t border-gray-200 bg-gray-50 text-right text-sm text-gray-600">
+                    Showing <span className="font-semibold">{filtered.length}</span> of <span className="font-semibold">{billcode.length}</span> entries
+                </div>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+
+            {/* Tailwind CSS Animations (add to your CSS file or a style block if not globally available) */}
+            <style jsx="true">{`
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes scale-in {
+                    from { transform: scale(0.95); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.2s ease-out forwards;
+                }
+                .animate-scale-in {
+                    animation: scale-in 0.3s ease-out forwards;
+                }
+                /* Custom Scrollbar */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #888;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #555;
+                }
+            `}</style>
+        </div>
+    );
 };
 
 export default BillCodeLookupModal;

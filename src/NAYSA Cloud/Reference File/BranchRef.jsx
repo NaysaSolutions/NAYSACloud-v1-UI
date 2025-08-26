@@ -466,7 +466,7 @@ const resetForm = () => {
 
 
   return (
-    <div className="global-ref-main-div-ui">
+    <div className="global-ref-main-div-ui mt-36">
 
       <div className="mx-auto">
 

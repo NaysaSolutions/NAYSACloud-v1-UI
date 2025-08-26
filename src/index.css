@@ -25,7 +25,7 @@ body {
   /* TRANSACTION HEADER UI */
 
   .global-tran-main-div-ui {
-    @apply p-2 bg-gray-100 min-h-screen mt-16 md:mt-6 lg:mt-10
+    @apply p-2 bg-gray-100 min-h-screen mt-36 md:mt-6 lg:mt-9
     dark:bg-black;
   }
   
@@ -34,15 +34,16 @@ body {
   }
   
   .global-tran-header-div-ui {
-    @apply bg-white shadow-md rounded-lg p-2 mt-20 md:mt-16
+    @apply bg-white shadow-md rounded-lg p-2 mt-20 md:mt-28
     dark:bg-gray-800;
   }
 
+  /* bg-gradient-to-r from-blue-400 to-purple-300 */
   .global-tran-header-ui {
-    @apply fixed mt-28 top-14 left-6 right-6 z-30 bg-gradient-to-r from-blue-400 to-purple-300 p-1 rounded-lg text-blue-900 shadow-lg 
-            lg:p-2 mb-4 flex flex-col 
+    @apply fixed mt-36 top-14 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
+            lg:p-1 mb-4 flex flex-col 
             sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4
-            md:mt-20
+            md:mt-14
             dark:from-blue-900 dark:to-purple-900 dark:text-white;
   }
 
@@ -51,7 +52,7 @@ body {
   }
 
   .global-tran-headertext-ui {
-    @apply text-base sm:text-xl lg:text-3xl font-semibold pl-3;
+    @apply text-base sm:text-xl lg:text-2xl font-semibold pl-3;
   }
 
   /* TRANSACTION STATUS UI */
@@ -66,7 +67,7 @@ body {
   }
 
   .global-tran-stat-text-ui {
-    @apply text-sm sm:text-sm lg:text-xl font-extrabold text-center;
+    @apply text-sm sm:text-sm lg:text-base font-extrabold text-center;
   }
 
   .global-tran-stat-text-closed-ui {
@@ -93,7 +94,7 @@ body {
   }
 
   .global-tran-tab-padding-ui {
-    @apply py-2 px-2;
+    @apply py-1 px-2;
   }
 
   .global-tran-tab-text_active-ui {
@@ -107,12 +108,12 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-2 mb-6 mt-6
+    @apply bg-white shadow-md rounded-lg p-2 mb-4 mt-4
     dark:bg-gray-800;
   }
 
   .global-tran-tab-nav-ui {
-    @apply flex flex-col justify-center sm:flex-row sm:items-center md:justify-between border-b mb-4 text-sm sm:text-base lg:text-base gap-2 sm:gap-0;
+    @apply flex flex-col justify-center sm:flex-row sm:items-center md:justify-between mb-2 text-sm sm:text-base lg:text-base gap-2 sm:gap-0;
   }
 
 
@@ -145,24 +146,24 @@ body {
   /* TRANSACTION TEXTBOX AND TEXT BUTTON UI */
 
   .global-tran-textbox-group-div-ui {
-      @apply space-y-4 p-2;
+      @apply space-y-3 p-2;
     }
 
   .global-tran-textbox-ui {
       @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
-      px-2 pb-2 pt-2 text-xs text-black 
+      px-2 pb-1 pt-2 text-xs text-black 
       focus:border-blue-600 focus:outline-none focus:ring-0 
-      h-[30px] sm:h-[30px] lg:h-[40px]
+      h-[30px] sm:h-[30px] lg:h-[35px]
       dark:bg-gray-600 dark:text-white;
     }
 
   .global-tran-textbox-remarks-ui {
-      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0
+      @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0
       dark:bg-gray-600 dark:text-white;
     }
     
   .global-tran-textbox-button-search-padding-ui {
-        @apply w-[40px] h-[30px] sm:h-[30px] lg:h-[40px] absolute inset-y-0 right-0;
+        @apply w-[40px] h-[30px] sm:h-[30px] lg:h-[35px] absolute inset-y-0 right-0;
       }
 
   .global-tran-textbox-button-search-enabled-ui {
@@ -209,6 +210,7 @@ body {
 
   .global-tran-table-main-sub-div-ui {
     @apply max-h-[360px] overflow-y-auto relative;
+ 
   }
 
   .global-tran-table-div-ui {
@@ -222,17 +224,17 @@ body {
   }
 
   .global-tran-th-ui {
-    @apply px-2 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900
+    @apply px-2 py-2 sm:py-2 lg:py-2 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900
     dark:text-gray-300;
   }
 
   .global-tran-tr-ui {
-    @apply hover:bg-blue-200 border
+    @apply hover:bg-blue-100 border
     dark:text-black dark:hover:bg-blue-700;
   }
 
   .global-tran-td-ui {
-    @apply border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal
+    @apply px-1 border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal
     dark:text-white;
   }
 
@@ -308,7 +310,8 @@ body {
       }
 
     .global-ref-header-ui {
-      @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg
+      /* @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg */
+      @apply bg-blue-300 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg
       dark:from-blue-900 dark:to-purple-900 dark:text-white;
     }
   
@@ -385,7 +388,7 @@ body {
   }
 
 .global-ref-textbox-remarks-ui {
-    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-2 pb-2 pt-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0
+    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white px-4 pb-4 pt-2 mb-2 text-xs text-black focus:border-blue-600 focus:outline-none focus:ring-0
     dark:bg-gray-600 dark:text-white;
   }
   
