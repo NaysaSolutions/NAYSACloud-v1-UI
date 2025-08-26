@@ -18,6 +18,7 @@ import BillTermLookupModal from "../../../Lookup/SearchBillTermRef.jsx";
 import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
+import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -84,6 +85,7 @@ const SVI = () => {
     glCurrGlobal1:"",
     glCurrGlobal2:"",
     glCurrGlobal3:"",
+
 
     
     // Document information
@@ -167,7 +169,7 @@ const SVI = () => {
     billtermModalOpen:false,
     showCancelModal:false,
     showAttachModal:false,
-
+    showSignatoryModal:false,
    });
 
   const updateState = (updates) => {
@@ -208,6 +210,7 @@ const SVI = () => {
   glCurrGlobal2,
   glCurrGlobal3,
   defaultCurrRate,
+
 
   // Transaction Header
   branchCode,
@@ -256,7 +259,7 @@ const SVI = () => {
   billtermModalOpen,
   showCancelModal,
   showAttachModal,
-
+  showSignatoryModal,
 
 
 } = state;
@@ -553,6 +556,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       creditFx2: formatNumber(glRow.creditFx2),
     }));
 
+  
     // Update state with fetched data
     updateState({
       documentStatus: data.sviStatus,
@@ -722,7 +726,6 @@ const handleCurrRateNoBlur = (e) => {
             const newGlEntries = await useGenerateGLEntries(docType, glData);
 
             if (newGlEntries) {
-                //console.log("Successfully generated GL entries:", newGlEntries);
                 updateState({ detailRowsGL: newGlEntries });
             } else {
                 console.warn("GL entries generation failed or returned no data.");
@@ -739,11 +742,18 @@ const handleCurrRateNoBlur = (e) => {
 
     if (action === "Upsert") {
         try {
-            //console.log("Upsert Data:",glData);
-            const response = await useTransactionUpsert(docType, glData, updateState, 'sviId', 'sviNo');
-             if (response ) { 
-            useSwalshowSaveSuccessDialog(() => { handleReset() }, () => { handlePrint() });
-             }
+
+          const response = await useTransactionUpsert(docType, glData, updateState, 'sviId', 'sviNo');
+          if (response) {
+
+            useSwalshowSaveSuccessDialog(
+              handleReset,
+              () => handleSaveAndPrint(response.data[0].sviId)
+            );
+          }
+
+         
+           
         } catch (error) {
             console.error("Error during transaction upsert:", error);
         } finally {
@@ -889,11 +899,11 @@ const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
+  updateState({ showSignatoryModal: true });
 
-
-  updateState({ showSpinner: true });
-  await useHandlePrint(documentID, docType);
-  updateState({ showSpinner: false });
+  // updateState({ showSpinner: true });
+  // await useHandlePrint(documentID, docType);
+  // updateState({ showSpinner: false });
 };
 
 
@@ -1359,7 +1369,7 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
-  const handleCloseCancel = async (confirmation) => {
+const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
       const result = await useHandleCancel(docType,documentID,"NSI",confirmation.reason,updateState);
@@ -1378,6 +1388,35 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
+const handleCloseSignatory = async () => {
+
+    updateState({ showSpinner: true });
+    await useHandlePrint(documentID, docType);
+
+    updateState({
+      showSpinner: false,
+      showSignatoryModal: false,
+    });
+};
+
+
+
+
+
+
+const handleSaveAndPrint = async (documentID) => {
+
+    updateState({ showSpinner: true });
+    await useHandlePrint(documentID, docType);
+
+    updateState({showSpinner: false});
+};
+
+
+
+
+
+
 
 
 
@@ -1388,8 +1427,9 @@ const handleCloseBillCodeModal = async (selectedBillCode) => {
        handleDetailChange(selectedRowIndex, 'billCode', result);
     }  
   }
-  updateState({ showBillCodeModal: false });
-  updateState({ selectedRowIndex: null });
+  updateState({ showBillCodeModal: false,
+                selectedRowIndex: null
+             });
 };
 
 
@@ -3140,14 +3180,32 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 
-
-{/* Attachment Modal */}
 {showAttachModal && (
   <AttachDocumentModal
     isOpen={showAttachModal}
-    onClose={handleCloseCancel}
+    params={{
+      DocumentID: documentID,
+      DocumentName: documentName,
+      BranchName: branchName,
+      DocumentNo: documentNo,
+    }}
+     onClose={() => updateState({ showAttachModal: false })}
   />
 )}
+
+
+
+
+
+{showSignatoryModal && (
+  <DocumentSignatories
+    isOpen={showSignatoryModal}
+    params={documentID}
+    onClose={handleCloseSignatory}
+    onCancel={() => updateState({ showSignatoryModal: false })}
+  />
+)}
+
 
 
 {showSpinner && <LoadingSpinner />}

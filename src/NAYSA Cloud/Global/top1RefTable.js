@@ -335,3 +335,24 @@ export const useTopForexRate = async (currencyCode, documentDate) => {
 
 
 
+
+export async function useTopDocSign(documentID) {
+
+  if (!documentID) return null;
+
+  try {
+    const response = await fetchData("getDocSign", {documentID: documentID });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Doc Sign row:", error);
+    return null;
+  }
+}
+
+
+
+
