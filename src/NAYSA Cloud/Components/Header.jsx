@@ -261,11 +261,11 @@
 
 import React, { useState, useRef, useEffect } from "react"; // Added useRef and useEffect for dropdown
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCircle, faVideo, faFilePdf, faSpinner } from "@fortawesome/free-solid-svg-icons"; // Changed faCancel to faTimesCircle for better icon representation
+import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCircle, faVideo, faFilePdf, faSpinner, faPaperclip } from "@fortawesome/free-solid-svg-icons"; // Changed faCancel to faTimesCircle for better icon representation
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
-const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel, onCopy }) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel, onCopy, onAttach }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { triggerReset } = useReset(); // Destructure triggerReset from useReset
@@ -308,6 +308,16 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         // Simulate API call or processing time
         // setTimeout(() => setLoading(false), 1500);
     };
+
+     const handleAttach = () => {
+        // setLoading(true); // Assuming post also has a loading state
+        if (onAttach) {
+            onAttach(); // Call the post handler from parent
+        }
+        // Simulate API call or processing time
+        // setTimeout(() => setLoading(false), 1500);
+    };
+
 
     const handleReset = () => {
         console.log("Reset button clicked");
@@ -459,6 +469,20 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                             <FontAwesomeIcon icon={faSave} className="mr-2" />
                         )}
                         Post
+                    </button>
+
+
+                     <button
+                        onClick={handleAttach}
+                        disabled={loading} // Assuming post shares the same loading state as save for simplicity
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-pink-600 text-white hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-pink-700 dark:hover:bg-pink-600"
+                    >
+                        {loading ? (
+                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                        ) : (
+                            <FontAwesomeIcon icon={faPaperclip} className="mr-2" />
+                        )}
+                        Attach
                     </button>
 
                     {/* Guide Dropdown Button */}

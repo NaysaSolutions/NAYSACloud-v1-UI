@@ -275,7 +275,7 @@ export async function useTopAccountRow(acctCode) {
 
 
 
-export async function useTopCurrentRow(currCode) {
+export async function useTopCurrencyRow(currCode) {
   if (!currCode) return null;
 
   try {
@@ -334,6 +334,27 @@ export const useTopForexRate = async (currencyCode, documentDate) => {
       return '1.000000'
     }
 };
+
+
+
+
+export async function useTopDocSign(documentID) {
+
+  if (!documentID) return null;
+
+  try {
+    const response = await fetchData("getDocSign", {documentID: documentID });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Doc Sign row:", error);
+    return null;
+  }
+}
+
 
 
 
