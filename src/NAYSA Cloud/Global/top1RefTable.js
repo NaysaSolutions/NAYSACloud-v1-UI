@@ -357,4 +357,18 @@ export async function useTopDocSign(documentID) {
 
 
 
+export async function useTopBankRow(bankCode) {
+  if (!bankCode) return null;
 
+  try {
+    const response = await fetchData("getBank", { BANK_CODE: bankCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Bank row:", error);
+    return null;
+  }
+}
