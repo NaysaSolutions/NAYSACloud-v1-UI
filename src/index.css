@@ -25,7 +25,7 @@ body {
   /* TRANSACTION HEADER UI */
 
   .global-tran-main-div-ui {
-    @apply p-2 bg-gray-100 min-h-screen mt-36 md:mt-6 lg:mt-9
+    @apply p-2 bg-gray-100 min-h-screen mt-32 sm:mt-24 md:mt-6 lg:mt-9
     dark:bg-black;
   }
   
@@ -40,7 +40,7 @@ body {
 
   /* bg-gradient-to-r from-blue-400 to-purple-300 */
   .global-tran-header-ui {
-    @apply fixed mt-36 top-14 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
+    @apply fixed mt-24 top-14 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
             lg:p-1 mb-4 flex flex-col 
             sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4
             md:mt-14
@@ -108,7 +108,7 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-2 mb-4 mt-4
+    @apply bg-white shadow-md rounded-lg p-4 mt-2
     dark:bg-gray-800;
   }
 
@@ -272,7 +272,7 @@ body {
 
 
   .global-tran-tab-footer-total-main-div-ui {
-    @apply flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-8 p-2;
+    @apply flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 sm:gap-x-6 p-2;
   }
 
   .global-tran-tab-footer-total-div-ui {
