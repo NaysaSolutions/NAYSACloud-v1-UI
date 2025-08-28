@@ -273,6 +273,26 @@ export async function useTopAccountRow(acctCode) {
 
 
 
+
+export async function useTopBankMastRow(bankCode) {
+  if (!bankCode) return null;
+
+  try {
+    const response = await fetchData("getBank", { BANK_CODE: bankCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Bank Master row:", error);
+    return null;
+  }
+}
+
+
+
+
 export async function useTopCurrencyRow(currCode) {
   if (!currCode) return null;
 
@@ -352,6 +372,28 @@ export async function useTopDocSign(documentID) {
     return null;
   }
 }
+
+
+
+
+
+
+export async function useTopOpenARBalance() {
+
+
+  try {
+    const response = await fetchData("getOpenARBalance");
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Open AR Balance row:", error);
+    return null;
+  }
+}
+
 
 
 

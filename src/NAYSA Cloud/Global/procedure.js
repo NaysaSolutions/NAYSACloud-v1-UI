@@ -15,11 +15,11 @@ import { parseFormattedNumber } from './behavior';
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-   //console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+  //  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
-    // console.log("Raw response from generateGL API:", response);
+    //  console.log("Raw response from generateGL API:", response);
 
     if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
       let glEntries;
@@ -95,7 +95,7 @@ export const useTransactionUpsert = async (docCode, glData, updateState, idKey, 
 
         const payload = { json_data: glData };
 
-        // console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
+        console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
 
         const response = await postRequest("upsert" + docCode, JSON.stringify(payload));
 
@@ -396,6 +396,8 @@ printWindow.document.write(`
     console.error("Error printing report:", error);
   }
 }
+
+
 
 
 

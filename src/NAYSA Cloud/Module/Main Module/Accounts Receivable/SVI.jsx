@@ -103,6 +103,7 @@ const SVI = () => {
     GLactiveTab: "invoice",
     isLoading: false,
     showSpinner: false,
+    triggerGLEntries:false,
     isDocNoDisabled: false,
     isSaveDisabled: false,
     isResetDisabled: false,
@@ -197,6 +198,7 @@ const SVI = () => {
   isSaveDisabled,
   isResetDisabled,
   isFetchDisabled,
+  triggerGLEntries,
 
 
 
@@ -358,6 +360,20 @@ const SVI = () => {
 
 
 
+useEffect(() => {
+  if (triggerGLEntries) {
+    handleActivityOption("GenerateGL").then(() => {
+      updateState({ triggerGLEntries: false });
+    });
+  }
+}, [triggerGLEntries]);
+
+
+
+
+
+
+
   useEffect(() => {
   if (glCurrMode && glCurrDefault && currCode) {
     loadCurrencyMode(glCurrMode, glCurrDefault, currCode);
@@ -384,6 +400,7 @@ const SVI = () => {
 
 
   useEffect(() => {
+    loadCompanyData();
     handleReset();
   }, []);
 
@@ -403,9 +420,6 @@ const SVI = () => {
   
   const handleReset = () => {
 
-      loadDocDropDown();
-      loadDocControl();
-      loadCompanyData();
       updateState({header:{svi_date:new Date().toISOString().split("T")[0]},
 
       branchCode: "HO",
@@ -429,8 +443,6 @@ const SVI = () => {
       // UI state
       activeTab: "basic",
       GLactiveTab: "invoice",
-      isLoading: false,
-      showSpinner: false,
       isDocNoDisabled: false,
       isSaveDisabled: false,
       isResetDisabled: false,
@@ -441,30 +453,64 @@ const SVI = () => {
       updateTotalsDisplay (0, 0, 0, 0, 0, 0)
   };
 
-const loadCompanyData = async () => {
-  const hsOption = await useTopHSOption();
-  if (hsOption) {
-    updateState({
-      glCurrMode: hsOption.glCurrMode,
-      glCurrDefault: hsOption.glCurrDefault,
-      currCode: hsOption.glCurrDefault,
-      glCurrGlobal1:hsOption.glCurrGlobal1,
-      glCurrGlobal2:hsOption.glCurrGlobal2,
-      glCurrGlobal3:hsOption.glCurrGlobal3,
-    });
 
-    const curr = await useTopCurrencyRow(hsOption.glCurrDefault);
-    if (curr) {
-      updateState({
-        currName: curr.currName,
-        currRate: formatNumber(1, 6)
-      });
+
+   const loadCompanyData = async () => {
+
+    updateState({isLoading:true})
+
+    try {
+      // 🔹 1. Run these in parallel since they don’t depend on each other      
+      const data = await useTopDocDropDown(docType,"SVITRAN_TYPE");
+      if(data){
+        updateState({
+         sviTypes: data,
+         selectedSVIType: "REG",
+          });
+        };   
+
+      // 🔹 2. Document row (independent)
+      const docRow = await useTopDocControlRow(docType);
+      if (docRow) {
+        updateState({
+          documentName: docRow.docName,
+          documentSeries: docRow.docName,
+          tdocumentDocLen: docRow.docName,
+        });
+      }
+
+
+
+      // 🔹 3. HS Options + Currency row (dependent chain)
+      const hsOption = await useTopHSOption();
+      if (hsOption) {
+        updateState({
+          glCurrMode: hsOption.glCurrMode,
+          glCurrDefault: hsOption.glCurrDefault,
+          currCode: hsOption.glCurrDefault,
+          glCurrGlobal1: hsOption.glCurrGlobal1,
+          glCurrGlobal2: hsOption.glCurrGlobal2,
+          glCurrGlobal3: hsOption.glCurrGlobal3,
+        });
+
+        const curr = await useTopCurrencyRow(hsOption.glCurrDefault);
+        if (curr) {
+          updateState({
+            currName: curr.currName,
+            currRate: formatNumber(1, 6),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
     }
-  }
-};
+
+     updateState({isLoading:false})
+  };
 
 
 
+  
 const loadCurrencyMode = (
 
       mode = glCurrMode,
@@ -480,32 +526,8 @@ const loadCurrencyMode = (
         withCurr2: calcWithCurr2,
         withCurr3: calcWithCurr3,
       });
-
 };
 
-  const loadDocControl = async () => {
-      const data = await useTopDocControlRow(docType);
-      if(data){
-      updateState({
-        documentName: data.docName,
-        documentSeries: data.docName,
-        tdocumentDocLen: data.docName,
-        });
-      };
-  };
-
-
-
-  const loadDocDropDown = async () => {
-   const data = await useTopDocDropDown(docType,"SVITRAN_TYPE");
-      if(data){
-        updateState({
-         sviTypes: data,
-         selectedSVIType: "REG",
-          });
-        };    
-   };
- 
 
 
 
@@ -620,11 +642,10 @@ const handleCurrRateNoBlur = (e) => {
 
 
  const handleActivityOption = async (action) => {
-   
-    if (!detailRows || detailRows.length === 0) {
-      return;
-      }
-
+  if (action === "Upsert" && detailRowsGL.length === 0) {
+    updateState({ triggerGLEntries: true });
+    return;
+  }
 
 
   if (documentStatus === '') {
@@ -801,7 +822,9 @@ const handleCurrRateNoBlur = (e) => {
     }));
 
       const updatedRows = [...detailRows, ...newRows];
-      updateState({ detailRows: updatedRows });
+      updateState({ detailRows: updatedRows,
+                    detailRowsGL: []
+       });
       updateTotals(updatedRows);
 
 
@@ -852,21 +875,24 @@ const handleAddRowGL = () => {
 
   
 
-  const handleDeleteRow = (index) => {
+  const handleDeleteRow = async (index) => {
     const updatedRows = [...detailRows];
     updatedRows.splice(index, 1);
 
-    updateState({ detailRows: updatedRows });
+    updateState({
+        detailRows: updatedRows,
+        triggerGLEntries:true });
     updateTotals(updatedRows);
+
   };
 
 
 
   
-  const handleDeleteRowGL = (index) => {
+  const handleDeleteRowGL =  (index) => {
     const updatedRows = [...detailRowsGL];
     updatedRows.splice(index, 1);
-    updateState({ detailRowsGL: updatedRows });
+    updateState({ detailRowsGL: updatedRows }); 
   };
 
 
