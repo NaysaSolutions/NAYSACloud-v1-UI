@@ -427,7 +427,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
 
                     <button
                         onClick={handleReset}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-gray-600 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                     >
                         <FontAwesomeIcon icon={faUndo} className="mr-2" />
                         Reset
@@ -435,7 +435,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
 
                     <button
                         onClick={handleCopy} // Assuming copy also triggers a reset or similar action for now
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-purple-700 dark:hover:bg-purple-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-purple-700 dark:hover:bg-purple-600"
                     >
                         <FontAwesomeIcon icon={faCopy} className="mr-2" />
                         Copy
@@ -443,7 +443,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
 
                     <button
                         onClick={handlePrint}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-indigo-700 dark:hover:bg-indigo-600"
                     >
                         <FontAwesomeIcon icon={faPrint} className="mr-2" />
                         Print
@@ -452,30 +452,19 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                     <button
                         // This button doesn't have an onClick handler in the original code,
                         // so it's left as is, but it should ideally have a function.
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-teal-600 text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-teal-700 dark:hover:bg-teal-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-teal-700 dark:hover:bg-teal-600"
                     >
                         <FontAwesomeIcon icon={faPrint} className="mr-2" />
                         BIR Form
                     </button>
 
-                    <button
-                        onClick={handlePost}
-                        disabled={loading} // Assuming post shares the same loading state as save for simplicity
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600"
-                    >
-                        {loading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                        ) : (
-                            <FontAwesomeIcon icon={faSave} className="mr-2" />
-                        )}
-                        Post
-                    </button>
+
 
 
                      <button
                         onClick={handleAttach}
                         disabled={loading} // Assuming post shares the same loading state as save for simplicity
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-pink-600 text-white hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-pink-700 dark:hover:bg-pink-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-pink-700 dark:hover:bg-pink-600"
                     >
                         {loading ? (
                             <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
@@ -517,6 +506,19 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                             </div>
                         )}
                     </div>
+                    
+                    <button
+                        onClick={handlePost}
+                        disabled={loading} // Assuming post shares the same loading state as save for simplicity
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600"
+                    >
+                        {loading ? (
+                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                        ) : (
+                            <FontAwesomeIcon icon={faSave} className="mr-2" />
+                        )}
+                        Post
+                    </button>
 
                     <button
                         onClick={handleCancel}
