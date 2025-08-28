@@ -470,18 +470,18 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
 
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-6 lg:p-8 animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 sm:p-6 lg:p-8 animate-fade-in">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-8xl max-h-[90vh] flex flex-col relative overflow-hidden transform scale-95 animate-scale-in">
                 {/* Close Icon */}
                 <button
                     onClick={() => onClose(null)}
-                    className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-blue-100"
+                    className="absolute top-1 right-2 text-blue-500 hover:text-blue-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-blue-100"
                     aria-label="Close modal"
                 >
                     <FontAwesomeIcon icon={faTimes} size="lg" />
                 </button>
 
-                <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">Select Payee</h2>
+                <h2 className="text-sm font-semibold text-blue-800 px-3 py-2 border-b border-gray-100 dark:bg-gray-800 dark:text-white">Select Payee</h2>
 
                 <div className="flex-grow overflow-hidden">
                     {loading ? (
@@ -492,117 +492,117 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
                     ) : (
                         <div className="overflow-auto max-h-[calc(90vh-160px)] custom-scrollbar">
                             <table className="min-w-full divide-y divide-gray-100">
-                                <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                                <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm select-none">
                                     <tr>
                                         {/* Headers with Sort */}
-                                        <th className="w-[140px] px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('vendCode')}>
+                                        <th className="w-[140px] px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('vendCode')}>
                                             Payee Code {renderSortIcon('vendCode')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('vendName')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('vendName')}>
                                             Payee Name {renderSortIcon('vendName')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('source')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('source')}>
                                             Source {renderSortIcon('source')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('vendTin')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('vendTin')}>
                                             TIN {renderSortIcon('vendTin')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('atcCode')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('atcCode')}>
                                             ATC {renderSortIcon('atcCode')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('vatCode')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('vatCode')}>
                                             VAT {renderSortIcon('vatCode')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200" onClick={() => handleSort('addr')}>
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:bg-gray-800 dark:text-white" onClick={() => handleSort('addr')}>
                                             Address {renderSortIcon('addr')}
                                         </th>
-                                        <th className="px-4 py-2 text-left text-xs font-bold text-blue-900 tracking-wider">
+                                        <th className="px-3 py-2 text-left text-xs font-bold text-blue-900 tracking-wider dark:bg-gray-800 dark:text-white">
                                             Action
                                         </th>
                                     </tr>
                                     {/* Filter Row */}
-                                    <tr className="bg-gray-100">
-                                        <th className="px-3 py-1">
+                                    <tr className="bg-gray-100 dark:bg-gray-800">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.vendCode}
                                                 onChange={(e) => handleFilterChange(e, 'vendCode')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.vendName}
                                                 onChange={(e) => handleFilterChange(e, 'vendName')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.source}
                                                 onChange={(e) => handleFilterChange(e, 'source')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.vendTin}
                                                 onChange={(e) => handleFilterChange(e, 'vendTin')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.atcCode}
                                                 onChange={(e) => handleFilterChange(e, 'atcCode')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.vatCode}
                                                 onChange={(e) => handleFilterChange(e, 'vatCode')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1">
+                                        <th className="px-2 pb-1 pt-0">
                                             <input
                                                 type="text"
                                                 value={filters.addr}
                                                 onChange={(e) => handleFilterChange(e, 'addr')}
                                                 placeholder="Filter..."
-                                                className="block w-full px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className="block w-full px-1 py-1 text-xs text-gray-700 bg-white dark:bg-gray-900 dark:text-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </th>
-                                        <th className="px-3 py-1"></th>
+                                        <th className="px-2 pb-1 pt-0"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {paginatedData.length > 0 ? (
                                         paginatedData.map((vend, index) => (
                                             <tr key={index}
-                                                className="hover:bg-blue-50 transition-colors duration-150 cursor-pointer text-xs"
-                                                onClick={() => handleApply(vend)} // Allow clicking row to apply
+                                                className="hover:bg-blue-50 transition-colors duration-50 cursor-pointer text-xs dark:bg-gray-800 dark:text-white dark:hover:bg-blue-900"
+                                                onDoubleClick={() => handleApply(vend)} // Allow clicking row to apply
                                             >
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.vendCode}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.vendName}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.source}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.vendTin}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.atcCode}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">{vend.vatCode}</td>
-                                                <td className="px-4 py-1 whitespace-normal">{vend.addr}</td>
-                                                <td className="px-4 py-1 whitespace-nowrap">
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.vendCode}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.vendName}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.source}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.vendTin}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.atcCode}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">{vend.vatCode}</td>
+                                                <td className="px-3 py-1 whitespace-normal text-[11px]">{vend.addr}</td>
+                                                <td className="px-3 py-1 whitespace-nowrap text-[11px]">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleApply(vend); }} // Stop propagation to prevent row click
                                                         className="px-6 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-150"
@@ -625,11 +625,11 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
                     )}
                 </div>
 
-                <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600">
+                <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600 dark:bg-gray-800 dark:text-white">
                     <button
                         onClick={handlePrevPage}
                         disabled={currentPage === 1}
-                        className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                        className="px-7 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                     >
                         Previous
                     </button>
@@ -639,7 +639,7 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
                     <button
                         onClick={handleNextPage}
                         disabled={filtered.length <= currentPage * itemsPerPage}
-                        className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                        className="px-7 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                     >
                         Next
                     </button>
