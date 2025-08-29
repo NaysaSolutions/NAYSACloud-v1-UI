@@ -45,6 +45,7 @@ import {
   useTopVatAmount,
   useTopATCAmount,
   useTopBankRow,
+  useTopBankMastRow,
 } from '@/NAYSA Cloud/Global/top1RefTable';
 
 import {
@@ -127,27 +128,38 @@ const CV = () => {
 
 
     //Other Header Info
-    sviTypes :[],
+    cvWithApvDd :[],
+    cvTranTypeDd:[],
+    cvPayTypeDd:[],
+
+    selectedWithAPV : "Y",
+    selectedCvType : "APV01",
+    selectedPayType : "CV01",
+
+    // withAPV : "Y",
+    // paymentType: "CV01",
+    // cvType: "APV01",
+
+
     refDocNo1: "",
     refDocNo2: "",
     fromDate: null,
     toDate: null,
     remarks: "",
-    billtermCode: "",
-    billtermName: "",
-    selectedSVIType : "REG",
-    withAPV : "Y",
+
     bankCode: "",
     bankAcctNo: "",
     lastCheckNo: "",
-    paymentType: "CV001",
-    cvType: "APV001",
+
 
     userCode: 'NSI', // Default value
 
     //Detail 1-2
     detailRows  :[],
     detailRowsGL :[],
+    apTypeDd:[],
+
+    selectedApType : "APV01",
 
     totalDebit:"0.00",
     totalCredit:"0.00",
@@ -234,14 +246,21 @@ const CV = () => {
   refDocNo1,
   refDocNo2,
   remarks,
-  withAPV,
   bankCode,
   bankAcctNo,
   lastCheckNo,
+
+  selectedWithAPV,
+  selectedPayType,
+  selectedCvType,
+
+  withAPV,
   paymentType,
-  checheckDate,
   cvType,
 
+  cvWithApvDd,
+  cvTranTypeDd,
+  cvPayTypeDd,
 
   // Transaction details
   detailRows,
@@ -252,6 +271,10 @@ const CV = () => {
   totalCreditFx1,
   totalDebitFx2,
   totalCreditFx2,
+
+  selectedApType,
+  apType,
+  cvApTypeDd,
 
 
   // Contexts
@@ -440,77 +463,186 @@ const CV = () => {
   );
 
   
-  const handleReset = () => {
+  // const handleReset = () => {
 
-      loadDocDropDown();
-      loadDocControl();
-      loadCompanyData();
-      updateState({
+  //     loadDocControl();
+  //     loadCompanyData();
+  //     updateState({
         
-      header:{cv_date:new Date().toISOString().split("T")[0]},
-      header:{ck_date:new Date().toISOString().split("T")[0]},
+  //     header:{cv_date:new Date().toISOString().split("T")[0]},
+  //     header:{ck_date:new Date().toISOString().split("T")[0]},
 
-      branchCode: "HO",
-      branchName: "Head Office",
+  //     branchCode: "HO",
+  //     branchName: "Head Office",
       
-      withAPV: "Y",
-      bankCode: "",
-      bankAcctNo: "",
-      lastCheckNo: "",
-      paymentType: "Y",
-      cvType: "APV001",
+  //     withAPV: "Y",
+  //     bankCode: "",
+  //     bankAcctNo: "",
+  //     lastCheckNo: "",
+  //     paymentType: "Y",
+  //     cvType: "APV01",
 
-      refDocNo1: "",
-      refDocNo2:"",
-      fromDate:null,
-      toDate:null,
-      remarks:"",
+  //     refDocNo1: "",
+  //     refDocNo2:"",
+  //     fromDate:null,
+  //     toDate:null,
+  //     remarks:"",
 
-      vendName:"",
-      vendCode:"",
-      documentNo: "",
-      documentID: "",
-      detailRows: [],
-      detailRowsGL:[],
-      documentStatus:"",
+  //     vendName:"",
+  //     vendCode:"",
+  //     documentNo: "",
+  //     documentID: "",
+  //     detailRows: [],
+  //     detailRowsGL:[],
+  //     documentStatus:"",
       
       
-      // UI state
-      activeTab: "basic",
-      GLactiveTab: "invoice",
-      isLoading: false,
-      showSpinner: false,
-      isDocNoDisabled: false,
-      isSaveDisabled: false,
-      isResetDisabled: false,
-      isFetchDisabled: false,
-      status:"Open"
+  //     // UI state
+  //     activeTab: "basic",
+  //     GLactiveTab: "invoice",
+  //     isLoading: false,
+  //     showSpinner: false,
+  //     isDocNoDisabled: false,
+  //     isSaveDisabled: false,
+  //     isResetDisabled: false,
+  //     isFetchDisabled: false,
+  //     status:"Open"
 
+  //   });
+  //     updateTotalsDisplay (0, 0, 0, 0, 0, 0, 0, 0)
+  // };
+
+  const handleReset = () => {
+    // These functions should still be called
+    loadDocControl();
+    loadCompanyData();
+    
+    // Correct way to update the state with a single header object
+    updateState({
+        header: { 
+            cv_date: new Date().toISOString().split("T")[0],
+            ck_date: new Date().toISOString().split("T")[0]
+        },
+        branchCode: "HO",
+        branchName: "Head Office",
+        withAPV: "Y",
+        bankCode: "",
+        bankAcctNo: "",
+        lastCheckNo: "",
+        paymentType: "Y",
+        cvType: "APV01",
+        refDocNo1: "",
+        refDocNo2:"",
+        fromDate:null,
+        toDate:null,
+        remarks:"",
+        vendName:"",
+        vendCode:"",
+        documentNo: "",
+        documentID: "",
+        detailRows: [],
+        detailRowsGL:[],
+        documentStatus:"",
+        
+        // UI state
+        activeTab: "basic",
+        GLactiveTab: "invoice",
+        isLoading: false,
+        showSpinner: false,
+        isDocNoDisabled: false,
+        isSaveDisabled: false,
+        isResetDisabled: false,
+        isFetchDisabled: false,
+        status:"Open"
     });
-      updateTotalsDisplay (0, 0, 0, 0, 0, 0, 0, 0)
-  };
+
+    updateTotalsDisplay(0, 0, 0, 0, 0, 0, 0, 0);
+};
 
 const loadCompanyData = async () => {
-  const hsOption = await useTopHSOption();
-  if (hsOption) {
-    updateState({
-      glCurrMode: hsOption.glCurrMode,
-      glCurrDefault: hsOption.glCurrDefault,
-      currCode: hsOption.glCurrDefault,
-      glCurrGlobal1:hsOption.glCurrGlobal1,
-      glCurrGlobal2:hsOption.glCurrGlobal2,
-      glCurrGlobal3:hsOption.glCurrGlobal3,
-    });
 
-    const curr = await useTopCurrencyRow(hsOption.glCurrDefault);
-    if (curr) {
-      updateState({
-        currName: curr.currName,
-        currRate: formatNumber(1, 6)
-      });
+
+    updateState({isLoading:true})
+
+    try {
+      // 🔹 1. Run these in parallel since they don’t depend on each other
+      const [cvPayType, cvTranType, cvWithApv, cvApType] = await Promise.all([
+        useTopDocDropDown(docType, "PAY_TYPE"),
+        useTopDocDropDown(docType, "CVTRAN_TYPE"),
+        useTopDocDropDown(docType, "WITH_APV"),
+        useTopDocDropDown("APV", "APVTRAN_TYPE"),
+      ]);
+
+      if (cvPayType) {
+        updateState({ cvPayTypeDd: cvPayType, selectedPayType: "CV01" });
+      }
+      if (cvTranType) {
+        updateState({ cvTranTypeDd: cvTranType, selectedCvType: "APV01" });
+      }
+      if (cvWithApv) {
+        updateState({ cvWithApvDd: cvWithApv, selectedWithAPV: "Y" });
+      }
+      if (cvApType) {
+        updateState({ cvApTypeDd: cvApType, selectedApType: "APV01" });
+      }
+
+
+
+      // 🔹 2. Document row (independent)
+      const docRow = await useTopDocControlRow(docType);
+      if (docRow) {
+        updateState({
+          documentName: docRow.docName,
+          documentSeries: docRow.docName,
+          tdocumentDocLen: docRow.docName,
+        });
+      }
+
+
+
+      // 🔹 3. HS Options + Currency row (dependent chain)
+      const hsOption = await useTopHSOption();
+      if (hsOption) {
+        updateState({
+          glCurrMode: hsOption.glCurrMode,
+          glCurrDefault: hsOption.glCurrDefault,
+          currCode: hsOption.glCurrDefault,
+          glCurrGlobal1: hsOption.glCurrGlobal1,
+          glCurrGlobal2: hsOption.glCurrGlobal2,
+          glCurrGlobal3: hsOption.glCurrGlobal3,
+        });
+
+        const curr = await useTopCurrencyRow(hsOption.glCurrDefault);
+        if (curr) {
+          updateState({
+            currName: curr.currName,
+            currRate: formatNumber(1, 6),
+          });
+        }
+      }
+
+
+
+      // 🔹 4. Company + Bank row (dependent chain)
+      const company = await useTopCompanyRow();
+      if (company) {
+        updateState({ depBankCode: company.depBankcode });
+
+        const bank = await useTopBankMastRow(company.depBankcode);
+        if (bank) {
+          updateState({
+            depBankCode: bank.bankCode,
+            depAcctName: bank.acctName,
+            depAcctNo: bank.bankAcctNo,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
     }
-  }
-};
+
+     updateState({isLoading:false})
+  };
 
 
 
@@ -545,15 +677,15 @@ const loadCurrencyMode = (
 
 
 
-  const loadDocDropDown = async () => {
-   const data = await useTopDocDropDown(docType,"SVITRAN_TYPE");
-      if(data){
-        updateState({
-         sviTypes: data,
-         selectedSVIType: "REG",
-          });
-        };    
-   };
+  // const loadDocDropDown = async () => {
+  //  const data = await useTopDocDropDown(docType,"SVITRAN_TYPE");
+  //     if(data){
+  //       updateState({
+  //        sviTypes: data,
+  //        selectedSVIType: "REG",
+  //         });
+  //       };    
+  //  };
  
 
 
@@ -594,12 +726,12 @@ const fetchTranData = async (documentNo, branchCode) => {
       origAmount: formatNumber(item.origAmount),
       currRate: formatNumber(item.currRate),
       siAmount: formatNumber(item.siAmount),
-      discRate: formatNumber(item.discRate),
+      appliedAmount: formatNumber(item.appliedAmount),
       unappliedAmount: formatNumber(item.unappliedAmount),
-      netDisc: formatNumber(item.netDisc),
+      balance: formatNumber(item.balance),
       vatAmount: formatNumber(item.vatAmount),
       atcAmount: formatNumber(item.atcAmount),
-      sviAmount: formatNumber(item.sviAmount),
+      amountDue: formatNumber(item.amountDue),
     }));
 
     const formattedGLRows = (data.dt2 || []).map(glRow => ({
@@ -615,16 +747,21 @@ const fetchTranData = async (documentNo, branchCode) => {
   
     // Update state with fetched data
     updateState({
-      documentStatus: data.sviStatus,
+      documentStatus: data.cvStatus,
       status: data.docStatus,
       documentID: data.cvId,
       documentNo: data.cvNo,
       branchCode: data.branchCode,
       header: { cv_date: cvDateForHeader },
       header: { ck_date: checkDateForHeader },
-      selectedCvType: data.cvType,
+      selectedCvType: data.cvtranType,
+      selectedWithAPV: data.withAPV,
+      selectedPayType: data.payType,
       vendCode: data.vendCode,
       vendName: data.vendName,
+      bankCode: data.bankCode,
+      bankAcctNo: data.bankAcctNo,
+      checkNo: data.checkNo,
       refDocNo1: data.refDocNo1,
       refDocNo2: data.refDocNo2,
       currCode: data.currCode,
@@ -650,7 +787,7 @@ const fetchTranData = async (documentNo, branchCode) => {
 };
 
 
-const handleSviNoBlur = () => {
+const handleCvNoBlur = () => {
 
     if (!state.documentID && state.documentNo && state.branchCode) { 
         fetchTranData(state.documentNo,state.branchCode);
@@ -658,13 +795,18 @@ const handleSviNoBlur = () => {
 };
 
 const handleWithAPVChange = (e) => {
-  const selectedWithAPV = e.target.value;  // Get the selected value from the dropdown
-  updateState({ withAPV: selectedWithAPV }); // Update cvType in the state
+  const selectedWithAPV = e.target.value; 
+  updateState({ selectedWithAPV: selectedWithAPV }); 
+};
+
+const handlePayTypeChange = (e) => {
+  const selectedPayType = e.target.value; 
+  updateState({ selectedPayType: selectedPayType }); 
 };
 
 const handleCvTypeChange = (e) => {
-  const selectedCvType = e.target.value;  // Get the selected value from the dropdown
-  updateState({ cvType: selectedCvType }); // Update cvType in the state
+  const selectedCvType = e.target.value;
+  updateState({ selectedCvType: selectedCvType });
 };
 
 
@@ -703,6 +845,7 @@ const handleCurrRateNoBlur = (e) => {
         header,
         selectedWithAPV,
         selectedCvType,
+        selectedPayType,
         vendCode,
         vendName,
         bankCode,
@@ -723,30 +866,33 @@ const handleCurrRateNoBlur = (e) => {
 
     updateState({ isLoading: true });
 
+    // const cvJsonData = JSON.stringify(glData);
     const glData = {
       branchCode: branchCode,
       cvNo: documentNo || "",
       cvId: documentID || "",
+      // cvDate: header.cv_date,
       cvDate: header.cv_date,
       checkDate: header.ck_date,
       withAPV: selectedWithAPV,
       vendCode: vendCode,
       vendName: vendName,
-      cvType: selectedCvType,
+      cvtranType: selectedCvType,
+      payType: selectedPayType,
       bankCode: bankCode,
       bankAcctNo: bankAcctNo,
       checkNo: lastCheckNo,
       refDocNo1: refDocNo1,
       refDocNo2: refDocNo2,
-      OrigAmt: OrigAmt,
+      currAmount: parseFormattedNumber(totals.totalAmountDue),
       currCode: currCode || "PHP",
       currRate: parseFormattedNumber(currRate),
-      CheckAmt: CheckAmt,
-      remarks: remarks|| "",
+      checkAmt: parseFormattedNumber(totals.totalFxAmountDue),
+      remarks: remarks || "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
         lnNo: String(index + 1),
-        apType: row.selectedApType,
+        // apType: row.selectedApType,
         rrNo: row.rrNo || "",
         poNo: row.poNo || "",
         siNo: row.siNo || "",
@@ -797,6 +943,10 @@ const handleCurrRateNoBlur = (e) => {
         }))
     };
 
+    // const cvJsonData = glData.replace(/(\r\n|\n|\r)/gm, "");
+    //       console.log("GL Data Payload stringify:", cvJsonData);
+          console.log("GL Data Payload glData:", glData);
+
     if (action === "GenerateGL") {
         try {
             const newGlEntries = await useGenerateGLEntries(docType, glData);
@@ -818,6 +968,9 @@ const handleCurrRateNoBlur = (e) => {
 
     if (action === "Upsert") {
         try {
+
+          // console.log("GL Data Payload stringify:", cvJsonData);
+          console.log("GL Data Payload glData:", glData);
 
           const response = await useTransactionUpsert(docType, glData, updateState, 'cvId', 'cvNo');
           if (response) {
@@ -851,10 +1004,7 @@ const handleCurrRateNoBlur = (e) => {
 
       return {
         lnNo: "",
-        // rrNo,
-        // poNo,
-        // siNo,
-        // siDate: header[cv_date],
+        siDate: header.cv_date,
         origAmount:"0.00",
         uomCode: "",
         siAmount: "0.00",
@@ -872,7 +1022,7 @@ const handleCurrRateNoBlur = (e) => {
         sviAmount: "0.00",
         apAcct: "",
         debitAcct: "",       
-        vatAcct: item.vatAcctCode,
+        vatAcct: item.vatAcct || "",
         discAcct: "",
         rcCode: "",
         rcName: "",
@@ -999,6 +1149,7 @@ const handleCancel = async () => {
     updateState({ showCancelModal: true });
   }
 };
+
 
 
 
@@ -1148,6 +1299,11 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
    
      const row = updatedRows[index];
 
+    // if (field === 'apType' ){
+    //       row.apType = value.selectedApType   
+          
+    // };
+
       if (field === 'vatCode') {
           row.vatCode = value.vatCode,
           row.vatAcct = value.acctCode,
@@ -1178,110 +1334,6 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
           
     };
 
-
-
-
-
-  //   if (runCalculations) {  
-  //     const origAmount = parseFormattedNumber(row.origAmount) || 0;
-  //     const origCurrRate = parseFormattedNumber(row.currRate) || 0;
-  //     const origInvoiceAmount = parseFormattedNumber(row.siAmount) || 0;
-  //     const origApplied = parseFormattedNumber(row.appliedAmount) || 0;
-  //     const origUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
-  //     const origBalance = parseFormattedNumber(row.balanceAmount) || 0;
-  //     const origAmtDue = parseFormattedNumber(row.amountDue) || 0;
-  //     const origVatCode = row.vatCode || "";
-  //     const origAtcCode = row.atcCode || "";
-
-  
-  //     // shared calculation logic
-  //     async function recalcRow(newAppliedAmount, newUnapplied) {
-  //       const newInvoiceAmount = (origAmount * origCurrRate).toFixed(2);
-  //       const newAppliedAmount = newInvoiceAmount;
-  //       const newUnapplied = 0;
-  //       const newBalance = newInvoiceAmount;
-  //       const newVatAmount = origVatCode ? await useTopVatAmount(origVatCode, newBalance) : 0;
-  //       const newNetOfVat = +(newBalance - newVatAmount).toFixed(2);
-  //       const newATCAmount = origAtcCode ? await useTopATCAmount(origAtcCode, newNetOfVat) : 0;
-  //       const newAmountDue = +(newBalance - newATCAmount).toFixed(2);
-
-
-  //       row.siAmount = formatNumber(newInvoiceAmount);
-  //       row.balanceAmount = formatNumber(newBalance);
-  //       row.vatAmount = formatNumber(newVatAmount);
-  //       row.atcAmount = formatNumber(newATCAmount);
-  //       row.appliedAmount = formatNumber(newInvoiceAmount);
-  //       row.unappliedAmount = formatNumber(0);
-  //       row.balance = formatNumber(newBalance);
-  //       row.origAmount = formatNumber(parseFormattedNumber (row.origAmount));
-  //       row.currRate = formatNumber(parseFormattedNumber (row.currRate));
-  //     }
-
-  //     if (field === 'origAmount') {
-  //       const newOrigAmount = parseFormattedNumber(row.origAmount) || 0;
-  //       const newUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
-  //       const newInvoiceAmount = +(newOrigAmount * origCurrRate).toFixed(2);
-  //       const newAppliedAmount = newInvoiceAmount.toFixed(2);
-  //       const newBalance = +(newInvoiceAmount - newAppliedAmount - newUnapplied).toFixed(2);
-  //       row.balanceAmount = newBalance.toFixed(2);
-  //       await recalcRow(newInvoiceAmount, newAppliedAmount, newBalance);
-  //     }
-
-  //     if (field === 'currRate') {
-  //       const newCurrRate = parseFormattedNumber(row.currRate) || 0;
-  //       const newUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
-  //       const newInvoiceAmount = +(origAmount * newCurrRate).toFixed(2);
-  //       const newAppliedAmount = newInvoiceAmount.toFixed(2);
-  //       const newBalance = +(newInvoiceAmount - newAppliedAmount - newUnapplied).toFixed(2);
-  //       row.row.siAmount = newInvoiceAmount.toFixed(2);
-  //       row.balanceAmount = newBalance.toFixed(2);
-  //       await recalcRow(newInvoiceAmount, newAppliedAmount, newBalance);
-  //     }
-
-  //     if (field === 'appliedAmount') {
-  //       const newInvoiceAmount = +(origAmount * origCurrRate).toFixed(2);
-  //       const newUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
-  //       const newAppliedAmount = parseFormattedNumber(row.appliedAmount) || 0;
-  //       const newBalance = +(newInvoiceAmount - newAppliedAmount - newUnapplied).toFixed(2);
-  //       row.row.siAmount = newInvoiceAmount.toFixed(2);
-  //       row.balanceAmount = newBalance.toFixed(2);
-  //       await recalcRow(newBalance);
-  //     }
-
-  //     if (field === 'unappliedAmount') {
-  //       const newUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
-  //       const newInvoiceAmount = +(origAmount * origCurrRate).toFixed(2);
-  //       const newAppliedAmount = parseFormattedNumber(row.appliedAmount) || 0;
-  //       const newBalance = +(newInvoiceAmount - newAppliedAmount - newUnapplied).toFixed(2);
-  //       row.row.siAmount = newInvoiceAmount.toFixed(2);
-  //       row.balanceAmount = newBalance.toFixed(2);
-  //       await recalcRow(newBalance);
-  //     }
-
-
-  //   if (field === 'vatCode' || field === 'atcCode') {
-  //     async function updateVatAndAtc() {
-  //       const newNetDiscount = +(parseFormattedNumber(row.siAmount) - parseFormattedNumber(row.unappliedAmount)).toFixed(2);
-  //       let newVatAmount = parseFormattedNumber(row.vatAmount) || 0;
-
-  //       if (field === 'vatCode') {
-  //         newVatAmount = row.vatCode ? await useTopVatAmount(row.vatCode, newNetDiscount) : 0;
-  //         row.vatAmount = newVatAmount.toFixed(2);
-  //       }
-
-  //       const newNetOfVat = +(newNetDiscount - newVatAmount).toFixed(2);
-  //       const newATCAmount = row.atcCode ? await useTopATCAmount(row.atcCode, newNetOfVat) : 0;
-
-  //       row.atcAmount = newATCAmount.toFixed(2);
-  //       row.amountDue = +(newNetDiscount - newATCAmount).toFixed(2);
-  //     }
-
-  //     await updateVatAndAtc();
-  //   }
-
-
-  // }
-
   if (runCalculations) {  
   const origAmount = parseFormattedNumber(row.origAmount) || 0;
   const origCurrRate = parseFormattedNumber(row.currRate) || 0;
@@ -1292,13 +1344,13 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
   const origAmtDue = parseFormattedNumber(row.amountDue) || 0;
   const origVatCode = row.vatCode || "";
   const origAtcCode = row.atcCode || "";
-  const cvType = row.cvType || "APV001"; // Make sure cvType is assigned correctly
+  const cvType = row.cvType || "APV01"; // Make sure cvType is assigned correctly
   const withAPV = row.withAPV || "Y";
 
   // Shared calculation logic
   async function recalcRow(newAppliedAmount, newUnapplied) {
     const newInvoiceAmount = (origAmount * origCurrRate).toFixed(2);
-    const finalAppliedAmount = cvType === "APV001" && withAPV === "Y" ? newInvoiceAmount : newAppliedAmount; // Use a final variable to avoid redeclaring
+    const finalAppliedAmount = cvType === "APV01" && withAPV === "Y" ? newInvoiceAmount : newAppliedAmount; // Use a final variable to avoid redeclaring
     const newBalance = +(finalAppliedAmount - newUnapplied).toFixed(2);
     const newVatAmount = origVatCode ? await useTopVatAmount(origVatCode, newBalance) : 0;
     const newNetOfVat = +(newBalance - newVatAmount).toFixed(2);
@@ -1317,7 +1369,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
   }
 
   if (field === 'origAmount' || field === 'currRate' || field === 'appliedAmount' || field === 'unappliedAmount') {
-    const newAppliedAmount = cvType === "APV001" && withAPV === "Y" ? row.appliedAmount : origInvoiceAmount; // Adjust based on condition
+    const newAppliedAmount = cvType === "APV01" && withAPV === "Y" ? row.appliedAmount : origInvoiceAmount; // Adjust based on condition
     const newUnapplied = parseFormattedNumber(row.unappliedAmount) || 0;
     const newATCAmount = parseFormattedNumber(row.atcAmount) || 0;
     const newInvoiceAmount = +(origAmount * origCurrRate).toFixed(2);
@@ -1361,16 +1413,16 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 const isVisible_Dtl1 = (field, cvType, withAPV) => {
   const rules = {
-
-    // hide if withAPV = "N"
+    // These fields are visible when withAPV is "Y"
     rrNo: !["N", "special-case"].includes(withAPV),
     poNo: !["N", "special-case"].includes(withAPV),
     appliedAmount: !["N", "special-case"].includes(withAPV),
     unappliedAmount: !["N", "special-case"].includes(withAPV),
     balance: !["N", "special-case"].includes(withAPV),
     apAcct: !["N", "special-case"].includes(withAPV),
-
-    // hide if withAPV = "Y"
+    apType: !["N", "special-case"].includes(withAPV), // Add the missing 'apType' rule here
+    
+    // These fields are visible when withAPV is "N"
     vatCode: !["Y", "special-case"].includes(withAPV),
     vatName: !["Y", "special-case"].includes(withAPV),
     vatAmount: !["Y", "special-case"].includes(withAPV),
@@ -1380,10 +1432,9 @@ const isVisible_Dtl1 = (field, cvType, withAPV) => {
     amountDue: !["Y", "special-case"].includes(withAPV),
     vatAcct: !["Y", "special-case"].includes(withAPV),
     
-    // always visible
+    // These are always visible
     siNo: true,
     siDate: true,
-
   };
 
   return rules[field] ?? true;
@@ -1818,18 +1869,18 @@ const handleCloseBankModal = async (selectedBank) => {
                     </button>
                 </div>
 
-                {/* SVI Number Field */}
+                {/* CV Number Field */}
                 <div className="relative">
                     <input
                         type="text"
                         id="cvNo"
                         value={state.documentNo}
                         onChange={(e) => updateState({ documentNo: e.target.value })}
-                        onBlur={handleSviNoBlur}
+                        onBlur={handleCvNoBlur}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault(); 
-                            document.getElementById("SVIDate")?.focus();
+                            document.getElementById("cvDate")?.focus();
                           }}}
                         placeholder=" "
                         className={`peer global-tran-textbox-ui ${state.isDocNoDisabled ? 'bg-blue-100 cursor-not-allowed' : ''}`}
@@ -1858,28 +1909,35 @@ const handleCloseBankModal = async (selectedBank) => {
                 {/* CV Date Picker */}
                 <div className="relative">
                     <input type="date"
-                        id="SVIDate"
+                        id="cvDate"
                         className="peer global-tran-textbox-ui"
                         value={header.cv_date}
                         onChange={(e) => setHeader((prev) => ({ ...prev, cv_date: e.target.value }))}
                         disabled={isFormDisabled} 
                     />
-                    <label htmlFor="SVIDate" className="global-tran-floating-label">CV Date</label>
+                    <label htmlFor="cvDate" className="global-tran-floating-label">CV Date</label>
                 </div>
 
 
-
-              <div className="relative">
+                {/* With APV */}
+                <div className="relative">
                     <select id="withAPV"
                         className="peer global-tran-textbox-ui"
-                        value={withAPV} // Bind to cvType state or value
-                        onChange={handleWithAPVChange}  // Handle the change when the dropdown value changes
-                        defaultValue="APV001"
+                        value={selectedWithAPV}
+                        onChange={handleWithAPVChange}
                         disabled={isFormDisabled} 
                     >
-                      {/* <option value="Y" disabled hidden></option> */}
-                      <option value="Y">Yes</option>
-                      <option value="N">No</option>
+                        {cvWithApvDd.length > 0 ?
+                        (
+                            <>
+                                {cvWithApvDd.map((type) =>
+                                (
+                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                        {type.DROPDOWN_NAME}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (<option value="">Loading...</option>)}
                     </select>
                     <label htmlFor="withAPV" className="global-tran-floating-label">With APV</label>
                     <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
@@ -1943,23 +2001,25 @@ const handleCloseBankModal = async (selectedBank) => {
                     </button>
                 </div>
 
-                
+                {/* Payment Type */}
                 <div className="relative flex-grow w-2/4">
                     <select id="paymentType"
                         className="peer global-tran-textbox-ui"
-                        // value={paymentType}
-                        // onChange={(e) => setSelectedSVIType(e.target.value)}
-                        defaultValue="CV001"
+                        value={selectedPayType}
+                        onChange={handlePayTypeChange}
                         disabled={isFormDisabled} 
                     >
-                      {/* <option value="CV001" disabled hidden></option> */}
-                      <option value="CV001">Check</option>
-                      <option value="CV002">Cash</option>
-                      <option value="CV003">Wired</option>
-                      <option value="CV004">Manager Check</option>
-                      <option value="CV005">Authority to Debit</option>
-                      <option value="CV006">Multiple Checks</option>
-                      <option value="CV007">Bank Transfer</option>
+                        {cvPayTypeDd.length > 0 ?
+                        (
+                            <>
+                                {cvPayTypeDd.map((type) =>
+                                (
+                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                        {type.DROPDOWN_NAME}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (<option value="">Loading...</option>)}
                     </select>
                     <label htmlFor="paymentType" className="global-tran-floating-label">Payment Type</label>
                     <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
@@ -1967,7 +2027,7 @@ const handleCloseBankModal = async (selectedBank) => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                </div>
+                </div>                
 
                 </div>
 
@@ -1976,8 +2036,8 @@ const handleCloseBankModal = async (selectedBank) => {
 
                 
                 <div className="relative flex-grow w-2/4">
-                    <input type="text" id="lastCheckNo" placeholder=" " value={lastCheckNo} onChange={(e) => updateState({ lastCheckNo: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
-                    <label htmlFor="lastCheckNo" className="global-tran-floating-label">Check No.</label>
+                    <input type="text" id="checkNo" placeholder=" " value={lastCheckNo} onChange={(e) => updateState({ lastCheckNo: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                    <label htmlFor="checkNo" className="global-tran-floating-label">Check No.</label>
                 </div>
 
                 {/* Check Date Picker */}
@@ -1995,26 +2055,33 @@ const handleCloseBankModal = async (selectedBank) => {
                 </div>
 
 
+                {/* CV Type */}
                 <div className="relative">
                     <select id="cvType"
                         className="peer global-tran-textbox-ui"
-                        value={cvType} // Bind to cvType state or value
-                        onChange={handleCvTypeChange}  // Handle the change when the dropdown value changes
-                        defaultValue="APV001"
+                        value={selectedCvType}
+                        onChange={handleCvTypeChange}
                         disabled={isFormDisabled} 
                     >
-                      {/* <option value="CV001" disabled hidden></option> */}
-                      <option value="APV001">Purchases</option>
-                      <option value="APV002">Non-Purchases</option>
-                      {/* <option value="APV003">Importation</option> */}
+                        {cvTranTypeDd.length > 0 ?
+                        (
+                            <>
+                                {cvTranTypeDd.map((type) =>
+                                (
+                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                        {type.DROPDOWN_NAME}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (<option value="">Loading...</option>)}
                     </select>
-                    <label htmlFor="cvType" className="global-tran-floating-label">AP Type</label>
+                    <label htmlFor="cvType" className="global-tran-floating-label">CV Type</label>
                     <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
                         <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                </div>
+                </div>          
 
                 
                 <div className="flex space-x-4"> {/* Added flex container with spacing */}
@@ -2151,7 +2218,7 @@ const handleCloseBankModal = async (selectedBank) => {
 
       {/* APV Detail Section */}
       {/* <div id="cv_dtl" className="global-tran-tab-div-ui" > */}
-      <div id="cv_dtl" className="global-tran-tab-div-ui" style={{ display: (withAPV === 'Y' && cvType === 'APV002') || withAPV === 'N' && cvType === 'APV002' ? 'none' : 'block' }}>
+      <div id="cv_dtl" className="global-tran-tab-div-ui" style={{ display: (selectedWithAPV === 'Y' && selectedCvType === 'APV02') || selectedWithAPV === 'N' && selectedCvType === 'APV02' ? 'none' : 'block' }}>
 
 
       {/* Tab Navigation */}
@@ -2180,31 +2247,31 @@ const handleCloseBankModal = async (selectedBank) => {
         <tr>
 
           <th className="global-tran-th-ui">LN</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apType", cvType, withAPV)}>AP Type</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rrNo", cvType, withAPV)}>RR No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("poNo", cvType, withAPV)}>PO/JO No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siNo", cvType, withAPV)}>Invoice No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siDate", cvType, withAPV)}>Invoice Date</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("origAmount", cvType, withAPV)}>Original Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currCode", cvType, withAPV)}>Currency</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currRate", cvType, withAPV)}>Currency Rate</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siAmount", cvType, withAPV)}>Invoice Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, withAPV)}>Applied Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, withAPV)}>Unapplied Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("balance", cvType, withAPV)}>Balance</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("debitAcct", cvType, withAPV)}>DR Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apAcct", cvType, withAPV)}>AP Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAcct", cvType, withAPV)}>VAT Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcCode", cvType, withAPV)}>RC Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcName", cvType, withAPV)}>RC Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("slCode", cvType, withAPV)}>SL Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatCode", cvType, withAPV)}>VAT Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatName", cvType, withAPV)}>VAT Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, withAPV)}>VAT Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcCode", cvType, withAPV)}>ATC</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcName", cvType, withAPV)}>ATC Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, withAPV)}>ATC Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("amountDue", cvType, withAPV)}>Amount Due</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apType", cvType, selectedWithAPV)}>AP Type</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rrNo", cvType, selectedWithAPV)}>RR No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("poNo", cvType, selectedWithAPV)}>PO/JO No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siNo", cvType, selectedWithAPV)}>Invoice No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siDate", cvType, selectedWithAPV)}>Invoice Date</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("origAmount", cvType, selectedWithAPV)}>Original Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currCode", cvType, selectedWithAPV)}>Currency</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currRate", cvType, selectedWithAPV)}>Currency Rate</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siAmount", cvType, selectedWithAPV)}>Invoice Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, selectedWithAPV)}>Applied</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, selectedWithAPV)}>Unapplied</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("balance", cvType, selectedWithAPV)}>Balance</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("debitAcct", cvType, selectedWithAPV)}>DR Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apAcct", cvType, selectedWithAPV)}>AP Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAcct", cvType, selectedWithAPV)}>VAT Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcCode", cvType, selectedWithAPV)}>RC Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcName", cvType, selectedWithAPV)}>RC Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("slCode", cvType, selectedWithAPV)}>SL Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatCode", cvType, selectedWithAPV)}>VAT Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatName", cvType, selectedWithAPV)}>VAT Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, selectedWithAPV)}>VAT Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcCode", cvType, selectedWithAPV)}>ATC</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcName", cvType, selectedWithAPV)}>ATC Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, selectedWithAPV)}>ATC Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("amountDue", cvType, selectedWithAPV)}>Amount Due</th>
 
          {!isFormDisabled && (
           <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
@@ -2229,21 +2296,27 @@ const handleCloseBankModal = async (selectedBank) => {
           <td className="global-tran-td-ui text-center">{index + 1}</td>
          
          {/* AP Type */}
-          <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("aptype", cvType, withAPV)}>
-              <select
-                className="w-[120px] global-tran-td-inputclass-ui"
-                value={row.aptype || ""}
-                onChange={(e) => handleDetailChange(index, 'apType', e.target.value)}
-              >
-                <option value="APV001">Purchases</option>
-                <option value="APV004">Liquidation</option>
-                <option value="APV005">Replenishment</option>
-                <option value="APV006">Reimbursement</option>
+          <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("apType", cvType, selectedWithAPV)}>
+            <select
+                  className="w-[120px] global-tran-td-inputclass-ui"
+                  value={row.apType || ""}
+                  onChange={(e) => handleDetailChange(index, 'apType', e.target.value)}
+            >
+                  {cvApTypeDd.length > 0 ?
+                      (
+                          <>
+                              {cvApTypeDd.map((type) => (
+                                  <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                      {type.DROPDOWN_NAME}
+                                  </option>
+                              ))}
+                          </>
+                      ) : (<option value="">Loading...</option>)}
               </select>
-            </td>
+          </td>
 
           {/* RR No */}
-           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("rrNo", cvType, withAPV)}>
+           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("rrNo", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2253,7 +2326,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
           {/* PO No */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("poNo", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("poNo", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2263,7 +2336,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
           {/* Invoice No */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siNo", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siNo", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2273,7 +2346,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
           {/* Invoice Date */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siDate", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siDate", cvType, selectedWithAPV)}>
               <input
                 type="date"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2284,7 +2357,7 @@ const handleCloseBankModal = async (selectedBank) => {
 
 
           {/* Original Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("origAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("origAmount", cvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2325,7 +2398,7 @@ const handleCloseBankModal = async (selectedBank) => {
 
 
             {/* Currency Code */}
-           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currCode", cvType, withAPV)}>
+           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currCode", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] text-center global-tran-td-inputclass-ui"
@@ -2335,7 +2408,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* Currency Rate */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currRate", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currRate", cvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2375,7 +2448,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>          
 
             {/* Invoice Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siAmount", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0 cursor-pointer"
@@ -2385,7 +2458,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* Applied Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2425,7 +2498,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* Unapplied Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2465,7 +2538,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* Balance */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("balance", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("balance", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2476,7 +2549,7 @@ const handleCloseBankModal = async (selectedBank) => {
 
 
             {/* DR Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("debitAcct", cvType, withAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("debitAcct", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2498,7 +2571,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* AP Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("apAcct", cvType, withAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("apAcct", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2520,7 +2593,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* VAT Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatAcct", cvType, withAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatAcct", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2542,7 +2615,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* RC Code */}
-              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcCode", cvType, withAPV)}>
+              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcCode", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2564,7 +2637,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* RC Name */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcName", cvType, withAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcName", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2602,7 +2675,7 @@ const handleCloseBankModal = async (selectedBank) => {
               </td> */}
 
               {/* SL Code */}
-              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("slCode", cvType, withAPV)}>
+              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("slCode", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2624,7 +2697,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* VAT Code */}
-             <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatCode", cvType, withAPV)}>
+             <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatCode", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2646,7 +2719,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* VAT Name */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatName", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatName", cvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[250px] global-tran-td-inputclass-ui"
@@ -2656,7 +2729,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* VAT Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2666,7 +2739,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* ATC Code */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("atcCode", cvType, withAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("atcCode", cvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2689,7 +2762,7 @@ const handleCloseBankModal = async (selectedBank) => {
 
             
             {/* ATC Name */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcName", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcName", cvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[250px] global-tran-td-inputclass-ui"
@@ -2699,7 +2772,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* ATC Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, selectedWithAPV)}>
                 <input
                    type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2709,7 +2782,7 @@ const handleCloseBankModal = async (selectedBank) => {
             </td>
 
             {/* Amount Due */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("amountDue", cvType, withAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("amountDue", cvType, selectedWithAPV)}>
                 <input
                    type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2777,7 +2850,7 @@ const handleCloseBankModal = async (selectedBank) => {
         <div className="global-tran-tab-footer-total-value-ui">{totals.totalInvoiceAmount}</div>
         {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxOriginalAmount}</div>}
          */}
-        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+        {!(selectedWithAPV === "N" && selectedCvType === "APV02") && selectedWithAPV !== "Y" && (
             <>
                 <div className="global-tran-tab-footer-total-label-ui">Total Invoice Amount:</div>
                 <div className="global-tran-tab-footer-total-value-ui">{totals.totalInvoiceAmount}</div>
@@ -2786,7 +2859,7 @@ const handleCloseBankModal = async (selectedBank) => {
         )}
 
         {/* Total Applied Amount */}
-        {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
+        {!(selectedWithAPV === "Y" && selectedCvType === "APV02") && selectedWithAPV !== "N" && (
             <>
                 <div className="global-tran-tab-footer-total-label-ui">Total Applied Amount:</div>
                 <div className="global-tran-tab-footer-total-value-ui">{totals.totalAppliedAmount}</div>
@@ -2795,7 +2868,7 @@ const handleCloseBankModal = async (selectedBank) => {
         )}
 
         {/* Total Unapplied Amount */}
-        {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
+        {!(selectedWithAPV === "Y" && selectedCvType === "APV02") && selectedWithAPV !== "N" && (
             <>
                 <div className="global-tran-tab-footer-total-label-ui">Total Unapplied Amount:</div>
                 <div className="global-tran-tab-footer-total-value-ui">{totals.totalUnappliedAmount}</div>
@@ -2804,7 +2877,7 @@ const handleCloseBankModal = async (selectedBank) => {
         )}
 
         {/* Total VAT Amount */}
-        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+        {!(selectedWithAPV === "N" && selectedCvType === "APV02") && selectedWithAPV !== "Y" && (
             <>
                 <div className="global-tran-tab-footer-total-label-ui">Total VAT Amount:</div>
                 <div className="global-tran-tab-footer-total-value-ui">{totals.totalVatAmount}</div>
@@ -2813,7 +2886,7 @@ const handleCloseBankModal = async (selectedBank) => {
         )}
 
         {/* Total ATC Amount */}
-        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+        {!(selectedWithAPV === "N" && selectedCvType === "APV02") && selectedWithAPV !== "Y" && (
             <>
                 <div className="global-tran-tab-footer-total-label-ui">Total ATC Amount:</div>
                 <div className="global-tran-tab-footer-total-value-ui">{totals.totalAtcAmount}</div>
