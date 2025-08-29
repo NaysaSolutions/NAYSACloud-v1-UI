@@ -152,6 +152,12 @@ const CV = () => {
     totalDebit:"0.00",
     totalCredit:"0.00",
 
+    totalDebitFx1:"0.00",
+    totalCreditFx1:"0.00",
+
+    totalDebitFx2:"0.00",
+    totalCreditFx2:"0.00",
+
  
     // Modal states
     modalContext: '',
@@ -233,7 +239,7 @@ const CV = () => {
   bankAcctNo,
   lastCheckNo,
   paymentType,
-  checkDate,
+  checheckDate,
   cvType,
 
 
@@ -242,6 +248,10 @@ const CV = () => {
   detailRowsGL,
   totalDebit,
   totalCredit,
+  totalDebitFx1,
+  totalCreditFx1,
+  totalDebitFx2,
+  totalCreditFx2,
 
 
   // Contexts
@@ -355,9 +365,13 @@ const CV = () => {
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
     const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debitFx1) || 0), 0);
+    const creditFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.creditFx1) || 0), 0);
   updateState({
     totalDebit: formatNumber(debitSum),
-    totalCredit: formatNumber(creditSum)
+    totalCredit: formatNumber(creditSum),
+    totalDebitFx1: formatNumber(debitFx1Sum),
+    totalCreditFx1: formatNumber(creditFx1Sum)
   })
   }, [detailRowsGL]);
 
@@ -568,10 +582,10 @@ const fetchTranData = async (documentNo, branchCode) => {
     }
 
     // Format header date
-    let ckDateForHeader = '';
-    if (data.ckDate) {
-      const d = new Date(data.ckDate);
-      ckDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
+    let checkDateForHeader = '';
+    if (data.checkDate) {
+      const d = new Date(data.checkDate);
+      checkDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
     }
 
     // Format rows
@@ -607,8 +621,8 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentNo: data.cvNo,
       branchCode: data.branchCode,
       header: { cv_date: cvDateForHeader },
-      header: { ck_date: ckDateForHeader },
-      selectedSVIType: data.svitranType,
+      header: { ck_date: checkDateForHeader },
+      selectedCvType: data.cvType,
       vendCode: data.vendCode,
       vendName: data.vendName,
       refDocNo1: data.refDocNo1,
@@ -617,8 +631,6 @@ const fetchTranData = async (documentNo, branchCode) => {
       currName: data.currName,
       currRate: formatNumber(data.currRate, 6),
       remarks: data.remarks,
-      billtermCode: data.billtermCode,
-      billtermName: data.billtermName,
       detailRows: retrievedDetailRows,
       detailRowsGL: formattedGLRows,
       isDocNoDisabled: true,
@@ -689,17 +701,20 @@ const handleCurrRateNoBlur = (e) => {
         documentNo,
         documentID,
         header,
-        selectedSVIType,
-        billtermCode,
+        selectedWithAPV,
+        selectedCvType,
         vendCode,
         vendName,
+        bankCode,
+        bankAcctNo,
+        lastCheckNo,
         refDocNo1,
         refDocNo2,
-        fromDate,
-        toDate,
+        OrigAmt,
         currCode,
         currName,
         currRate,
+        CheckAmt,
         remarks,
         // userCode, // Assuming userCode is also part of your state
         detailRows,
@@ -713,46 +728,50 @@ const handleCurrRateNoBlur = (e) => {
       cvNo: documentNo || "",
       cvId: documentID || "",
       cvDate: header.cv_date,
-      ckDate: header.ck_date,
-      svitranType: selectedSVIType,
-      billtermCode:billtermCode,
+      checkDate: header.ck_date,
+      withAPV: selectedWithAPV,
       vendCode: vendCode,
       vendName: vendName,
+      cvType: selectedCvType,
+      bankCode: bankCode,
+      bankAcctNo: bankAcctNo,
+      checkNo: lastCheckNo,
       refDocNo1: refDocNo1,
       refDocNo2: refDocNo2,
-      fromDate: fromDate,
-      toDate: toDate,
+      OrigAmt: OrigAmt,
       currCode: currCode || "PHP",
       currRate: parseFormattedNumber(currRate),
+      CheckAmt: CheckAmt,
       remarks: remarks|| "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
         lnNo: String(index + 1),
-        billCode: row.billCode || "",
-        billName: row.billName || "",
-        sviSpecs: row.sviSpecs || "",
+        apType: row.selectedApType,
+        rrNo: row.rrNo || "",
+        poNo: row.poNo || "",
+        siNo: row.siNo || "",
+        siDate: row.siDate || header.cv_date,
+        origAmount: parseFormattedNumber(row.origAmount || 0),
         currCode: row.currCode || "",
         currRate: parseFormattedNumber(row.currRate),
-        origAmount: parseFormattedNumber(row.origAmount || 0),
-        uomCode: row.uomCode || "",
-        currRate: parseFormattedNumber(row.currRate || 0),
         siAmount: parseFormattedNumber(row.siAmount || 0),
-        discRate: parseFormattedNumber(row.discRate || 0),
-        unappliedAmount: parseFormattedNumber(row.discAmt || 0),
-        netDisc: parseFormattedNumber(row.netDisc || 0),
+        appliedAmount: parseFormattedNumber(row.appliedAmount || 0),
+        appliedFx: parseFormattedNumber(row.appliedFx || 0),
+        unappliedAmount: parseFormattedNumber(row.unappliedAmount || 0),
+        balance: parseFormattedNumber(row.balance || 0),
+        apAcct: row.apAcct,
+        debitAcct: row.debitAcct,
+        vatAcct: row.vatAcct,
+        rcCode: row.rcCode,
+        rcName: row.rcName,
+        slCode: row.slCode,
         vatCode: row.vatCode,
         vatName: row.vatName,
         vatAmount: parseFormattedNumber(row.vatAmount || 0),
         atcCode: row.atcCode || "",
         atcName: row.atcName || "",
         atcAmount: parseFormattedNumber(row.atcAmount),
-        sviAmount: parseFormattedNumber(row.sviAmount || 0),
-        apAcct: row.apAcct,
-        debitAcct: row.debitAcct,
-        vatAcct: row.vatAcct,
-        slCode: row.slCode,
-        rcCode:row.rcCode,
-        rcName:row.rcName
+        amountDue: parseFormattedNumber(row.amountDue || 0)
       })),
        dt2: detailRowsGL.map((entry, index) => ({
           recNo: String(index + 1),
@@ -1389,6 +1408,8 @@ const handleDetailChangeGL = async (index, field, value) => {
             row.atcCode = data.atcCode
             row.atcName = data.atcName
             row.particular = data.particular
+            row.slRefNo = data.slRefNo
+            row.slRefDate = data.slRefDate
         }
     }
     
@@ -1962,13 +1983,13 @@ const handleCloseBankModal = async (selectedBank) => {
                 {/* Check Date Picker */}
                 <div className="relative flex-grow w-2/4">
                     <input type="date"
-                        id="CheckDate"
+                        id="checkDate"
                         className="peer global-tran-textbox-ui"
                         value={header.ck_date}
                         onChange={(e) => setHeader((prev) => ({ ...prev, ck_date: e.target.value }))}
                         disabled={isFormDisabled} 
                     />
-                    <label htmlFor="CheckDate" className="global-tran-floating-label">Check Date</label>
+                    <label htmlFor="checkDate" className="global-tran-floating-label">Check Date</label>
                 </div>
                 
                 </div>
@@ -2058,8 +2079,8 @@ const handleCloseBankModal = async (selectedBank) => {
         {/* Column 4 - Totals (remains unchanged, but its parent is now the main 4-column grid) */}
         <div className="global-tran-textbox-group-div-ui">
             <div className="relative">
-                <input type="text" id="totalInvoiceAmount" value={totals.totalInvoiceAmount} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-                <label htmlFor="totalInvoiceAmount" className="global-tran-floating-label">Check Amount (Orig.)</label>
+                <input type="text" id="totalFxAmountDue" value={totals.totalFxAmountDue} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+                <label htmlFor="totalFxAmountDue" className="global-tran-floating-label">Check Amount (Orig.)</label>
             </div>
 
     
@@ -2119,8 +2140,8 @@ const handleCloseBankModal = async (selectedBank) => {
                     </div>
 
             <div className="relative">
-                <input type="text" id="totalFxAmountDue" value={totals.totalFxAmountDue} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
-                <label htmlFor="totalFxAmountDue" className="global-tran-floating-label">Check Amount (PHP)</label>
+                <input type="text" id="totalAmountDue" value={totals.totalAmountDue} placeholder=" " className="peer global-tran-textbox-ui text-right"/>
+                <label htmlFor="totalAmountDue" className="global-tran-floating-label">Check Amount (PHP)</label>
             </div>
         </div>
 
@@ -2731,135 +2752,81 @@ const handleCloseBankModal = async (selectedBank) => {
   </div>
   </div>
 
-{/* Invoice Details Footer */}
-{/* Invoice Details Footer */}
-<div className="global-tran-tab-footer-main-div-ui grid grid-cols-1 gap-0 sm:grid-cols-0 sm:gap-2 justify-between">
 
-  {/* Add Button */}
-  <div className="global-tran-tab-footer-button-div-ui">
-    <button
-      onClick={() => handleAddRow()}
-      className="global-tran-tab-footer-button-add-ui"
-      style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
-    >
-      <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
-    </button>
-  </div>
-
-  {/* Totals Section */}
-  <div className="global-tran-tab-footer-total-main-div-ui">
-
-    {/* Currency */}
-    <div className="global-tran-tab-footer-total-div-ui">
-      <label className="global-tran-tab-footer-total-label-ui">Currency:</label>
-      <label id="currency" className="global-tran-tab-footer-total-value-ui">{glCurrDefault}</label>
+<div className="global-tran-tab-footer-main-div-ui flex flex-col sm:flex-row gap-4 sm:justify-between items-end">
+    {/* Add Button */}
+    <div className="global-tran-tab-footer-button-div-ui">
+        <button
+            onClick={() => handleAddRow()}
+            className="global-tran-tab-footer-button-add-ui"
+            style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
+        >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
+        </button>
     </div>
 
-    {/* Total Invoice Amount */}
-    <div className="global-tran-tab-footer-total-div-ui">
-      <label className="global-tran-tab-footer-total-label-ui">Total Invoice Amount:</label>
-      <label id="totalInvoiceAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalInvoiceAmount}</label>
+    {/* Totals Grid */}
+    <div className={`global-tran-tab-footer-total-main-div-ui grid gap-1 ${currRate > 1 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {/* Header Row */}
+        <div className="col-span-1 sm:col-span-1"></div>
+        <div className="global-tran-tab-footer-total-label-ui text-right">Currency ({glCurrDefault})</div>
+        {currRate > 1 && <div className="global-tran-tab-footer-total-label-ui text-right">Currency ({currCode})</div>}
+
+        {/* Total Invoice Amount */}
+        {/* <div className="global-tran-tab-footer-total-label-ui">Total Invoice Amount:</div>
+        <div className="global-tran-tab-footer-total-value-ui">{totals.totalInvoiceAmount}</div>
+        {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxOriginalAmount}</div>}
+         */}
+        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+            <>
+                <div className="global-tran-tab-footer-total-label-ui">Total Invoice Amount:</div>
+                <div className="global-tran-tab-footer-total-value-ui">{totals.totalInvoiceAmount}</div>
+                {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxOriginalAmount}</div>}
+            </>
+        )}
+
+        {/* Total Applied Amount */}
+        {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
+            <>
+                <div className="global-tran-tab-footer-total-label-ui">Total Applied Amount:</div>
+                <div className="global-tran-tab-footer-total-value-ui">{totals.totalAppliedAmount}</div>
+                {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxAppliedAmount}</div>}
+            </>
+        )}
+
+        {/* Total Unapplied Amount */}
+        {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
+            <>
+                <div className="global-tran-tab-footer-total-label-ui">Total Unapplied Amount:</div>
+                <div className="global-tran-tab-footer-total-value-ui">{totals.totalUnappliedAmount}</div>
+                {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxUnappliedAmount}</div>}
+            </>
+        )}
+
+        {/* Total VAT Amount */}
+        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+            <>
+                <div className="global-tran-tab-footer-total-label-ui">Total VAT Amount:</div>
+                <div className="global-tran-tab-footer-total-value-ui">{totals.totalVatAmount}</div>
+                {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxVatAmount}</div>}
+            </>
+        )}
+
+        {/* Total ATC Amount */}
+        {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
+            <>
+                <div className="global-tran-tab-footer-total-label-ui">Total ATC Amount:</div>
+                <div className="global-tran-tab-footer-total-value-ui">{totals.totalAtcAmount}</div>
+                {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxAtcAmount}</div>}
+            </>
+        )}
+
+        {/* Total Amount Due */}
+        <div className="global-tran-tab-footer-total-label-ui">Total Amount Due:</div>
+        <div className="global-tran-tab-footer-total-value-ui">{totals.totalAmountDue}</div>
+        {currRate > 1 && <div className="global-tran-tab-footer-total-value-ui">{totals.totalFxAmountDue}</div>}
     </div>
-
-    {/* Total Applied Amount */}
-    {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total Applied Amount:</label>
-        <label id="totalAppliedAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalAppliedAmount}</label>
-      </div>
-    )}
-
-    {/* Total Unapplied Amount */}
-    {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total Unapplied Amount:</label>
-        <label id="totalUnappliedAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalUnappliedAmount}</label>
-      </div>
-    )}
-
-    {/* Total VAT Amount */}
-    {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total VAT Amount:</label>
-        <label id="totalVatAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalVatAmount}</label>
-      </div>
-    )}
-
-    {/* Total ATC Amount */}
-    {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total ATC Amount:</label>
-        <label id="totalAtcAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalAtcAmount}</label>
-      </div>
-    )}
-
-    {/* Total Payable Amount (Invoice + VAT - ATC) */}
-    <div className="global-tran-tab-footer-total-div-ui">
-      <label className="global-tran-tab-footer-total-label-ui">Total Amount Due:</label>
-      <label id="totalAmountDue" className="global-tran-tab-footer-total-value-ui">{totals.totalAmountDue}</label>
-    </div>
-
-  </div>
-
-  {/* Totals in Forex Section */}
-  {currRate > 1 && (
-    <div className="global-tran-tab-footer-total-main-div-ui">
-
-      {/* Currency */}
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Currency:</label>
-        <label id="currency" className="global-tran-tab-footer-total-value-ui">{currCode}</label>
-      </div>
-
-      {/* Total Invoice Amount in Forex */}
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total Invoice Amount:</label>
-        <label id="totalOriginalAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalFxOriginalAmount}</label>
-      </div>
-
-      {/* Total Applied Amount in Forex */}
-      {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
-        <div className="global-tran-tab-footer-total-div-ui">
-          <label className="global-tran-tab-footer-total-label-ui">Total Applied Amount:</label>
-          <label id="totalAppliedAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalFxAppliedAmount}</label>
-        </div>
-      )}
-
-      {/* Total Unapplied Amount in Forex */}
-      {!(withAPV === "Y" && cvType === "APV002") && withAPV !== "N" && (
-        <div className="global-tran-tab-footer-total-div-ui">
-          <label className="global-tran-tab-footer-total-label-ui">Total Unapplied Amount:</label>
-          <label id="totalUnappliedAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalFxUnappliedAmount}</label>
-        </div>
-      )}
-
-      {/* Total VAT Amount in Forex */}
-      {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
-        <div className="global-tran-tab-footer-total-div-ui">
-          <label className="global-tran-tab-footer-total-label-ui">Total VAT Amount:</label>
-          <label id="totalVatAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalFxVatAmount}</label>
-        </div>
-      )}
-
-      {/* Total ATC Amount in Forex */}
-      {!(withAPV === "N" && cvType === "APV002") && withAPV !== "Y" && (
-        <div className="global-tran-tab-footer-total-div-ui">
-          <label className="global-tran-tab-footer-total-label-ui">Total ATC Amount:</label>
-          <label id="totalAtcAmount" className="global-tran-tab-footer-total-value-ui">{totals.totalFxAtcAmount}</label>
-        </div>
-      )}
-
-      {/* Total Payable Amount in Forex (Invoice + VAT - ATC) */}
-      <div className="global-tran-tab-footer-total-div-ui">
-        <label className="global-tran-tab-footer-total-label-ui">Total Amount Due:</label>
-        <label id="totalAmountDue" className="global-tran-tab-footer-total-value-ui">{totals.totalFxAmountDue}</label>
-      </div>
-
-    </div>
-  )}
-
 </div>
-
 
 
 </div>
@@ -3368,29 +3335,58 @@ const handleCloseBankModal = async (selectedBank) => {
 
       
 
-      {/* Totals Section */}
-      <div className="global-tran-tab-footer-total-main-div-ui">
 
-      {/* Total Debit */}
+{/* Totals Section */}
+<div className="global-tran-tab-footer-total-main-div-ui">
+
+  {/* Total Debit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+      Total Debit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+      {totalDebit}
+    </label>
+  </div>
+
+  {/* Total Credit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+      Total Credit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+      {totalCredit}
+    </label>
+  </div>
+
+  {/* Totals in Forex Section (if currRate > 1) */}
+  {currRate > 1 && (
+    <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
-          Total Debit:
+          Total Debit ({currCode}):
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-      {totalDebit}
-      </label>
+          {totalDebitFx1}
+        </label>
       </div>
 
-      {/* Total Credit */}
+      {/* Total Credit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
-          Total Credit:
+          Total Credit ({currCode}):
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-      {totalCredit}
-      </label>
+          {totalCreditFx1}
+        </label>
       </div>
+
     </div>
+  )}
+
+</div>
 
     
 
@@ -3458,7 +3454,7 @@ const handleCloseBankModal = async (selectedBank) => {
   <VATLookupModal  
     isOpen={showVatModal}
     onClose={handleCloseVatModal}
-    customParam="OutputService"
+    customParam="Input"
   />
 )}
 
