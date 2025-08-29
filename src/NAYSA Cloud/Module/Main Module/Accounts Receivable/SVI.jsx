@@ -1843,7 +1843,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             onChange={(e) => {
                             const inputValue = e.target.value;
                             const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                            if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            if (/^\d*\.?\d{0,6}$/.test(sanitizedValue) || sanitizedValue === "") {
                                 updateState({ currRate: sanitizedValue })
                             }}}
                             onBlur={handleCurrRateNoBlur}
