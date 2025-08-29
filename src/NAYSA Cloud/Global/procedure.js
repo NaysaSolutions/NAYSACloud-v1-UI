@@ -74,7 +74,7 @@ export const useGenerateGLEntries = async (docCode, glData) => {
     }
   } catch (error) {
     console.error("Error in generateGLEntries:", error);
-    swal.fire({
+    Swal.fire({
       icon: 'error',
       title: 'Generation Failed',
       text: error.message || 'Unknown error occurred',
