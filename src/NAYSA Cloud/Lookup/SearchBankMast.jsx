@@ -70,7 +70,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-auto relative">
+      <div className="bg-white rounded-lg p-3 w-full max-w-3xl max-h-[90vh] overflow-auto relative">
         {/* Close Icon */}
         <button
           onClick={() => onClose(null)}
@@ -79,7 +79,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
           <FontAwesomeIcon icon={faTimes} size="lg" />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4 uppercase">Select Bank</h2>
+        <h2 className="text-sm font-semibold mb-3">Select Bank</h2>
 
         {loading ? (
           <div className="flex justify-center items-center h-32">
@@ -87,18 +87,18 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
           </div>
         ) : (
           <div className="overflow-x-auto max-h-[60vh] rounded">
-            <table className="min-w-full border-collapse text-sm text-left border border-gray-200">
-              <thead className='text-gray-700 uppercase bg-gray-100 sticky top-0 z-10'>
+            <table className="min-w-full border-collapse text-xs text-left border border-gray-200">
+              <thead className='text-blue-800 bg-gray-100 sticky top-0 z-10'>
                 <tr>
                   <th className="px-2 py-2 border">Bank Code</th>
                   <th className="px-2 py-2 border">Bank Type</th>
-                  <th className="px-4 py-2 border text-center">Account Code</th>
-                  <th className="px-8 py-2 border text-center">Bank Account No</th>
+                  <th className="px-2 py-2 border text-center">Account Code</th>
+                  <th className="px-2 py-2 border text-center">Bank Account No</th>
                   <th className="px-2 py-2 border text-center">Currency</th>
-                  <th className="px-4 py-2 border">Action</th>
+                  <th className="px-2 py-2 border">Action</th>
                 </tr>
                 <tr className="bg-white">
-                  <th className="border px-4 py-1">
+                  <th className="border px-2 py-1">
                     <input
                       type="text"
                       value={filters.bankCode}
@@ -106,7 +106,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="border px-2 py-1">
                     <input
                       type="text"
                       value={filters.bankTypeCode}
@@ -114,7 +114,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="border px-2 py-1">
                     <input
                       type="text"
                       value={filters.acctCode}
@@ -122,7 +122,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="border px-2 py-1">
                     <input
                       type="text"
                       value={filters.bankAcctNo}
@@ -130,7 +130,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>
-                  <th className="border px-4 py-1">
+                  <th className="border px-2 py-1">
                     <input
                       type="text"
                       value={filters.currCode}
@@ -138,7 +138,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
                       className="w-full border px-2 py-1 rounded text-sm"
                     />
                   </th>               
-                  <th className="border px-4 py-1"></th>
+                  <th className="border px-2 py-1"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -152,15 +152,15 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
   ) : filtered.length > 0 ? (
     filtered.map((bank, index) => (
       <tr key={index} className="bg-white hover:bg-gray-100 transition">
-        <td className="px-4 py-2 border">{bank.bankCode}</td>
-        <td className="px-4 py-2 border">{bank.bankTypeCode}</td>
-        <td className="px-4 py-2 border">{bank.acctCode}</td>
-        <td className="px-4 py-2 border">{bank.bankAcctNo}</td>
-        <td className="px-4 py-2 border">{bank.currCode}</td>
-        <td className="border px-4 py-2">
+        <td className="px-2 py-1 border">{bank.bankCode}</td>
+        <td className="px-2 py-1 border">{bank.bankTypeCode}</td>
+        <td className="px-2 py-1 border">{bank.acctCode}</td>
+        <td className="px-2 py-1 border">{bank.bankAcctNo}</td>
+        <td className="px-2 py-1 border">{bank.currCode}</td>
+        <td className="border px-2 py-1">
           <button
             onClick={() => handleApply(bank)}
-            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+            className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
           >
             Apply
           </button>
@@ -177,7 +177,7 @@ const BankMastLookupModal = ({ isOpen, onClose}) => {
 </tbody>
 
             </table>
-            <div className="p-3 text-sm text-gray-600">
+            <div className="p-2 text-sm text-gray-600">
               Showing <strong>{filtered.length}</strong> of {bamast.length} entries
             </div>
           </div>

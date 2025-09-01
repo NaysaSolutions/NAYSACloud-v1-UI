@@ -442,3 +442,39 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
 
 
 
+
+export async function useHandlePost(docCode, documentID, userCode, updateState) {
+  const payload = {
+    json_data: {
+      docCode,
+      documentID,
+      userCode
+    },
+  };
+
+  updateState({ isLoading: true });
+
+  try {
+    const response = await postRequest("post" + docCode, JSON.stringify(payload));
+
+      if (response?.status === "success") {
+        return { success: true, message: `${docCode} posted successfully!`, data: response };
+      } else {
+        return { success: false, message: response?.message || "Failed to post transaction" };
+      }
+
+  } catch (error) {
+    console.error("Error posting transaction:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Post Failed",
+      text: error.message || "An error occurred while posting the transaction",
+    });
+  } finally {
+    updateState({
+      isSaveDisabled: false,
+      isResetDisabled: false,
+      isLoading: false,
+    });
+  }
+}

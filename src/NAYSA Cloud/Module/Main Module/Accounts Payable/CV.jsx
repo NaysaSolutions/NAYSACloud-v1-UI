@@ -16,6 +16,7 @@ import ATCLookupModal from "../../../Lookup/SearchATCRef.jsx";
 import SLMastLookupModal from "../../../Lookup/SearchSLMast.jsx";
 import BankLookupModal from "../../../Lookup/SearchBankMast.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
+import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 
@@ -56,6 +57,7 @@ import {
   useFetchTranData,
   useHandlePrint,
   useHandleCancel,
+  useHandlePost,
 } from '@/NAYSA Cloud/Global/procedure';
 
 
@@ -101,6 +103,7 @@ const CV = () => {
     GLactiveTab: "invoice",
     isLoading: false,
     showSpinner: false,
+    triggerGLEntries:false,
     isDocNoDisabled: false,
     isSaveDisabled: false,
     isResetDisabled: false,
@@ -149,7 +152,7 @@ const CV = () => {
 
     bankCode: "",
     bankAcctNo: "",
-    lastCheckNo: "",
+    checkNo: "",
 
 
     userCode: 'NSI', // Default value
@@ -191,6 +194,7 @@ const CV = () => {
     paytermModalOpen:false,
     bankModalOpen:false,
     showCancelModal:false,
+    showPostModal:false,
     showAttachModal:false,
     showSignatoryModal:false,
    });
@@ -248,7 +252,7 @@ const CV = () => {
   remarks,
   bankCode,
   bankAcctNo,
-  lastCheckNo,
+  checkNo,
 
   selectedWithAPV,
   selectedPayType,
@@ -294,6 +298,7 @@ const CV = () => {
   payeeModalOpen,
   bankModalOpen,
   showCancelModal,
+  showPostModal,
   showAttachModal,
   showSignatoryModal,
 
@@ -478,7 +483,7 @@ const CV = () => {
   //     withAPV: "Y",
   //     bankCode: "",
   //     bankAcctNo: "",
-  //     lastCheckNo: "",
+  //     checkNo: "",
   //     paymentType: "Y",
   //     cvType: "APV01",
 
@@ -528,7 +533,7 @@ const CV = () => {
         withAPV: "Y",
         bankCode: "",
         bankAcctNo: "",
-        lastCheckNo: "",
+        checkNo: "",
         paymentType: "Y",
         cvType: "APV01",
         refDocNo1: "",
@@ -702,27 +707,38 @@ const fetchTranData = async (documentNo, branchCode) => {
     const data = await useFetchTranData(documentNo, branchCode,docType,"cvNo");
 
     if (!data?.cvId) {
-      Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
+      Swal.fire({ icon: 'info', 
+        // title: 'No Records Found', 
+        text: 'No Records Found.' });
       return resetState();
     }
 
-    // Format header date
-    let cvDateForHeader = '';
-    if (data.cvDate) {
-      const d = new Date(data.cvDate);
-      cvDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
+    // // Format header date
+    // let cvDateForHeader = '';
+    // if (data.cvDate) {
+    //   const d = new Date(data.cvDate);
+    //   cvDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
+    // }
 
-    // Format header date
-    let checkDateForHeader = '';
-    if (data.checkDate) {
-      const d = new Date(data.checkDate);
-      checkDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
+    // // Format header date
+    // let checkDateForHeader = '';
+    // if (data.checkDate) {
+    //   const d = new Date(data.checkDate);
+    //   checkDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
+    // }
+
+    let cvDateForHeader = data.cvDate ? new Date(data.cvDate).toISOString().split("T")[0] : '';
+    let checkDateForHeader = data.checkDate ? new Date(data.checkDate).toISOString().split("T")[0] : '';
+
+    setHeader({
+          cv_date: cvDateForHeader,
+          ck_date: checkDateForHeader
+      });
 
     // Format rows
     const retrievedDetailRows = (data.dt1 || []).map(item => ({
       ...item,
+      siDate: item.siDate ? new Date(item.siDate).toISOString().split('T')[0] : '',
       origAmount: formatNumber(item.origAmount),
       currRate: formatNumber(item.currRate),
       siAmount: formatNumber(item.siAmount),
@@ -752,8 +768,19 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.cvId,
       documentNo: data.cvNo,
       branchCode: data.branchCode,
-      header: { cv_date: cvDateForHeader },
-      header: { ck_date: checkDateForHeader },
+      // header: { cv_date: cvDateForHeader },
+      // header: { ck_date: checkDateForHeader },
+       // Combine both properties into one header object
+      // header: {
+      //   cv_date: cvDateForHeader,
+      //   ck_date: checkDateForHeader,
+      // },
+      header: {
+        cvDate: cvDateForHeader,
+        checkDate: checkDateForHeader,
+        cv_date: cvDateForHeader,
+        ck_date: checkDateForHeader,
+      },
       selectedCvType: data.cvtranType,
       selectedWithAPV: data.withAPV,
       selectedPayType: data.payType,
@@ -764,9 +791,11 @@ const fetchTranData = async (documentNo, branchCode) => {
       checkNo: data.checkNo,
       refDocNo1: data.refDocNo1,
       refDocNo2: data.refDocNo2,
+      currAmount: formatNumber(data.currAmount, 2),
+      currRate: formatNumber(data.currRate, 6),
       currCode: data.currCode,
       currName: data.currName,
-      currRate: formatNumber(data.currRate, 6),
+      amount: formatNumber(data.amount, 2),
       remarks: data.remarks,
       detailRows: retrievedDetailRows,
       detailRowsGL: formattedGLRows,
@@ -828,11 +857,14 @@ const handleCurrRateNoBlur = (e) => {
 
  const handleActivityOption = async (action) => {
    
-    if (!detailRows || detailRows.length === 0) {
-      return;
-      }
+    // if (!detailRows || detailRows.length === 0) {
+    //   return;
+    //   }
 
-
+  if (action === "Upsert" && detailRowsGL.length === 0) {
+    updateState({ triggerGLEntries: true });
+    return;
+  }
 
   if (documentStatus === '') {
    
@@ -850,7 +882,7 @@ const handleCurrRateNoBlur = (e) => {
         vendName,
         bankCode,
         bankAcctNo,
-        lastCheckNo,
+        checkNo,
         refDocNo1,
         refDocNo2,
         OrigAmt,
@@ -864,14 +896,12 @@ const handleCurrRateNoBlur = (e) => {
         detailRowsGL
     } = state;
 
-    updateState({ isLoading: true });
+    // updateState({ isLoading: true });
 
-    // const cvJsonData = JSON.stringify(glData);
     const glData = {
       branchCode: branchCode,
       cvNo: documentNo || "",
       cvId: documentID || "",
-      // cvDate: header.cv_date,
       cvDate: header.cv_date,
       checkDate: header.ck_date,
       withAPV: selectedWithAPV,
@@ -881,7 +911,7 @@ const handleCurrRateNoBlur = (e) => {
       payType: selectedPayType,
       bankCode: bankCode,
       bankAcctNo: bankAcctNo,
-      checkNo: lastCheckNo,
+      checkNo: checkNo,
       refDocNo1: refDocNo1,
       refDocNo2: refDocNo2,
       currAmount: parseFormattedNumber(totals.totalAmountDue),
@@ -943,9 +973,8 @@ const handleCurrRateNoBlur = (e) => {
         }))
     };
 
-    // const cvJsonData = glData.replace(/(\r\n|\n|\r)/gm, "");
-    //       console.log("GL Data Payload stringify:", cvJsonData);
           console.log("GL Data Payload glData:", glData);
+          console.log("GL Data Payload cvDate:", header.cv_date);
 
     if (action === "GenerateGL") {
         try {
@@ -969,7 +998,6 @@ const handleCurrRateNoBlur = (e) => {
     if (action === "Upsert") {
         try {
 
-          // console.log("GL Data Payload stringify:", cvJsonData);
           console.log("GL Data Payload glData:", glData);
 
           const response = await useTransactionUpsert(docType, glData, updateState, 'cvId', 'cvNo');
@@ -1147,6 +1175,18 @@ const handleCancel = async () => {
 
   if (documentID && (documentStatus === '')) {
     updateState({ showCancelModal: true });
+  }
+};
+
+
+const handlePost = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostModal: true });
   }
 };
 
@@ -1630,6 +1670,23 @@ const handleCloseCancel = async (confirmation) => {
     updateState({showCancelModal: false});
 };
 
+const handleClosePost = async (confirmation) => {
+    if(documentStatus !== "OPEN" && documentID !== null ) {
+
+      const result = await useHandlePost(docType,documentID,"NSI",updateState);
+      if (result.success) 
+      {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: result.message,
+        });       
+      } 
+     await fetchTranData(documentNo,branchCode);
+    }
+    updateState({showPostModal: false});
+};
+
 
 
 const handleCloseSignatory = async () => {
@@ -1759,11 +1816,90 @@ const handleCloseBankModal = async (selectedBank) => {
       updateState({
         bankCode:result.bankCode,
         bankAcctNo:result.bankAcctNo,
-        lastCheckNo: result.lastCheckNo 
+        checkNo: result.nextCheckNo 
         })     
       }
     }
   };
+
+  
+  
+// ... assuming `updateState`, `bankCode`, and `documentID` are defined in your component's scope
+
+const handleCheckNoChange = async (e) => {
+    const newCheckNo = e.target.value;
+    const docId = documentID; // Use a correctly scoped variable
+
+    // Immediately update state to reflect user input
+    updateState({ checkNo: newCheckNo });
+
+    // Wait a brief moment to avoid API calls on every keystroke
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+        const isDuplicate = await checkDuplicateCheckNo(newCheckNo, docId);
+
+        if (isDuplicate) {
+            Swal.fire({
+                icon: 'error',
+                text: 'Duplicate Check Number is not allowed!',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+            });
+            // Clear the input only if it's a duplicate
+            updateState({ checkNo: "" });
+            return;
+        }
+
+    } catch (error) {
+        console.error('Error in handleCheckNoChange:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred while checking the duplicate check number. Please try again later.',
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'OK'
+        });
+    }
+};
+
+const checkDuplicateCheckNo = async (checkNo, docId) => {
+    const selectedBankCode = bankCode;  // Replace with the actual bank code
+    console.log('Checking for duplicate with BankCode:', selectedBankCode, 'CheckNo:', checkNo, 'DocId:', docId);
+
+    try {
+        // Construct the query parameters
+        let params = { bankCode: selectedBankCode, checkNo: checkNo };
+
+        // Append docId if it's provided
+        if (docId) {
+            params.docId = docId;
+        }
+
+        // Make the GET request using the global fetchData function (Axios)
+        const data = await fetchData('/getDuplicate', params);
+
+        console.log('API Response Data:', data);
+        return data.result === 1; // Return true if duplicate, false otherwise
+    } catch (error) {
+        console.error('Error fetching data from API:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'API Error',
+            text: 'An error occurred. Please try again later.',
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'OK'
+        });
+        return false;
+    }
+};
+
+
+
+
+
+
+
 
 
 
@@ -1785,6 +1921,7 @@ const handleCloseBankModal = async (selectedBank) => {
         printData={printData} 
         onReset={handleReset}
         onSave={() => handleActivityOption("Upsert")}
+        onPost={handlePost} 
         onCancel={handleCancel} 
         onCopy={handleCopy} 
         onAttach={handleAttach}
@@ -2034,11 +2171,31 @@ const handleCloseBankModal = async (selectedBank) => {
 
                 <div className="flex space-x-4"> {/* Added flex container with spacing */}
 
-                
+{/*                 
                 <div className="relative flex-grow w-2/4">
-                    <input type="text" id="checkNo" placeholder=" " value={lastCheckNo} onChange={(e) => updateState({ lastCheckNo: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                    <input type="text" 
+                        id="checkNo" 
+                        placeholder=" " 
+                        value={checkNo} 
+                        onChange={(e) => { updateState({ checkNo: e.target.value }); handleCheckNoChange(e); }} 
+                        className="peer global-tran-textbox-ui" 
+                        disabled={isFormDisabled} />
                     <label htmlFor="checkNo" className="global-tran-floating-label">Check No.</label>
-                </div>
+                </div> */}
+
+                <div className="relative flex-grow w-2/4">
+    <input 
+        type="text" 
+        id="checkNo" 
+        placeholder=" " 
+        value={checkNo} 
+        onChange={(e) => handleCheckNoChange(e)}  // Call handleCheckNoChange instead of updateState
+        className="peer global-tran-textbox-ui" 
+        disabled={isFormDisabled} 
+    />
+    <label htmlFor="checkNo" className="global-tran-floating-label">Check No.</label>
+</div>
+
 
                 {/* Check Date Picker */}
                 <div className="relative flex-grow w-2/4">
@@ -2237,6 +2394,20 @@ const handleCloseBankModal = async (selectedBank) => {
           Invoice Details
         </button>
       </div>
+
+      {selectedWithAPV === 'Y' && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => handleActivityOption("GenerateGL")}
+            className="global-tran-button-generateGL"
+            disabled={isLoading}
+            style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
+          >
+            Get Reference APV
+          </button>
+        </div>
+      )}
+
     </div>
 
   {/* Invoice Details Button */}
@@ -2822,7 +2993,10 @@ const handleCloseBankModal = async (selectedBank) => {
 
 
     </table>
+    
   </div>
+
+
   </div>
 
 
@@ -3556,6 +3730,15 @@ const handleCloseBankModal = async (selectedBank) => {
   <CancelTranModal
     isOpen={showCancelModal}
     onClose={handleCloseCancel}
+  />
+)}
+
+
+{/* Post Modal */}
+{showPostModal && (
+  <PostTranModal
+    isOpen={showPostModal}
+    onClose={handleClosePost}
   />
 )}
 
