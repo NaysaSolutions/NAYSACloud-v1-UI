@@ -2184,17 +2184,17 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
                 </div> */}
 
                 <div className="relative flex-grow w-2/4">
-    <input 
-        type="text" 
-        id="checkNo" 
-        placeholder=" " 
-        value={checkNo} 
-        onChange={(e) => handleCheckNoChange(e)}  // Call handleCheckNoChange instead of updateState
-        className="peer global-tran-textbox-ui" 
-        disabled={isFormDisabled} 
-    />
-    <label htmlFor="checkNo" className="global-tran-floating-label">Check No.</label>
-</div>
+                    <input 
+                        type="text" 
+                        id="checkNo" 
+                        placeholder=" " 
+                        value={checkNo} 
+                        onChange={(e) => handleCheckNoChange(e)}  // Call handleCheckNoChange instead of updateState
+                        className="peer global-tran-textbox-ui" 
+                        disabled={isFormDisabled} 
+                    />
+                    <label htmlFor="checkNo" className="global-tran-floating-label">Check No.</label>
+                </div>
 
 
                 {/* Check Date Picker */}
