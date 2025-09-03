@@ -261,11 +261,11 @@
 
 import React, { useState, useRef, useEffect } from "react"; // Added useRef and useEffect for dropdown
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCircle, faVideo, faFilePdf, faSpinner, faPaperclip } from "@fortawesome/free-solid-svg-icons"; // Changed faCancel to faTimesCircle for better icon representation
+import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCircle, faVideo, faFilePdf, faSpinner, faPaperclip, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons"; // Changed faCancel to faTimesCircle for better icon representation
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
-const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost,onCancel, onCopy, onAttach }) => {
+const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost, onCancel, onCopy, onAttach }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { triggerReset } = useReset(); // Destructure triggerReset from useReset
@@ -287,44 +287,33 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
+    }, []); 
 
     const handleSave = () => {
-        // setLoading(true);
         console.log("Save button clicked");
         if (onSave) {
             onSave(); // Call the save handler from parent
         }
-        // Simulate API call or processing time
-        // setTimeout(() => setLoading(false), 1500);
     };
 
     const handlePost = () => {
-        // setLoading(true); // Assuming post also has a loading state
         console.log("Post button clicked");
         if (onPost) {
             onPost(); // Call the post handler from parent
         }
-        // Simulate API call or processing time
-        // setTimeout(() => setLoading(false), 1500);
     };
 
-     const handleAttach = () => {
-        // setLoading(true); // Assuming post also has a loading state
+    const handleAttach = () => {
         if (onAttach) {
             onAttach(); // Call the post handler from parent
         }
-        // Simulate API call or processing time
-        // setTimeout(() => setLoading(false), 1500);
     };
-
 
     const handleReset = () => {
         console.log("Reset button clicked");
         if (onReset) {
             onReset(); // Call the reset handler from parent
         }
-        // triggerReset(); // Trigger the context reset
     };
 
     const handleCancel = () => {
@@ -340,14 +329,9 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         }
     };
 
-
-
     const handlePDFGuide = () => {
         if (pdfLink) {
             window.open(pdfLink, '_blank');
-        } else {
-            console.warn("PDF link is not provided.");
-            // Optionally, provide a default PDF or alert the user
         }
         setIsGuideOpen(false);
     };
@@ -355,9 +339,6 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
     const handleVideoGuide = () => {
         if (videoLink) {
             window.open(videoLink, '_blank');
-        } else {
-            console.warn("Video link is not provided.");
-            // Optionally, provide a default video or alert the user
         }
         setIsGuideOpen(false);
     };
@@ -369,42 +350,38 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
         }
     };
 
-
-   
-
     return (
         <div className="fixed top-[55px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">
-             <div className="flex flex-col md:flex-row items-center justify-between px-4 py-2 gap-3 border-b border-gray-200 dark:border-gray-700">
-
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-2 gap-2 border-b border-gray-200 dark:border-gray-700">
                 {/* Header Tabs */}
-                <div className="flex flex-wrap justify-center md:justify-start gap-4 w-full md:w-auto">
+                <div className="flex flex-wrap justify-center md:justify-start gap-1 lg:gap-2 w-full md:w-auto">
                     <button
-                        className={`flex items-center px-3 py-2 rounded-md text-sm font-bold transition-colors duration-200
-                            ${location.pathname === "/"
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                        className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group
+                            ${location.pathname === "/" 
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" 
                                 : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
                             }`}
                         onClick={() => navigate("/")}
                     >
-                        <FontAwesomeIcon icon={faPen} className="w-4 h-4 mr-2" />
-                        <span>Transaction Details</span>
+                        <FontAwesomeIcon icon={faPen} className="w-4 h-3 mr-2" />
+                        <span className="group-hover:block">Transaction Details</span>
                     </button>
 
                     <button
-                        className={`flex items-center px-3 py-2 rounded-md text-sm font-bold transition-colors duration-200
-                            ${location.pathname === "/history"
+                        className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group
+                            ${location.pathname === "/CVhistory"
                                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                                 : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
                             }`}
-                        onClick={() => navigate("/history")}
+                        onClick={() => navigate("/CVhistory")}
                     >
                         <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
-                        <span>Transaction History</span>
+                        <span className="group-hover:block">Transaction History</span>
                     </button>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap justify-center md:justify-end gap-1 lg:gap-2 w-full md:w-auto">
                     <button
                         onClick={handleSave}
                         disabled={loading}
@@ -414,129 +391,124 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                                 handleSave();
                             }
                         }}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-800 dark:hover:bg-blue-700 group"
                         aria-label="Save transaction"
                     >
                         {loading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="" />
                         ) : (
-                            <FontAwesomeIcon icon={faSave} className="mr-2" />
+                            <FontAwesomeIcon icon={faSave} className="" />
                         )}
-                        Save
+                        <span className="hidden lg:block group-hover:block ml-2">Save</span>
                     </button>
 
                     <button
                         onClick={handleReset}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-20 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
-                        <FontAwesomeIcon icon={faUndo} className="mr-2" />
-                        Reset
+                        <FontAwesomeIcon icon={faUndo} className="" />
+                        <span className="hidden lg:block group-hover:block ml-2">Reset</span>
                     </button>
 
                     <button
-                        onClick={handleCopy} // Assuming copy also triggers a reset or similar action for now
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-purple-700 dark:hover:bg-purple-600"
+                        onClick={handleCopy}
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
-                        <FontAwesomeIcon icon={faCopy} className="mr-2" />
-                        Copy
+                        <FontAwesomeIcon icon={faCopy} className="" />
+                        <span className="hidden lg:block group-hover:block ml-2">Copy</span>
                     </button>
 
                     <button
                         onClick={handlePrint}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
-                        <FontAwesomeIcon icon={faPrint} className="mr-2" />
-                        Print
+                        <FontAwesomeIcon icon={faPrint} className="" />
+                        <span className="hidden lg:block group-hover:block ml-2">Print</span>
                     </button>
 
                     <button
-                        // This button doesn't have an onClick handler in the original code,
-                        // so it's left as is, but it should ideally have a function.
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-teal-700 dark:hover:bg-teal-600"
+                        onClick={handlePrint}
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
-                        <FontAwesomeIcon icon={faPrint} className="mr-2" />
-                        BIR Form
+                        <FontAwesomeIcon icon={faPrint} className="" />
+                        <span className="hidden lg:block group-hover:block ml-2">BIR Form</span>
                     </button>
 
-
-
-
-                     <button
+                    <button
                         onClick={handleAttach}
-                        disabled={loading} // Assuming post shares the same loading state as save for simplicity
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-pink-700 dark:hover:bg-pink-600"
+                        disabled={loading}
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
                         {loading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="" />
                         ) : (
-                            <FontAwesomeIcon icon={faPaperclip} className="mr-2" />
+                            <FontAwesomeIcon icon={faPaperclip} className="" />
                         )}
-                        Attach
+                        <span className="hidden lg:block group-hover:block ml-2">Attach</span>
                     </button>
 
-                    {/* Guide Dropdown Button */}
                     <div className="relative" ref={guideDropdownRef}>
                         <button
                             onClick={() => setIsGuideOpen(!isGuideOpen)}
-                            className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-700 dark:hover:bg-blue-600"
+                            className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                             aria-haspopup="true"
                             aria-expanded={isGuideOpen ? "true" : "false"}
                         >
-                            <FontAwesomeIcon icon={faInfoCircle} className="mr-2" />
-                            Guide
+                            <FontAwesomeIcon icon={faInfoCircle} className="" />
+                            <span className="hidden lg:block group-hover:block ml-2">Guide</span>
                         </button>
                         {isGuideOpen && (
                             <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-700 dark:ring-gray-600 animate-fade-in-down">
                                 <div className="py-1">
                                     <button
                                         onClick={handlePDFGuide}
-                                        className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center dark:text-gray-200 dark:hover:bg-gray-600"
+                                        className="w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center dark:text-gray-200 dark:hover:bg-gray-600"
                                     >
-                                        <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" />
+                                        <FontAwesomeIcon icon={faFilePdf} className="mr-2 lg:mr-2 text-red-600" />
                                         PDF Guide
                                     </button>
                                     <button
                                         onClick={handleVideoGuide}
-                                        className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center dark:text-gray-200 dark:hover:bg-gray-600"
+                                        className="w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center dark:text-gray-200 dark:hover:bg-gray-600"
                                     >
-                                        <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-500" />
+                                        <FontAwesomeIcon icon={faVideo} className="mr-2 lg:mr-2 text-blue-500" />
                                         Video Guide
                                     </button>
                                 </div>
                             </div>
                         )}
                     </div>
-                    
+
                     <button
                         onClick={handlePost}
-                        disabled={loading} // Assuming post shares the same loading state as save for simplicity
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600"
+                        disabled={loading}
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600 group"
                     >
                         {loading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="" />
                         ) : (
-                            <FontAwesomeIcon icon={faSave} className="mr-2" />
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="" />
                         )}
-                        Post
+                        <span className="hidden lg:block group-hover:block ml-2">Post</span>
                     </button>
 
                     <button
                         onClick={handleCancel}
                         disabled={cancelLoading}
-                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600"
+                        className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-700 dark:hover:bg-red-600 group"
                         aria-label="Cancel transaction"
                     >
                         {cancelLoading ? (
-                            <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="" />
                         ) : (
-                            <FontAwesomeIcon icon={faTimesCircle} className="mr-2" /> // Changed icon here
+                            <FontAwesomeIcon icon={faTimesCircle} className="" />
                         )}
-                        Cancel
+                        <span className="hidden lg:block group-hover:block ml-2">Cancel</span>
                     </button>
                 </div>
             </div>
 
-            {/* Tailwind CSS Animations (add to your CSS file or a style block if not globally available) */}
+            {/* Tailwind CSS Animations */}
             <style jsx="true">{`
                 @keyframes fade-in-down {
                     from { opacity: 0; transform: translateY(-10px); }

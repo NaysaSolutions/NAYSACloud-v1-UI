@@ -15,11 +15,11 @@ import { parseFormattedNumber } from './behavior';
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-   //console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+  //  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
-    // console.log("Raw response from generateGL API:", response);
+    //  console.log("Raw response from generateGL API:", response);
 
     if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
       let glEntries;
@@ -74,7 +74,7 @@ export const useGenerateGLEntries = async (docCode, glData) => {
     }
   } catch (error) {
     console.error("Error in generateGLEntries:", error);
-    swal.fire({
+    Swal.fire({
       icon: 'error',
       title: 'Generation Failed',
       text: error.message || 'Unknown error occurred',
@@ -95,7 +95,7 @@ export const useTransactionUpsert = async (docCode, glData, updateState, idKey, 
 
         const payload = { json_data: glData };
 
-        // console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
+        console.log("Sending data to API for Upsert:", JSON.stringify(payload, null, 2));
 
         const response = await postRequest("upsert" + docCode, JSON.stringify(payload));
 
@@ -400,6 +400,8 @@ printWindow.document.write(`
 
 
 
+
+
 export async function useHandleCancel(docCode, documentID, userCode, reason, updateState) {
   const payload = {
     json_data: {
@@ -440,3 +442,39 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
 
 
 
+
+export async function useHandlePost(docCode, documentID, userCode, updateState) {
+  const payload = {
+    json_data: {
+      docCode,
+      documentID,
+      userCode
+    },
+  };
+
+  updateState({ isLoading: true });
+
+  try {
+    const response = await postRequest("post" + docCode, JSON.stringify(payload));
+
+      if (response?.status === "success") {
+        return { success: true, message: `${docCode} posted successfully!`, data: response };
+      } else {
+        return { success: false, message: response?.message || "Failed to post transaction" };
+      }
+
+  } catch (error) {
+    console.error("Error posting transaction:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Post Failed",
+      text: error.message || "An error occurred while posting the transaction",
+    });
+  } finally {
+    updateState({
+      isSaveDisabled: false,
+      isResetDisabled: false,
+      isLoading: false,
+    });
+  }
+}
