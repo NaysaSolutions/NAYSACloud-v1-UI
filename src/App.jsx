@@ -46,7 +46,7 @@
 
 //           <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
 //             <Routes>
-//               {/* Dashboard when Accounts Payable is selected */}
+//               {/* Dashboard when JOURNAL VOUCHERis selected */}
 //               {selectedModule === "Accounts Payable" && (
 //                 <Route path="/" element={<Dashboard />} />
 //               )}
@@ -127,7 +127,7 @@ const AppContent = () => {
         <Routes>
           {/* <Route path="/history" element={<JVHistory />} /> */}
           {/* <Route path="/" element={<APV />} /> */}
-          <Route path="/" element={<CV />} />
+          <Route path="/" element={<JV />} />
           {/* <Route path="/" element={<SVI/>} />  */}
           {/* <Route path="/" element={<BranchRef/>} />  */}
           {/* <Route path="/" element={<BankRef/>} />  */}
