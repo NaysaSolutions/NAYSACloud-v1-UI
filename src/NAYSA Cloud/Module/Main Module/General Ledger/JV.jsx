@@ -497,8 +497,8 @@ const [refDocType, setRefDocType] = useState('');
         branchCode: data.branchCode,
         header: { jv_date: jvDateForHeader },
         selectedJVType: data.jvtranType,
-        custCode: data.custCode,
-        custName: data.custName,
+        custCode: data.slCode,
+        custName: data.slName,
         refDocNo: data.refDocNo,
         refDocNo2: data.refDocNo1,
         currCode: data.currCode,
@@ -759,9 +759,9 @@ const [refDocType, setRefDocType] = useState('');
   };
 
   const handleCancel = async () => {
-    if (!detailRows || detailRows.length === 0) {
-      return;
-    }
+    // if (!detailRows || detailRows.length === 0) {
+    //   return;
+    // }
 
     if (documentID && (documentStatus === '')) {
       updateState({ showCancelModal: true });
