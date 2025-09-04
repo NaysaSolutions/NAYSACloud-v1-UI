@@ -6,7 +6,7 @@ import { formatNumber } from '../Global/behavior';
 
 
 
-const AROpenBalanceLookupModal = ({ isOpen, onClose, onCancel, endpoint,data }) => {
+const GlobalLookupModalv1 = ({ isOpen, onClose, onCancel, endpoint, data ,title, btnCaption }) => {
 
     const [records, setRecords] = useState([]);
     const [filtered, setFiltered] = useState([]);
@@ -121,8 +121,6 @@ const handleGetSelected = () => {
     data: selected.map(item => item.groupId),
   };
   onClose(payload);
-  setRecords([]);
-  setSelected([]); 
 };
 
 
@@ -198,7 +196,7 @@ const renderSortIcon = (column) => {
                     <FontAwesomeIcon icon={faTimes} size="lg" />
                 </button>
 
-                <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">Open AR Balance</h2>
+                <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">{title}</h2>
 
                 <div className="flex-grow overflow-hidden">
                     {loading ? (
@@ -296,7 +294,7 @@ const renderSortIcon = (column) => {
                             disabled={selected.length === 0}
                             className="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                         >
-                            Get Selected Invoice
+                            {btnCaption}
                         </button>
                     </div>
 
@@ -326,4 +324,4 @@ const renderSortIcon = (column) => {
     );
 };
 
-export default AROpenBalanceLookupModal;
+export default GlobalLookupModalv1;

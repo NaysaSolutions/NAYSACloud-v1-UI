@@ -1,5 +1,4 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
-import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { useSwalValidationAlert,} from '@/NAYSA Cloud/Global/behavior';
 import Swal from 'sweetalert2';
@@ -12,10 +11,11 @@ import { parseFormattedNumber } from './behavior';
 
 
 
+
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-  //  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+    console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
@@ -298,110 +298,6 @@ if (!documentNo || !branchCode) {
 
 
 
-export async function useHandlePrint(documentID, docCode) {
-  try {
-    
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      throw new Error("Popup blocked — please allow popups for this site.");
-    }
-
- // Inject a basic spinner into the new tab
-printWindow.document.write(`
-                    <html>
-                        <head>
-                        <title>Preparing Document...</title>
-                        <style>
-                            body {
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: center;
-                            height: 100vh;
-                            margin: 0;
-                            font-family: 'Segoe UI', Tahoma, sans-serif;
-                            background: linear-gradient(135deg, #eef2f3, #d9e2ec);
-                            color: #333;
-                            }
-                            .spinner {
-                            width: 64px;
-                            height: 64px;
-                            border-radius: 50%;
-                            border: 6px solid transparent;
-                            border-top: 6px solid #4a90e2;
-                            border-left: 6px solid #6fb1fc;
-                            background: linear-gradient(145deg, #ffffff, #cfd9df);
-                            box-shadow:
-                                inset 2px 2px 4px rgba(0,0,0,0.15),
-                                inset -2px -2px 4px rgba(255,255,255,0.6),
-                                0 0 12px rgba(74,144,226,0.4);
-                            animation: spin 1s linear infinite;
-                            margin-bottom: 18px;
-                            }
-                            .caption {
-                            font-size: 1rem;
-                            font-weight: 500;
-                            opacity: 0.85;
-                            letter-spacing: 0.4px;
-                            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
-                            }
-                            @keyframes spin {
-                            0% { transform: rotate(0deg); }
-                            100% { transform: rotate(360deg); }
-                            }
-                        </style>
-                        </head>
-                        <body>
-                        <div class="spinner"></div>
-                        <div class="caption">Preparing document...</div>
-                        </body>
-                    </html>
-                    `);
-
-    const responseDocControl = await useTopDocControlRow(docCode);
-    const formName = responseDocControl.formName;
-
-    if (!formName) {
-      throw new Error("Report Name not defined");
-    }
-
-    const payload = { tranId: documentID, formName };
-    const apiUrl = "http://127.0.0.1:8000/api/printForm";
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/pdf",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to generate report: ${errorText}`);
-    }
-
-    const blob = await response.blob();
-    if (blob.type !== "application/pdf") {
-      const text = await blob.text();
-      throw new Error(`Expected PDF but got: ${text}`);
-    }
-
-    const fileURL = URL.createObjectURL(blob);
-    printWindow.location.href = fileURL; 
-
-
-  } catch (error) {
-    console.error("Error printing report:", error);
-  }
-}
-
-
-
-
-
-
 export async function useHandleCancel(docCode, documentID, userCode, reason, updateState) {
   const payload = {
     json_data: {
@@ -442,3 +338,7 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
 
 
 
+
+// moved to printing.js
+export async function useHandlePrint(documentID, docCode) {
+}

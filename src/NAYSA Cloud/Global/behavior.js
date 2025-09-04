@@ -67,6 +67,43 @@ export const useSwalValidationAlert = ({ icon = "info", title = "", message = ""
 
 
 
+export const useSwalReturnSummary = ({ icon = "info", title = "", message = "" }) => {
+  const formattedMessage = (message || "")
+    .toString()
+    .replace(/\r?\n/g, "<br/>");
+
+  Swal.fire({
+    icon,
+    title,
+    html: formattedMessage,
+    didOpen: () => {
+      const popup = Swal.getPopup();
+      if (popup) {
+        // ✅ Apply inline styles directly (no need for global CSS)
+        popup.style.maxWidth = "400px";
+        popup.style.width = "auto";
+        popup.style.padding = "1rem";
+        popup.style.fontSize = "14px"; // overall font size
+
+        const titleEl = popup.querySelector(".swal2-title");
+        if (titleEl) titleEl.style.fontSize = "16px";
+
+        const body = popup.querySelector(".swal2-html-container");
+        if (body) {
+          body.style.fontSize = "13px";
+          body.style.textAlign = "left";   // left align text
+          body.style.whiteSpace = "pre-wrap"; // preserve line breaks
+          body.style.maxHeight = "300px";  // ✅ limit height
+          body.style.overflowY = "auto";   // ✅ scroll if too long
+        }
+      }
+    },
+  });
+};
+
+
+
+
 export const useSwalshowSaveSuccessDialog = (onConfirm, onPrint) => {
   Swal.fire({
     title: "Record Saved.",

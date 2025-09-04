@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import  { useState, useEffect, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSort, faSortUp, faSortDown, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { formatNumber } from '../Global/behavior';
 
 
 
-const AROpenBalanceLookupModal = ({ isOpen, onClose, onCancel, endpoint,data }) => {
+const GlobalGLPostingModalv1 = ({ data,colConfigData,title, btnCaption, onClose, onPost }) => {
 
     const [records, setRecords] = useState([]);
     const [filtered, setFiltered] = useState([]);
@@ -19,17 +19,15 @@ const AROpenBalanceLookupModal = ({ isOpen, onClose, onCancel, endpoint,data }) 
     const itemsPerPage = 50;
 
     useEffect(() => {
-
-        if (!isOpen) {
-            setRecords([]);
-            setFiltered([]);
-            setSelected([]);
-            setFilters({});
-            setColumnConfig([]);
-            setSortConfig({ key: '', direction: 'asc' });
-            setCurrentPage(1);
-            return;
-        }
+ 
+        setRecords([]);
+        setFiltered([]);
+        setSelected([]);
+        setFilters({});
+        setColumnConfig([]);
+        setSortConfig({ key: '', direction: 'asc' });
+        setCurrentPage(1);
+    
         fetchData();
     }, [data]);
 
@@ -40,7 +38,7 @@ const AROpenBalanceLookupModal = ({ isOpen, onClose, onCancel, endpoint,data }) 
         setLoading(true);
       try {
             setLoading(true);
-            if (endpoint) setColumnConfig(endpoint);
+            if (colConfigData) setColumnConfig(colConfigData);
             if (data) setRecords(data);
         } catch (error) {
             console.error("Failed to fetch record:", error);
@@ -116,21 +114,19 @@ const AROpenBalanceLookupModal = ({ isOpen, onClose, onCancel, endpoint,data }) 
 
 
 
-const handleGetSelected = () => {
-  const payload = {
-    data: selected.map(item => item.groupId),
-  };
-  onClose(payload);
-  setRecords([]);
-  setSelected([]); 
-};
-
 
 
 const handleFilterChange = (e, key) => {
   setFilters(prev => ({ ...prev, [key]: e.target.value }));
 };
 
+
+const handleGetSelected = () => {
+  const payload = {
+    data: selected.map(item => item.groupId),
+  };
+   onPost(payload.data);
+};
 
 
 const handleSort = (key) => {
@@ -177,7 +173,7 @@ const renderSortIcon = (column) => {
         return filtered.slice(startIndex, startIndex + itemsPerPage);
     }, [filtered, currentPage, itemsPerPage]);
 
-    if (!isOpen) return null;
+
     const paginatedData = getPaginatedData;
     const totalItems = filtered.length;
     const startItem = totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
@@ -191,14 +187,14 @@ const renderSortIcon = (column) => {
             <div className="bg-white rounded-lg shadow-xl w-full max-w-8xl max-h-[90vh] flex flex-col relative overflow-hidden transform scale-95 animate-scale-in">
                 {/* Close Icon */}
                 <button
-                    onClick={() => onCancel()}
+                    onClick={onClose}
                     className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-blue-100"
                     aria-label="Close modal"
                 >
                     <FontAwesomeIcon icon={faTimes} size="lg" />
                 </button>
 
-                <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">Open AR Balance</h2>
+                <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">{title}</h2>
 
                 <div className="flex-grow overflow-hidden">
                     {loading ? (
@@ -279,51 +275,104 @@ const renderSortIcon = (column) => {
                         </div>
                     )}
                 </div>
+                
+                
+               {/* New Posting Condition Bar */}
+<div className="p-4 border-t border-gray-300 bg-white flex items-center justify-between text-xs">
+  {/* Left Section */}
+  <div className="flex flex-col gap-2">
+    
+    {/* Select All on top */}
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input 
+        type="checkbox"
+        checked={selected.length === filtered.length && filtered.length > 0}
+        onChange={toggleSelectAll}
+        className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+      />
+      Select All
+    </label>
 
-                <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600">
-                    <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="checkbox"
-                                checked={selected.length === filtered.length && filtered.length > 0}
-                                onChange={toggleSelectAll}
-                                className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            Select All
-                        </label>
-                        <button
-                            onClick={handleGetSelected}
-                            disabled={selected.length === 0}
-                            className="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            Get Selected Invoice
-                        </button>
-                    </div>
+    {/* Password Row */}
+    <div className="flex items-center gap-2">
+      <label className="font-medium">Password</label>
+      <input
+        type="password"
+        className="border border-gray-300 rounded px-2 py-1 text-xs w-40"
+      />
 
-                    <div className="font-semibold">
-                        Showing {startItem}-{endItem} of {totalItems} entries
-                    </div>
+      {/* Action Buttons */}
+      <button 
+        disabled={selected.length === 0}
+        className="px-4 py-1 bg-blue-600 text-white rounded text-xs"
+        onClick={handleGetSelected}        
+        >
+        {btnCaption}
+      </button>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handlePrevPage}
-                            disabled={currentPage === 1}
-                            className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={handleNextPage}
-                            disabled={endItem >= totalItems}
-                            className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+      <button 
+        className="px-4 py-1 bg-red-400 text-white rounded text-xs"
+        onClick={onClose}
+        >
+        Cancel
+      </button>
+
+      <button className="px-4 py-1 bg-gray-200 text-gray-800 border rounded text-xs">
+        View Document
+      </button>
+    </div>
+  </div>
+
+  {/* Right Section */}
+  <div className="flex items-center gap-4">
+    <div>
+      <label className="font-medium">Progress Status</label>
+      <input
+        type="text"
+        readOnly
+        value="0%"
+        className="ml-2 border border-gray-300 rounded px-2 py-1 text-xs w-20 text-center"
+      />
+    </div>
+    <div className="text-red-600 font-medium">
+      Warning! <br />
+      <span className="font-normal text-gray-700">
+        Before running this routine make sure that the transaction entries are correct.  
+        NO un-posting of transaction.
+      </span>
+    </div>
+  </div>
+</div>
+
+{/* Keep your pagination footer as-is */}
+<div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600">
+  <div className="font-semibold">
+    Showing {startItem}-{endItem} of {totalItems} entries
+  </div>
+
+  <div className="flex items-center gap-2">
+    <button
+      onClick={handlePrevPage}
+      disabled={currentPage === 1}
+      className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+    >
+      Previous
+    </button>
+    <button
+      onClick={handleNextPage}
+      disabled={endItem >= totalItems}
+      className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+    >
+      Next
+    </button>
+  </div>
+</div>
+
+
+
             </div>
         </div>
     );
 };
 
-export default AROpenBalanceLookupModal;
+export default GlobalGLPostingModalv1;
