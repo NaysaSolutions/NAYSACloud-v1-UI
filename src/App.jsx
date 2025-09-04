@@ -46,7 +46,7 @@
 
 //           <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
 //             <Routes>
-//               {/* Dashboard when Accounts Payable is selected */}
+//               {/* Dashboard when JOURNAL VOUCHERis selected */}
 //               {selectedModule === "Accounts Payable" && (
 //                 <Route path="/" element={<Dashboard />} />
 //               )}
@@ -84,10 +84,8 @@ import Header from "./NAYSA Cloud/Components/Header";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
-import CR from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/CR.jsx";
 import SVI from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
-import SVIPost from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostSVI.jsx";
-import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
+// import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
 import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV.jsx";
 import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
 // import JVHistory from "./NAYSA Cloud/Module/Main Module/General Ledger/JVHistory.jsx";
@@ -129,9 +127,8 @@ const AppContent = () => {
         <Routes>
           {/* <Route path="/history" element={<JVHistory />} /> */}
           {/* <Route path="/" element={<APV />} /> */}
-          <Route path="/tran-ap-cvtran" element={<CV />} />
-          <Route path="/" element={<SVI />} />
-          <Route path="/tran-ar-svitran" element={<CR/>} /> 
+          <Route path="/" element={<JV />} />
+          {/* <Route path="/" element={<SVI/>} />  */}
           {/* <Route path="/" element={<BranchRef/>} />  */}
           {/* <Route path="/" element={<BankRef/>} />  */}
         </Routes>

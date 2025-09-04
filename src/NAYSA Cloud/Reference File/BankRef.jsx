@@ -195,7 +195,7 @@ const resetForm = () => {
 
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen font-roboto">
+    <div className="mt-10 p-4 bg-gray-100 min-h-screen font-roboto">
 
       <div className="mx-auto">
 
@@ -248,7 +248,7 @@ const resetForm = () => {
 
     </div> 
 
-    <div className="mt-6 flex flex-col md:flex-row gap-4">
+    <div className="mt-2 flex flex-col md:flex-row gap-4">
 
         {/* Form Section */}
         <div className="mt-2 bg-white p-4 sm:p-6 shadow-md rounded-lg w-full md:w-1/2 min-w-[100px]">
