@@ -19,6 +19,9 @@ import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
+import PostSVI from "../../../Module/Main Module/Accounts Receivable/PostSVI.jsx";
+import ARReportModal from "../../../Printing/ARReport.jsx";
+
 
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -55,9 +58,14 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
   useHandleCancel,
 } from '@/NAYSA Cloud/Global/procedure';
+
+
+
+import {
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
 
 
 import { 
@@ -171,6 +179,7 @@ const SVI = () => {
     showCancelModal:false,
     showAttachModal:false,
     showSignatoryModal:false,
+    showPostingModal:false,
    });
 
   const updateState = (updates) => {
@@ -186,6 +195,7 @@ const SVI = () => {
   documentStatus,
   documentNo,
   status,
+  userCode,
 
   // Tabs & loading
   activeTab,
@@ -262,7 +272,7 @@ const SVI = () => {
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-
+  showPostingModal
 
 } = state;
 
@@ -669,7 +679,7 @@ const handleCurrRateNoBlur = (e) => {
         currName,
         currRate,
         remarks,
-        // userCode, // Assuming userCode is also part of your state
+        userCode, 
         detailRows,
         detailRowsGL
     } = state;
@@ -925,12 +935,27 @@ const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  updateState({ showSignatoryModal: true });
-
-  // updateState({ showSpinner: true });
-  // await useHandlePrint(documentID, docType);
-  // updateState({ showSpinner: false });
+  if (documentID && (documentStatus === '')) {
+    updateState({ showSignatoryModal: true });
+  }
 };
+
+
+
+
+const handlePost = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostingModal: true });
+  }
+};
+
+
+
+
 
 
 
@@ -949,14 +974,9 @@ const handleCancel = async () => {
 
 
 const handleAttach = async () => {
-//  if (!detailRows || detailRows.length === 0) {
-//       return;
-//       }
-
-
-//   if (documentID ) {
+  if (documentID ) {
     updateState({ showAttachModal: true });
-  // }
+   }
 };
 
 
@@ -1586,6 +1606,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   pdfLink={pdfLink} 
   videoLink={videoLink}
   onPrint={handlePrint} 
+  onPost={handlePost} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
@@ -3231,6 +3252,24 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
 )}
+
+
+
+{showPostingModal && (
+  <PostSVI
+    isOpen={showPostingModal}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)}
+{/* 
+{showPostingModal && (
+  <ARReportModal
+    isOpen={showPostingModal}
+    userCode ={userCode}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)} */}
+
 
 
 

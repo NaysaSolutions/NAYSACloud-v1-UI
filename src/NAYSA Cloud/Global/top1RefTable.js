@@ -64,6 +64,26 @@ export async function useTopDocControlRow(docId) {
 
 
 
+
+
+export async function useTopHSRptRow(reportId) {
+  if (!reportId) return null;
+
+  try {
+    const response = await fetchData("getHsrpt", { REPORT_ID: reportId });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Document Control row:", error);
+    return null;
+  }
+}
+
+
+
 export async function useTopDocDropDown(documentCode, documentCol) {
   if (!documentCode || !documentCol) {
     console.warn("Document code or column not provided");

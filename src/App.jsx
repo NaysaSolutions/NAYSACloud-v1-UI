@@ -127,7 +127,7 @@ const AppContent = () => {
         <Routes>
           {/* <Route path="/history" element={<JVHistory />} /> */}
           {/* <Route path="/" element={<APV />} /> */}
-          <Route path="/" element={<JV />} />
+          <Route path="/" element={<SVI />} />
           {/* <Route path="/" element={<SVI/>} />  */}
           {/* <Route path="/" element={<BranchRef/>} />  */}
           {/* <Route path="/" element={<BankRef/>} />  */}
