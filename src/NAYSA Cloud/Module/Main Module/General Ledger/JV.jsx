@@ -17,6 +17,7 @@ import SLMastLookupModal from "../../../Lookup/SearchSLMast.jsx";
 import BillTermLookupModal from "../../../Lookup/SearchBillTermRef.jsx";
 import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
+import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 
@@ -56,6 +57,7 @@ import {
   useFetchTranData,
   useHandlePrint,
   useHandleCancel,
+  useHandlePost,
 } from '@/NAYSA Cloud/Global/procedure';
 
 import { 
@@ -157,6 +159,7 @@ const JV = () => {
     showSignatoryModal: false,
     showBillCodeModal: false,
     showSlModal: false,
+    showPostModal: false, //new modal
   });
 
   const updateState = (updates) => {
@@ -243,6 +246,7 @@ const [refDocType, setRefDocType] = useState('');
     showSignatoryModal,
     showBillCodeModal,
     showSlModal,
+    showPostModal, //new modal
   } = state;
 
   const [focusedCell, setFocusedCell] = useState(null); // { index: number, field: string }
@@ -752,9 +756,9 @@ const [refDocType, setRefDocType] = useState('');
   };
 
   const handlePrint = async () => {
-    if (!detailRows || detailRows.length === 0) {
-      return;
-    }
+    // if (!detailRows || detailRows.length === 0) {
+    //   return;
+    // }
     updateState({ showSignatoryModal: true });
   };
 
@@ -767,6 +771,22 @@ const [refDocType, setRefDocType] = useState('');
       updateState({ showCancelModal: true });
     }
   };
+
+
+
+
+
+const handlePost = async () => {
+//  if (!detailRows || detailRows.length === 0) {
+//       return;
+//       }
+
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostModal: true });
+  }
+};
+
 
   const handleAttach = async () => {
     updateState({ showAttachModal: true });
@@ -1073,6 +1093,26 @@ const [refDocType, setRefDocType] = useState('');
   updateState({ showCancelModal: false });
 };
 
+
+
+const handleClosePost = async (confirmation) => {
+    if(documentStatus !== "OPEN" && documentID !== null ) {
+
+      const result = await useHandlePost(docType,documentID,"NSI",updateState);
+      if (result.success) 
+      {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: result.message,
+        });       
+      } 
+     await fetchTranData(documentNo,branchCode);
+    }
+    updateState({showPostModal: false});
+};
+
+
 const handleCloseSignatory = async () => {
   updateState({ showSpinner: true });
   await useHandlePrint(documentID, docType);
@@ -1206,6 +1246,7 @@ return (
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
+  onPost={handlePost} 
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
@@ -2224,6 +2265,13 @@ return (
 )}
 
 
+{/* Post Modal */}
+{showPostModal && (
+  <PostTranModal
+    isOpen={showPostModal}
+    onClose={handleClosePost}
+  />
+)}
 
 {showAttachModal && (
   <AttachDocumentModal
