@@ -1,5 +1,6 @@
 import { apiClient ,postPdfRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 import { useTopDocControlRow,useTopHSRptRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { stringify } from 'postcss';
 
 
 
@@ -81,6 +82,9 @@ export async function useHandlePrint(documentID, docCode) {
     }
 
     const payload = { tranId: documentID, formName };
+
+
+
     const pdfBlob = await postPdfRequest("/printForm", payload);
 
     if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf") {
@@ -122,10 +126,12 @@ export async function useHandlePrintARReport(params) {
               endDate: params.endDate,
               sCustCode: params.sCustCode,
               eCustCode: params.eCustCode,
-              formName: formName,
+              reportName: formName,
               sprocMode:"",
               sprocName : "",
               export :"" };
+
+        console.log(JSON.stringify(payload))
 
     const pdfBlob = await postPdfRequest("/printARReport", payload);
 
@@ -140,6 +146,70 @@ export async function useHandlePrintARReport(params) {
     console.error("Error printing report:", error);
   }
 }
+
+
+
+// export async function useHandleDownloadExcelARReport(params) {
+ 
+//    try {
+//     const responseDocRpt = await useTopHSRptRow(params.reportId);
+
+//     const payload = {
+//       branchCode: params.branchCode,
+//       startDate: params.startDate,
+//       endDate: params.endDate,
+//       sCustCode: params.sCustCode,
+//       eCustCode: params.eCustCode,
+//       formName: responseDocRpt.crptName,
+//       sprocMode: responseDocRpt.sprocMode,
+//       sprocName: responseDocRpt.sprocName,
+//       export: responseDocRpt.export,
+//       reportName: responseDocRpt.reportName,
+//       userCode:params.userCode
+//     };
+
+
+//     console.log(JSON.stringify(payload))
+
+//     // ⬇️ override only for this request
+//     const response = await apiClient.post("/printARReport", payload, {
+//       responseType: "blob",
+//     });
+
+//     if (!response || !response.data) {
+//       return false; // ❌ return failure if no data
+//     }
+
+    
+//     // Extract filename from headers if available
+//     let filename =  responseDocRpt.reportName + ".xlsx";
+//     const disposition = response.headers["content-disposition"];
+//     if (disposition && disposition.includes("filename=")) {
+//       filename = disposition
+//         .split("filename=")[1]
+//         .replace(/["']/g, "")
+//         .trim();
+//     }
+
+//     // Create blob and trigger download
+//     const blob = new Blob([response.data], {
+//       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//     });
+
+//     const link = document.createElement("a");
+//     link.href = URL.createObjectURL(blob);
+//     link.download = filename;
+//     document.body.appendChild(link);
+//     link.click();
+//     document.body.removeChild(link);
+
+//     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+//     return true;
+//   } catch (error) {
+//     console.error("Error downloading report:", error);
+//   }
+// }
+
 
 
 
@@ -163,18 +233,19 @@ export async function useHandleDownloadExcelARReport(params) {
     };
 
 
+    console.log(JSON.stringify(payload))
+
     // ⬇️ override only for this request
     const response = await apiClient.post("/printARReport", payload, {
       responseType: "blob",
     });
 
     if (!response || !response.data) {
-      return false; // ❌ return failure if no data
+      return false; // no data received
     }
 
-    
-    // Extract filename from headers if available
-    let filename =  responseDocRpt.reportName + ".xlsx";
+    // Determine filename from headers or fallback
+    let filename = responseDocRpt.reportName + ".xlsx";
     const disposition = response.headers["content-disposition"];
     if (disposition && disposition.includes("filename=")) {
       filename = disposition
@@ -183,7 +254,7 @@ export async function useHandleDownloadExcelARReport(params) {
         .trim();
     }
 
-    // Create blob and trigger download
+    // Create a blob and trigger download
     const blob = new Blob([response.data], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
@@ -195,10 +266,13 @@ export async function useHandleDownloadExcelARReport(params) {
     link.click();
     document.body.removeChild(link);
 
+    // Cleanup URL object
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
     return true;
   } catch (error) {
     console.error("Error downloading report:", error);
+    return false;
   }
 }
 

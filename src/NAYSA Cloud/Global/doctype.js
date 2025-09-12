@@ -1,7 +1,14 @@
 export const docTypes = {
   SVI: "SVI",
   CV: "CV",
-  JV: "JV"
+  JV: "JV",
+  APV:"APV",
+  PCV:"PCV",
+  SOA:"SOA",
+  ARCM:"ARCM",
+  ARDM:"ARDM",
+  CR:"CR"
+
 };
 
 

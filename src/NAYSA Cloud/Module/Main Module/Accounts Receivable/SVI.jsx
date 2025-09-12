@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Swal from 'sweetalert2';
 
 // UI
@@ -21,6 +21,7 @@ import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import PostSVI from "../../../Module/Main Module/Accounts Receivable/PostSVI.jsx";
 import ARReportModal from "../../../Printing/ARReport.jsx";
+import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 
 
 // Configuration
@@ -44,7 +45,6 @@ import {
   useTopForexRate,
   useTopCurrencyRow,
   useTopHSOption,
-  useTopCompanyRow,
   useTopDocControlRow,
   useTopDocDropDown,
   useTopVatAmount,
@@ -264,7 +264,6 @@ const SVI = () => {
   showAtcModal,
   showBillCodeModal,
   showSlModal,
-  showBilltermModal,
   currencyModalOpen,
   branchModalOpen,
   custModalOpen,
@@ -367,9 +366,7 @@ const SVI = () => {
   useEffect(() => {
   }, [custCode]);
 
-
-
-
+ 
 useEffect(() => {
   if (triggerGLEntries) {
     handleActivityOption("GenerateGL").then(() => {
@@ -388,7 +385,7 @@ useEffect(() => {
   if (glCurrMode && glCurrDefault && currCode) {
     loadCurrencyMode(glCurrMode, glCurrDefault, currCode);
   }
-}, [glCurrMode, glCurrDefault, currCode]);
+  }, [glCurrMode, glCurrDefault, currCode]);
 
 
 
@@ -809,7 +806,7 @@ const handleCurrRateNoBlur = (e) => {
         billCode: "",
         billName: "",
         sviSpecs: "",
-        quantity:"0.00",
+        quantity:"1.00",
         uomCode: "",
         unitPrice: "0.00",
         grossAmount: "0.00",
@@ -1055,7 +1052,10 @@ const handleCopy = async () => {
     } catch (error) {
         console.error("Error fetching customer details:", error);
     } finally {
-        updateState({ isLoading: false });
+       updateState({
+            isLoading: false,
+            triggerGLEntries: parseFormattedNumber(totalDebit)>0
+          });
     }
 };
 
@@ -1072,22 +1072,14 @@ const handleCopy = async () => {
   let totalDiscAmt=0;
 
   rows.forEach(row => {
-        // console.log("Row values before parseFormattedNumber:", {
-        //     vatAmountRaw: row.vatAmount,
-        //     atcAmountRaw: row.atcAmount,
-        //     grossAmountRaw: row.grossAmount,
-        //     netDiscRaw: row.netDisc,
-        //     discAmountRaw: row.discAmount
-        // });
+
     const vatAmount = parseFormattedNumber(row.vatAmount || 0) || 0;
     const atcAmount = parseFormattedNumber(row.atcAmount || 0) || 0;
     const invoiceGross = parseFormattedNumber(row.grossAmount || 0) || 0;
     const invoiceNetDisc = parseFormattedNumber(row.netDisc || row.netDisc || 0) || 0;
     const invoiceDiscount = parseFormattedNumber(row.discAmount || 0) || 0;
 
-        // console.log("Row values after parseFormattedNumber:", {
-        //     vatAmount, atcAmount, invoiceGross, invoiceNetDisc, invoiceDiscount
-        // });
+
     totalGrossAmt+= invoiceGross;
     totalDiscAmt+= invoiceDiscount;
     totalNetDiscount+= invoiceNetDisc;
@@ -1095,10 +1087,7 @@ const handleCopy = async () => {
     totalATC += atcAmount;
   });
 
-  totalAmtDue = totalNetDiscount - totalATC; // <--- POTENTIAL CORRECTION HERE
-    // console.log("Calculated RAW totals (before formatting):", {
-    //     totalGrossAmt, totalDiscAmt, totalNetDiscount, totalVAT, totalATC, totalAmtDue
-    // });
+  totalAmtDue = totalNetDiscount - totalATC; 
     updateTotalsDisplay (totalGrossAmt,totalDiscAmt,totalNetDiscount, totalVAT, totalATC, totalAmtDue);
 
 };
@@ -1136,7 +1125,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
           row.salesAcct= value.salesAcct,
           row.discAcct= value.sDiscAcct,
           row.rcCode= value.rcCode,
-          row.quantity= "0.00",
+          row.quantity= "1.00",
           row.grossAmount= "0.00",
           row.unitPrice= "0.00",
           row.vatAmount= "0.00",
@@ -1436,12 +1425,13 @@ const handleCloseCancel = async (confirmation) => {
 
 const handleCloseSignatory = async () => {
 
-    updateState({ showSpinner: true });
+    updateState({ 
+        showSpinner: true,
+        showSignatoryModal: false, });
     await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+      showSpinner: false 
     });
 };
 
@@ -1684,6 +1674,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
                         disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
+                        onClick={() => updateState({ branchModalOpen: true })}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -3198,7 +3189,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 )}
 
 
-
 {/* ATC Code Modal */}
 {showAtcModal && (
   <ATCLookupModal  
@@ -3255,12 +3245,12 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 
-{showPostingModal && (
+ {showPostingModal && (
   <PostSVI
     isOpen={showPostingModal}
     onClose={() => updateState({ showPostingModal: false })}
   />
-)}
+)} 
 {/* 
 {showPostingModal && (
   <ARReportModal
@@ -3268,7 +3258,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
     userCode ={userCode}
     onClose={() => updateState({ showPostingModal: false })}
   />
-)} */}
+)}  */}
 
 
 

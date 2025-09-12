@@ -9,9 +9,6 @@ import { parseFormattedNumber } from './behavior';
 
 
 
-
-
-
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
@@ -19,7 +16,19 @@ export const useGenerateGLEntries = async (docCode, glData) => {
 
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
-    //  console.log("Raw response from generateGL API:", response);
+   
+    //console.log("Raw response from generateGL API:", response);
+
+       const returnedErrorCount = response.data[0]['errorCount'];
+       const returnedErrorMsg = response.data[0]['errorMsg'];
+        if (returnedErrorMsg && returnedErrorCount >0) {
+            useSwalValidationAlert({
+                icon: "error",
+                title: "Generate GL Failed",
+                message: returnedErrorMsg || "An error occurred while saving the Transaction"
+                        });    
+                return null;
+          }
 
     if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
       let glEntries;
@@ -58,8 +67,8 @@ export const useGenerateGLEntries = async (docCode, glData) => {
           creditFx1: entry.credit ? formatNumber(entry.creditFx1) : "0.00",
           debitFx2: entry.debit ? formatNumber(entry.debitFx2) : "0.00",
           creditFx2: entry.credit ? formatNumber(entry.creditFx2) : "0.00",
-          slRefNo: entry.slrefNo || "",
-          slrefDate: entry.slrefDate || "",
+          slRefNo: entry.slRefNo || "",
+          slRefDate: entry.slRefDate || "",
           remarks: entry.remarks || "",
           dt1Lineno: entry.dt1Lineno || ""
         }));

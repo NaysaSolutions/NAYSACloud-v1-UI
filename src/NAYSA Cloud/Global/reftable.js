@@ -63,5 +63,5 @@ export const reftables = {
     ARCM: "AR Credit Memo Voucher Transaction",
     CR: "Collection Receipt Transaction",
     SOA: "Statement of Account Transaction",
-
   };
+

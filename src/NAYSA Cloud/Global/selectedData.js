@@ -32,9 +32,13 @@ export const useSelectedHSColConfig = async (endpoint) => {
 
 
 
-export const useSelectedOpenARBalance = async (glData) => {
+export const useSelectedOpenARBalance = async (glData,transactionType) => {
   try {
-    const payload = { json_data: glData };
+    const payload = { json_data: glData,
+                      filterTranType: transactionType
+     };
+
+     console.log(JSON.stringify(payload))
     const response = await fetchData("getSelectedARBalance", { json_data: JSON.stringify(payload) } );
 
     if (response?.success && response.data?.[0]?.result) {

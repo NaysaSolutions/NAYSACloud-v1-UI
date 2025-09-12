@@ -1516,12 +1516,13 @@ const handleCloseCancel = async (confirmation) => {
 
 const handleCloseSignatory = async () => {
 
-    updateState({ showSpinner: true });
+    updateState({ showSpinner: true,
+      showSignatoryModal: false,
+     });
     await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+      showSpinner: false
     });
 };
 
