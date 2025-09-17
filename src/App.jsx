@@ -1,138 +1,211 @@
-// import React from 'react';
-// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-// import './App.css';
-// import Login from './NAYSA Cloud/Login';
-// import Register from './NAYSA Cloud/Register'; // Make sure to import Register
 
-// function App() {
-//   return (
-//     <Router>
-//       <div className="flex">
-//         <Routes>
-//           <Route path="/" element={<Login />} />
-//           <Route path="/register" element={<Register />} />
-//         </Routes>
-//       </div>
-//     </Router>
-//   );
-// }
-
-// export default App;
-
-
-
-
-// import React, { useState } from "react";
-// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// import { useEffect, useState } from "react";
+// import { pageRegistry } from "./pageRegistry";
+// import { fetchData } from '@/NAYSA Cloud/Configuration/BaseURL';
+// import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+// import Header from "./NAYSA Cloud/Components/Header";
 // import Navbar from "./NAYSA Cloud/Components/Navbar";
 // import Sidebar from "./NAYSA Cloud/Components/Sidebar";
-// import Dashboard from "./NAYSA Cloud/Components/Dashboard";
-// import PayeeMasterData from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/REFERENCE FILES/PayeeMasterData.jsx";
+// import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 
-// const App = () => {
-//   const [selectedModule, setSelectedModule] = useState("");
+
+
+// const AppContent = () => {
+//   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+//   const location = useLocation();
+//   const [menuItems, setMenuItems] = useState([]);
+//   const [routeRows, setRouteRows] = useState([]);
+
+//   const toggleSidebar = () => {
+//     setIsSidebarVisible((prev) => !prev);
+//   };
+
+
+  
+//   useEffect(() => {
+//     let alive = true; 
+
+//     (async () => {
+//       try {
+//         const [menuResp, routesResp] = await Promise.all([
+//           fetchData("menu-items"),
+//           fetchData("menu-routes"),
+//         ]);
+
+//         if (!alive) return;
+//         setMenuItems(menuResp?.menuItems ?? []);
+//         setRouteRows(routesResp?.routes ?? []);
+//       } catch (e) {
+//         if (!alive) return;
+//         setMenuItems([]);
+//         setRouteRows([]);
+//       }
+//     })();
+
+//     return () => { alive = false; };
+//   }, []);
+
+
+
 
 //   return (
-//     <Router>
-//       <div className="h-screen flex flex-col">
-//         {/* Navbar */}
-//         <div className="h-[60px]">
-//           <Navbar />
+//     <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
+//       {isSidebarVisible && (
+//         <div className="fixed inset-0 z-50 flex">
+//           <Sidebar onNavigate={() => setIsSidebarVisible(false)} />   
+//           <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
 //         </div>
+//       )}
 
-//         {/* Sidebar + Content */}
-//         <div className="flex flex-1 overflow-hidden">
-//           <Sidebar onMenuClick={setSelectedModule} />
 
-//           <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
-//             <Routes>
-//               {/* Dashboard when JOURNAL VOUCHERis selected */}
-//               {selectedModule === "Accounts Payable" && (
-//                 <Route path="/" element={<Dashboard />} />
-//               )}
-
-//               {/* Other static route */}
-//               <Route path="/payeemasterdata" element={<PayeeMasterData />} />
-
-//               {/* Fallback for no selection */}
-//               <Route
-//                 path="*"
-//                 element={
-//                   selectedModule ? (
-//                     <div className="text-gray-600 text-lg">
-//                       {selectedModule} module selected.
-//                     </div>
-//                   ) : (
-//                     <div className="text-gray-400 text-lg">
-//                       Please select a module from the sidebar.
-//                     </div>
-//                   )
-//                 }
-//               />
-//             </Routes>
-//           </main>
-//         </div>
+//       <div className="sticky top-0 z-40">
+//         <Navbar onMenuClick={toggleSidebar} />
 //       </div>
-//     </Router>
+
+//       <div className="flex-1 p-4 overflow-y-auto">
+//         <Routes>
+//         {routeRows.map(({ code, path, componentKey }) => {
+//           const Cmp = pageRegistry[componentKey];
+//           return Cmp ? <Route key={code} path={path} element={<Cmp />} /> : null;
+//         })}
+//       </Routes>
+//       </div>
+//     </div>
 //   );
 // };
 
+// const App = () => (
+//   <Router>
+//     <ResetProvider>
+//       <AppContent />
+//     </ResetProvider>
+//   </Router>
+// );
+
 // export default App;
-import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-import Header from "./NAYSA Cloud/Components/Header";
+import { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { pageRegistry } from "./pageRegistry";
+import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
+
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
-import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
-import SVI from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
-// import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
-import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV.jsx";
-import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
-// import JVHistory from "./NAYSA Cloud/Module/Main Module/General Ledger/JVHistory.jsx";
-// import PCV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV.jsx";
-import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
-import BankRef from "./NAYSA Cloud/Reference File/BankRef.jsx";
 import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
+
+/* Simple modal host (renders any component by its key from pageRegistry) */
+const ModalHost = ({ modalKey, onClose }) => {
+  if (!modalKey) return null;
+  const Cmp = pageRegistry[modalKey];
+
+  if (!Cmp) {
+    console.warn("[ModalHost] No component found for key:", modalKey);
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* If your modal component accepts onClose, this will work; otherwise it will be ignored */}
+        <Cmp isOpen={true} onClose={onClose} userCode={"NSI"} />
+      </div>
+    </div>
+  );
+};
 
 const AppContent = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const location = useLocation();
+  const [menuItems, setMenuItems] = useState([]);
+  const [routeRows, setRouteRows] = useState([]);
+  const [activeModalKey, setActiveModalKey] = useState(null);
 
-  const toggleSidebar = () => {
-    setIsSidebarVisible(prev => !prev);
+  const toggleSidebar = () => setIsSidebarVisible((prev) => !prev);
+  const openModal = (componentKey) => setActiveModalKey(componentKey);
+  const closeModal = () => setActiveModalKey(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [menuResp, routesResp] = await Promise.all([
+          fetchData("menu-items"),
+          fetchData("menu-routes"),
+        ]);
+        if (!alive) return;
+        setMenuItems(menuResp?.menuItems ?? []);
+        setRouteRows(routesResp?.routes ?? []);
+      } catch (e) {
+        if (!alive) return;
+        console.error("[App] Failed to load menu/routes:", e);
+        setMenuItems([]);
+        setRouteRows([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Lock body scroll when modal open
+  useEffect(() => {
+    document.body.style.overflow = activeModalKey ? "hidden" : "auto";
+    return () => { document.body.style.overflow = "auto"; };
+  }, [activeModalKey]);
+
+
+
+  const handleCloseModal = () => {
+    setActiveModalKey(null);
+    // Go "home" after closing modal:
+    const homePath = "/" || (routeRows.find(r => !r.isModal)?.path ?? "/");
+    navigate(homePath, { replace: true });   // replace=true avoids a useless back-step
   };
+
+
 
   return (
     <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
+      {/* Sidebar overlay (mobile) */}
       {isSidebarVisible && (
         <div className="fixed inset-0 z-50 flex">
-          <Sidebar />
-          <div
-            className="flex-1 bg-black bg-opacity-50"
-            onClick={toggleSidebar}
+          <Sidebar
+            menuItems={menuItems}
+            onNavigate={() => setIsSidebarVisible(false)}
+            onOpenModal={(key) => {
+              setIsSidebarVisible(false);
+              openModal(key);
+            }}
           />
+          <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
         </div>
       )}
 
+      {/* Top navbar */}
       <div className="sticky top-0 z-40">
         <Navbar onMenuClick={toggleSidebar} />
       </div>
-      
-      {/* <div className="sticky top-0 z-40 shadow-md">
-        <Header />
-      </div> */}
 
-
+      {/* Routed pages (only non-modals) */}
       <div className="flex-1 p-4 overflow-y-auto">
         <Routes>
-          {/* <Route path="/history" element={<JVHistory />} /> */}
-          {/* <Route path="/" element={<APV />} /> */}
-          <Route path="/" element={<SVI />} />
-          {/* <Route path="/" element={<SVI/>} />  */}
-          {/* <Route path="/" element={<BranchRef/>} />  */}
-          {/* <Route path="/" element={<BankRef/>} />  */}
+          {routeRows
+            .filter(r => r.path && r.componentKey && !r.isModal)   // <-- use API flag
+            .map(({ code, path, componentKey }) => {
+              const Cmp = pageRegistry[componentKey];
+              if (!Cmp) {
+                console.warn("[App] No page component for key:", componentKey, "path:", path);
+                return null;
+              }
+              return <Route key={code} path={path} element={<Cmp />} />;
+            })}
         </Routes>
       </div>
+
+      {/* Modal host */}
+      <ModalHost modalKey={activeModalKey} onClose={handleCloseModal} />
     </div>
   );
 };
@@ -211,26 +284,55 @@ export default App;
 
 
 
-// // src/App.jsx
-// import React from 'react';
-// import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-// import EmployeeList from './Components/EmployeeList';
-// import EmployeeForm from './Components/EmployeeForm';
-// //import Button from './Components/Button';
 
-// const App = () => {
-//   return (
-//     // <Button/>
-//     <Router>
-//       <div className="max-w-4xl mx-auto p-6">
-//         <Routes>
-//           <Route path="/" element={<EmployeeList />} />
-//           <Route path="/add" element={<EmployeeForm />} />
-//           <Route path="/edit/:id" element={<EmployeeForm />} />
-//         </Routes>
-//       </div>
-//     </Router>
-//   );
-// };
 
-// export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

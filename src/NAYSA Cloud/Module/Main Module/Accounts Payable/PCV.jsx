@@ -145,9 +145,13 @@ const PCV = () => {
     detailRows  :[],
     detailRowsGL :[],
 
+   
     totalDebit:"0.00",
     totalCredit:"0.00",
-
+    totalDebitFx1:"0.00",
+    totalCreditFx1:"0.00",
+    totalDebitFx2:"0.00",
+    totalCreditFx2:"0.00",
  
     // Modal states
     modalContext: '',
@@ -236,6 +240,11 @@ const PCV = () => {
   detailRowsGL,
   totalDebit,
   totalCredit,
+  totalDebitFx1,
+  totalCreditFx1,
+  totalDebitFx2,
+  totalCreditFx2,
+
 
 
   // Contexts
@@ -312,11 +321,16 @@ const PCV = () => {
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
     const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debitFx1) || 0), 0);
+    const creditFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.creditFx1) || 0), 0);
   updateState({
     totalDebit: formatNumber(debitSum),
-    totalCredit: formatNumber(creditSum)
+    totalCredit: formatNumber(creditSum),
+    totalDebitFx1: formatNumber(debitFx1Sum),
+    totalCreditFx1: formatNumber(creditFx1Sum)
   })
   }, [detailRowsGL]);
+
 
 
   useEffect(() => {
@@ -527,13 +541,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       return resetState();
     }
 
-    // Format header date
-    let pcvDateForHeader = '';
-    if (data.pcvDate) {
-      const d = new Date(data.pcvDate);
-      pcvDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
-
+    
     // Format rows
     const retrievedDetailRows = (data.dt1 || []).map(item => ({
       ...item,
@@ -561,7 +569,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.pcvId,
       documentNo: data.pcvNo,
       branchCode: data.branchCode,
-      documentDate: pcvDateForHeader ,
+      documentDate: useFormatToDate(data.pcvDate), 
       selectedPCVType: data.pcvtranType,
       vendCode: data.vendCode,
       vendName: data.vendName,
@@ -2771,37 +2779,64 @@ const handleCloseBranchModal = (selectedBranch) => {
 
       
 
-      {/* Totals Section */}
-      <div className="global-tran-tab-footer-total-main-div-ui">
+     {/* Totals Section */}
+<div className="global-tran-tab-footer-total-main-div-ui">
 
-      {/* Total Debit */}
+  {/* Total Debit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+      Total Debit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+      {totalDebit}
+    </label>
+  </div>
+
+  {/* Total Credit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+      Total Credit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+      {totalCredit}
+    </label>
+  </div>
+
+  {/* Totals in Forex Section (if currRate > 1) */}
+  {currRate !== 1 && (
+    <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
-          Total Debit:
+          Total Debit ({currCode}):
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-      {totalDebit}
-      </label>
+          {totalDebitFx1}
+        </label>
       </div>
 
-      {/* Total Credit */}
+      {/* Total Credit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
-          Total Credit:
+          Total Credit ({currCode}):
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-      {totalCredit}
-      </label>
+          {totalCreditFx1}
+        </label>
       </div>
+
     </div>
+  )}
+
+</div>
 
     
 
   </div>
 
-
-
 </div>
+
 
 
 

@@ -19,6 +19,7 @@ import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
+import PostCR from "../../../Module/Main Module/Accounts Receivable/PostCR.jsx";
 
 // Configuration
 import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
@@ -44,11 +45,15 @@ import {
   useTopCompanyRow,
   useTopDocControlRow,
   useTopDocDropDown,
-  useTopVatAmount,
-  useTopATCAmount,
-  useTopBillCodeRow,
   useTopBankMastRow,
 } from '@/NAYSA Cloud/Global/top1RefTable';
+
+
+import {
+  useGetCurrentDay,
+  useFormatToDate,
+} from '@/NAYSA Cloud/Global/dates';
+
 
 
 import {
@@ -107,6 +112,7 @@ const CR = () => {
     documentID: null,
     documentNo: "",
     documentStatus:"",
+    documentDate:useGetCurrentDay(),
     status: "OPEN",
 
 
@@ -122,10 +128,6 @@ const CR = () => {
     isFetchDisabled: false,
 
 
-     // Header information
-    header: {
-      cr_date: new Date().toISOString().split('T')[0]
-    },
 
     branchCode: "HO",
     branchName: "Head Office",
@@ -173,8 +175,13 @@ const CR = () => {
     globalLookupRow:[],
     globalLookupHeader:[],
 
+  
     totalDebit:"0.00",
     totalCredit:"0.00",
+    totalDebitFx1:"0.00",
+    totalCreditFx1:"0.00",
+    totalDebitFx2:"0.00",
+    totalCreditFx2:"0.00",
 
  
     // Modal states
@@ -188,6 +195,7 @@ const CR = () => {
     showAtcModal:false,
     showSlModal:false,
     showARBalanceModal:false,
+    showPostingModal:false,
 
     currencyModalOpen:false,
     branchModalOpen:false,
@@ -210,6 +218,7 @@ const CR = () => {
   documentID,
   documentStatus,
   documentNo,
+  documentDate,
   status,
 
   // Tabs & loading
@@ -278,6 +287,10 @@ const CR = () => {
   globalLookupHeader,
   totalDebit,
   totalCredit,
+  totalDebitFx1,
+  totalCreditFx1,
+  totalDebitFx2,
+  totalCreditFx2,
 
 
   // Contexts
@@ -301,6 +314,7 @@ const CR = () => {
   showAttachModal,
   showSignatoryModal,
   showARBalanceModal,
+  showPostingModal,
 
 
 } = state;
@@ -340,19 +354,17 @@ const CR = () => {
 
 
 
-  const [header, setHeader] = useState({
-  cr_date: new Date().toISOString().split('T')[0]
-  });
-
-
-
 
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
     const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debitFx1) || 0), 0);
+    const creditFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.creditFx1) || 0), 0);
   updateState({
     totalDebit: formatNumber(debitSum),
-    totalCredit: formatNumber(creditSum)
+    totalCredit: formatNumber(creditSum),
+    totalDebitFx1: formatNumber(debitFx1Sum),
+    totalCreditFx1: formatNumber(creditFx1Sum)
   })
   }, [detailRowsGL]);
 
@@ -458,10 +470,11 @@ useEffect(() => {
 
 
   const handleReset = () => { 
-      updateState({header:{cr_date:new Date().toISOString().split("T")[0]},
+      updateState({
 
       branchCode: "HO",
       branchName: "Head Office",
+      documentDate:useGetCurrentDay(),
       
       refDocNo1: "",
       refDocNo2:"",
@@ -656,7 +669,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.crId,
       documentNo: data.crNo,
       branchCode: data.branchCode,
-      header: { cr_date: crDateForHeader },
+      documentDate: useFormatToDate(data.crDate),
       selectedCRType: data.crtranType,
       selectedPayType:data.paymentType,
       selectedCheckType:data.ckType,
@@ -736,7 +749,6 @@ const handleCurrRateNoBlur = (e) => {
         branchCode,
         documentNo,
         documentID,
-        header,
         selectedCRType,
         selectedPayType,
         selectedCheckType,
@@ -770,7 +782,7 @@ const handleCurrRateNoBlur = (e) => {
       branchCode: branchCode,
       crNo: documentNo || "",
       crId: documentID || "",
-      crDate: header.cr_date,
+      crDate: documentDate,
       crtranType: selectedCRType,
       paymentType:selectedPayType,
       ckType:selectedCheckType,
@@ -902,7 +914,7 @@ const handleCurrRateNoBlur = (e) => {
         lnNo: "",
         w2307: "",
         siNo: "00000000",
-        siDate: header.cr_date,
+        siDate: documentDate,
         siAmount:"0.00",
         appliedAmount: "0.00",
         unappliedAmount: "0.00",
@@ -1025,6 +1037,22 @@ const handlePrint = async () => {
   updateState({ showSignatoryModal: true });
 
 };
+
+
+
+
+const handlePost = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostingModal: true });
+  }
+};
+
+
+
 
 
 
@@ -1194,8 +1222,15 @@ if (runCalculations) {
       const newBalance = origSIAmt - origApplied;
       row.checkAmount = formatNumber(newCheckAmt);
       row.balance = formatNumber(origApplied > origSIAmt ? 0 : newBalance);
-      row.appliedAmount = formatNumber(origApplied > origSIAmt ? origSIAmt : origApplied);
-    }
+
+
+     const applied =
+      origSIAmt < 0
+        ? (Math.abs(origApplied) <= Math.abs(origSIAmt) ? origApplied : origSIAmt)
+        : Math.min(origApplied, origSIAmt);
+        row.appliedAmount = formatNumber(applied);    
+        }
+
 
     if (selectedCRType === "CR13" || selectedCRType === "CR12" ) {
       row.checkAmount = formatNumber(newCheckAmt);
@@ -1393,7 +1428,7 @@ const handleBlurGL = async (index, field, value, autoCompute = false) => {
 
   if(autoCompute && ((withCurr2 && currCode !== glCurrDefault) || (withCurr3))){
   if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,header.cr_date); 
+    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,documentDate); 
         if(data) {
            row.debit = formatNumber(data.debit)
            row.credit = formatNumber(data.credit)
@@ -1616,7 +1651,7 @@ const handleCloseARBalance = async (payload) => {
         custCode: entry.custCode,
         custName: entry.custName,
         refBranchcode: branchCode,
-        refDocCode:  "CR",
+        refDocCode: entry.refDocCode,
         groupId: entry.groupId,
       
       }));
@@ -1724,7 +1759,7 @@ const handleCloseBranchModal = (selectedBranch) => {
       if (result) {
         const rate = currCode === glCurrDefault
           ? defaultCurrRate
-          : await useTopForexRate(currCode, header.cr_date);
+          : await useTopForexRate(currCode, documentDate);
 
         updateState({
           currCode: result.currCode,
@@ -1776,6 +1811,7 @@ const handleCloseBranchModal = (selectedBranch) => {
   pdfLink={pdfLink} 
   videoLink={videoLink}
   onPrint={handlePrint} 
+  onPost={handlePost} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
@@ -1900,8 +1936,8 @@ const handleCloseBranchModal = (selectedBranch) => {
                     <input type="date"
                         id="crDate"
                         className="peer global-tran-textbox-ui"
-                        value={header.cr_date}
-                        onChange={(e) => setHeader((prev) => ({ ...prev, cr_date: e.target.value }))}
+                        value={documentDate}
+                        onChange={(e) => updateState({ documentDate: e.target.value })} 
                         disabled={isFormDisabled} 
                     />
                     <label htmlFor="crDate" className="global-tran-floating-label">CR Date</label>
@@ -2477,13 +2513,39 @@ const handleCloseBranchModal = (selectedBranch) => {
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                     value={row.appliedAmount || ""}
+                    // onChange={(e) => {
+                    //     const inputValue = e.target.value;
+                    //     const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                    //     if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                    //         handleDetailChange(index, "appliedAmount", sanitizedValue, false);
+                    //     }
+                    // }}   
                     onChange={(e) => {
-                        const inputValue = e.target.value;
-                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChange(index, "appliedAmount", sanitizedValue, false);
+                        const raw = e.target.value;
+
+                        const siAmt = parseFormattedNumber(row.siAmount); // or from state
+                        const allowNegative = siAmt < 0;
+
+                        // Keep digits + dot; if negatives are allowed, also keep '-'
+                        let sanitized = raw.replace(allowNegative ? /[^0-9.\-]/g : /[^0-9.]/g, "");
+
+                        // If negatives allowed, ensure at most one leading '-' (move it to the front)
+                        if (allowNegative) {
+                          const hasMinus = sanitized.includes("-");
+                          sanitized = sanitized.replace(/-/g, "");
+                          if (hasMinus) sanitized = "-" + sanitized;
                         }
-                    }}                   
+
+                        // Valid number (up to 2 decimals). Allow "" or "-" as intermediate while typing.
+                        const re = allowNegative ? /^-?\d*(\.\d{0,2})?$/ : /^\d*(\.\d{0,2})?$/;
+                        const isIntermediate = sanitized === "" || (allowNegative && sanitized === "-");
+
+                        if (re.test(sanitized) || isIntermediate) {
+                          handleDetailChange(index, "appliedAmount", sanitized, false);
+                        }
+                      }}
+
+                    
                      onFocus={(e) => {
                         if (e.target.value === "0.00" || e.target.value === "0") {
                           e.target.value = "";
@@ -2672,7 +2734,7 @@ const handleCloseBranchModal = (selectedBranch) => {
            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
+                className="w-[250px] global-tran-td-inputclass-ui"
                 value={row.custName || ""}
                 readOnly
               />
@@ -3269,7 +3331,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 <input
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.remarks || header.remarks || ""}
+                  value={row.remarks || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                 />
              </td>
@@ -3323,34 +3385,60 @@ const handleCloseBranchModal = (selectedBranch) => {
       
 
       {/* Totals Section */}
-      <div className="global-tran-tab-footer-total-main-div-ui">
+<div className="global-tran-tab-footer-total-main-div-ui">
 
-      {/* Total Debit */}
+  {/* Total Debit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+      Total Debit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+      {totalDebit}
+    </label>
+  </div>
+
+  {/* Total Credit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+      Total Credit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+      {totalCredit}
+    </label>
+  </div>
+
+  {/* Totals in Forex Section (if currRate > 1) */}
+  {currRate !== 1 && (
+    <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
-          Total Debit:
+          Total Debit ({currCode}):
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-      {totalDebit}
-      </label>
+          {totalDebitFx1}
+        </label>
       </div>
 
-      {/* Total Credit */}
+      {/* Total Credit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
-          Total Credit:
+          Total Credit ({currCode}):
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-      {totalCredit}
-      </label>
+          {totalCreditFx1}
+        </label>
       </div>
+
     </div>
+  )}
+
+</div>
 
     
 
   </div>
-
-
 
 </div>
 
@@ -3470,6 +3558,12 @@ const handleCloseBranchModal = (selectedBranch) => {
 )}
 
 
+ {showPostingModal && (
+  <PostCR
+    isOpen={showPostingModal}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)} 
 
 {showAttachModal && (
   <AttachDocumentModal

@@ -318,9 +318,8 @@ const ARCM = () => {
   const [totals, setTotals] = useState({
   totalSIAmount: '0.00',
   totalAppliedAmount: '0.00',
-  totalBalanceAmount: '0.00',
-  totalUnappliedAmount: '0.00',
-  currAmount:"0.00"
+  totalVATAmount: '0.00',
+  totalATCAmount: '0.00'
   });
 
 
@@ -421,17 +420,13 @@ useEffect(() => {
   
 
 
-  const updateTotalsDisplay = (siAmt, applied, balance, unapplied) => {
+  const updateTotalsDisplay = (siAmt, applied, vat, atc) => {
     setTotals({
           totalSIAmount: formatNumber(siAmt),
           totalAppliedAmount: formatNumber(applied),
-          totalBalanceAmount: formatNumber(balance),
-          totalUnappliedAmount: formatNumber(unapplied),
-          currAmount:formatNumber(applied+unapplied),
+          totalVATAmount: formatNumber(vat),
+          totalATCAmount: formatNumber(atc)
       });
-
-
-      updateState({checkAmount:formatNumber((applied+unapplied) * currRate)})
   };
 
 
@@ -592,14 +587,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       return resetState();
     }
 
-    // Format header date
-    let arcmDateForHeader = '';
-    if (data.arcmDate) { 
-      const d = new Date(data.arcmDate);
-      arcmDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
 
-   
 
     // Format rows
     const retrievedDetailRows = (data.dt1 || []).map(item => ({
@@ -630,7 +618,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.arcmId,
       documentNo: data.arcmNo,
       branchCode: data.branchCode,
-      documentDate: arcmDateForHeader,
+      documentDate: useFormatToDate(data.arcmDate),
       selectedARCMType: data.arcmtranType,
       custCode: data.custCode,
       custName: data.custName,
@@ -849,11 +837,11 @@ const handleCurrRateNoBlur = (e) => {
         siDate: documentDate,
         siAmount:"0.00",
         appliedAmount: "0.00",
-        vatCode:"",
-        vatName:"",
+        vatCode: item.vatCode || "",
+        vatName: item.vatName || "",
         vatAmount:"0.00",
-        atcCode:"",
-        atcName:"",
+        atcCode: item.atcCode || "",
+        atcName: item.atcName || "",
         atcAmount:"0.00",
         currCode: currCode,
         currRate: formatNumber(currRate,6) ,
@@ -1024,16 +1012,16 @@ const handleAttach = async () => {
 
 
 const handleCopy = async () => {
- if (!detailRows || detailRows.length === 0) {
-      return;
-      }
-
+if (selectedARCMType !== "ARCM07" || !detailRows?.length) {
+  return;
+  }
 
   if (documentID ) {
     updateState({ documentNo:"",
                   documentID:"",
                   documentStatus:"",
-                  status:"OPEN"
+                  status:"OPEN",
+                  documentDate:useGetCurrentDay(),    
      });
   }
 };
@@ -1103,26 +1091,26 @@ const handleCopy = async () => {
 
   let totalSIAmt = 0;
   let totalApplied = 0;
-  let totalUnApplied = 0;
-  let totalBalance = 0;
+  let totalVAT = 0;
+  let totalATC = 0;
 
 
   rows.forEach(row => {
 
     const perSIAmt = parseFormattedNumber(row.siAmount || 0) || 0;
     const perApplied = parseFormattedNumber(row.appliedAmount || 0) || 0;
-    const perUnApplied = parseFormattedNumber(row.unappliedAmount || 0) || 0;
-    const perBalance = parseFormattedNumber(row.balance  || 0) || 0;
+    const perVAT = parseFormattedNumber(row.vatAmount || 0) || 0;
+    const perATC = parseFormattedNumber(row.atcAmount  || 0) || 0;
 
 
     totalSIAmt+= perSIAmt;
     totalApplied+= perApplied;
-    totalUnApplied+= perUnApplied;
-    totalBalance += perBalance;
+    totalVAT+= perVAT;
+    totalATC += perATC;
   });
 
 
-    updateTotalsDisplay (totalSIAmt,totalApplied, totalBalance,totalUnApplied);
+    updateTotalsDisplay (totalSIAmt,totalApplied, totalVAT,totalATC);
 
 };
 
@@ -1144,23 +1132,72 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       row[field] = value.acctCode;
     }
 
-if (runCalculations) {
 
-let vatRate = parseFormattedNumber(row.vatRate) || 0;
-let atcRate = parseFormattedNumber(row.atcRate) || 0;
-let origApplied = parseFormattedNumber(row.appliedAmount) || 0;
-let siAmount = parseFormattedNumber(row.siAmount) || 0;
+    if (field === 'vatCode') {
+          row.vatCode = value.vatCode,
+          row.vatName = value.vatName;     
+      };
+
+    
+    if (field === 'atcCode' ){
+          row.atcCode = value.atcCode,
+          row.atcName = value.atcName;     
+        };
+
+
+    if (field === 'rcCode' ){
+          row.rcCode = value.rcCode;
+        };
+
+
+
+
+
+if (runCalculations) {
+let vatRate      = parseFormattedNumber(row.vatRate)      || 0;
+let atcRate      = parseFormattedNumber(row.atcRate)      || 0;
+let origApplied  = parseFormattedNumber(row.appliedAmount) || 0;
+let siAmount     = parseFormattedNumber(row.siAmount)     || 0;
+
+const isARCM07 = selectedARCMType === "ARCM07";
+const isAllTypes = isARCM07 || selectedARCMType === "ARCM01";
+
 
 if (field === "appliedAmount") {
-  if (selectedARCMType === "ARCM01") {
-    origApplied = Math.min(origApplied, siAmount);  
-    row.vatAmount = formatNumber(origApplied * vatRate);
-    row.atcAmount = formatNumber(origApplied * atcRate);
-    row.appliedAmount = formatNumber(origApplied);
+  if (isARCM07) {
+    siAmount = parseFormattedNumber(row.appliedAmount);
+    row.siAmount = formatNumber(siAmount);
+  }
+
+  if (isAllTypes) {
+    const baseAmount = isARCM07 ? siAmount : origApplied;
+    origApplied = Math.min(origApplied, baseAmount);
+
+    row.vatAmount      = formatNumber(origApplied * vatRate);
+    row.atcAmount      = formatNumber(origApplied * atcRate);
+    row.appliedAmount  = formatNumber(origApplied);
   }
 }
 
- 
+
+
+if (isARCM07 && (field === "vatCode" || field === "atcCode") || field === "appliedAmount") {
+  const appliedAmt = parseFormattedNumber(row.appliedAmount);
+
+  const vatAmt = row.vatCode
+    ? await useTopVatAmount(row.vatCode, appliedAmt)
+    : 0;
+  row.vatAmount = formatNumber(vatAmt);
+
+  const netOfVat = +(appliedAmt - vatAmt).toFixed(2);
+  const atcAmt = row.atcCode
+    ? await useTopATCAmount(row.atcCode, netOfVat)
+    : 0;
+  row.atcAmount = formatNumber(atcAmt);
+}
+
+
+
 }
 
 
@@ -1812,7 +1849,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                         id="arcmDate"
                         className="peer global-tran-textbox-ui"
                         value={documentDate}
-                        onChange={(e) => setHeader((prev) => ({ ...prev, documentDate: e.target.value }))}
+                        onChange={(e) => updateState({ documentDate: e.target.value })} 
                         disabled={isFormDisabled} 
                     />
                     <label htmlFor="arcmDate" className="global-tran-floating-label">ARCM Date</label>
@@ -2098,7 +2135,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.siNo || ""}
                 onChange={(e) => handleDetailChange(index, 'siNo', e.target.value)}
-                readOnly={row.groupId !== null && row.groupId !== ""}
+                readOnly
               />
             </td>
             
@@ -2481,10 +2518,10 @@ const handleCloseBranchModal = (selectedBranch) => {
   {/* Total ATC Amount */}
   <div className="global-tran-tab-footer-total-div-ui" >
     <label className="global-tran-tab-footer-total-label-ui">
-      Total UnApplied Amount:
+      Total VAT Amount:
     </label>
     <label id="totalUnappliedAmount" className="global-tran-tab-footer-total-value-ui">
-      {totals.totalUnappliedAmount}
+      {totals.totalVATAmount}
     </label>
   </div>
 
@@ -2492,10 +2529,10 @@ const handleCloseBranchModal = (selectedBranch) => {
 
   <div className="global-tran-tab-footer-total-div-ui">
     <label className="global-tran-tab-footer-total-label-ui">
-      Total Balance:
+      Total ATC Amount:
     </label>
     <label id="totalBalanceAmount" className="global-tran-tab-footer-total-value-ui">
-      {totals.totalBalanceAmount}
+      {totals.totalATCAmount}
     </label>
   </div>
 

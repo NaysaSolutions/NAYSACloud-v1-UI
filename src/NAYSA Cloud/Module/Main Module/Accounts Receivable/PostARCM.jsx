@@ -4,7 +4,7 @@ import { useSelectedHSColConfig } from '@/NAYSA Cloud/Global/selectedData';
 import  GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import { useSwalValidationAlert } from '@/NAYSA Cloud/Global/behavior';
 
-const PostARCM = ({ isOpen, onClose }) => {
+const PostARCM = ({ isOpen, onClose,userCode }) => {
   const [data, setData] = useState([]);
   const [colConfigData, setcolConfigData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,7 @@ const PostARCM = ({ isOpen, onClose }) => {
     try {
       const payload = {
         json_data: {
-          userCode: "NSI",
+          userCode: userCode,
           dt1: selectedData.map((item, index) => ({
             lnNo: String(index + 1),
             groupId: item,

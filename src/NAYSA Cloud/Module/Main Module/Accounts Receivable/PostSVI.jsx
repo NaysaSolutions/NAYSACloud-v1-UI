@@ -4,7 +4,7 @@ import { useSelectedHSColConfig } from '@/NAYSA Cloud/Global/selectedData';
 import  GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import { useSwalValidationAlert } from '@/NAYSA Cloud/Global/behavior';
 
-const PostSVI = ({ isOpen, onClose }) => {
+const PostSVI = ({ isOpen, onClose, userCode }) => {
   const [data, setData] = useState([]);
   const [colConfigData, setcolConfigData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +66,7 @@ const PostSVI = ({ isOpen, onClose }) => {
     try {
       const payload = {
         json_data: {
-          userCode: "NSI",
+          userCode: userCode,
           dt1: selectedData.map((item, index) => ({
             lnNo: String(index + 1),
             groupId: item,
@@ -93,10 +93,6 @@ const PostSVI = ({ isOpen, onClose }) => {
       console.error("Error posting SVI:", error);
     }
   };
-
-  if (loading) {
-    return <div>Loading data...</div>;
-  }
 
   return modalReady ? (
     <GlobalGLPostingModalv1 
