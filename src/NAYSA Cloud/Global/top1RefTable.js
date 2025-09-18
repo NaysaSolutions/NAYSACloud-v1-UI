@@ -8,6 +8,23 @@ import Swal from 'sweetalert2';
 // ATC
 
 
+
+export async function useTopUserRow(userCode) {
+  try {
+    const response = await fetchData("getUser", { USER_CODE: userCode});
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching User row:", error);
+    return null;
+  }
+}
+
+
+
 export async function useTopCompanyRow() {
   try {
     const response = await fetchData("getCompany");

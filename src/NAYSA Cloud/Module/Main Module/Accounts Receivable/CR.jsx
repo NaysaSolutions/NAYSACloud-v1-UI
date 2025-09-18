@@ -1890,6 +1890,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
                         disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
+                        onClick={() => updateState({ branchModalOpen: true })}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>

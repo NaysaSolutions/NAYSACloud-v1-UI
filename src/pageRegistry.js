@@ -25,6 +25,9 @@ import JV        from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
 
+
+import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
+
 // Add more imports as you create pages…
 
 export const pageRegistry = {
@@ -51,5 +54,10 @@ export const pageRegistry = {
 
  
   //Posting
-  PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR
+  PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
+
+
+
+  //Printing
+  ARReportModal,
 };
