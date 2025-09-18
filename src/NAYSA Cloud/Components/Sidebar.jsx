@@ -287,7 +287,7 @@
 // export default Sidebar;
 
 import React, { useEffect, useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink  } from "react-router-dom";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
 import {
   FiChevronDown,
@@ -434,8 +434,8 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
     );
   }
 
-  // Leaf: decide by API flag
-  const isModal = !!item?.isModal; // <-- use API-provided flag
+
+  const isModal = !!item?.isModal;
   if (isModal) {
     return (
       <li key={item?.code || item?.name}>
@@ -443,8 +443,8 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onOpenModal?.(item?.componentKey); // open modal in App
-            onNavigate?.();                    // auto-close overlay
+            onOpenModal?.(item?.componentKey); 
+            onNavigate?.();                    
           }}
           className={rowBase + " w-full text-left cursor-pointer"}
         >

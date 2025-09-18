@@ -104,7 +104,7 @@ const PostCR = ({ isOpen, onClose,userCode }) => {
     <GlobalGLPostingModalv1 
       data={data} 
       colConfigData={colConfigData} 
-      title="Post AR Collection Receipt" 
+      title="Post Collection Receipt" 
       btnCaption="Ok"
       onClose={onClose}
       onPost={handlePost} 

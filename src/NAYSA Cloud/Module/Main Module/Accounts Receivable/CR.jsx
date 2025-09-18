@@ -1079,7 +1079,7 @@ const handleAttach = async () => {
 
 
 const handleCopy = async () => {
- if (!detailRows || detailRows.length === 0) {
+ if (!detailRows || selectedCRType === "CR11" ) {
       return;
       }
 
@@ -1088,7 +1088,8 @@ const handleCopy = async () => {
     updateState({ documentNo:"",
                   documentID:"",
                   documentStatus:"",
-                  status:"OPEN"
+                  status:"OPEN",
+                  documentDate:useGetCurrentDay(), 
      });
   }
 };

@@ -11,7 +11,8 @@ import ARDM      from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/ARDM
 import PostARDM  from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostARDM.jsx";
 import CR        from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/CR.jsx";
 import PostCR    from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostCR.jsx";
-
+import AR        from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/AR.jsx";
+import PostAR        from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostAR.jsx";
 
 import APV       from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
 import PCV       from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV.jsx";
@@ -33,6 +34,7 @@ export const pageRegistry = {
   ARCM,
   ARDM,
   CR,
+  AR,
 
   // Accounts Payable
   APV,
@@ -49,5 +51,5 @@ export const pageRegistry = {
 
  
   //Posting
-  PostSVI,PostSOA,PostARCM,PostARDM,PostCR
+  PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR
 };

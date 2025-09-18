@@ -7,7 +7,8 @@ export const docTypes = {
   SOA:"SOA",
   ARCM:"ARCM",
   ARDM:"ARDM",
-  CR:"CR"
+  CR:"CR",
+  AR:"AR"
 
 };
 
@@ -30,6 +31,7 @@ export const docTypeNames = {
     ARDM: "AR Debit Memo Transaction",
     ARCM: "AR Credit Memo Transaction",
     CR: "Collection Receipt Transaction",
+    AR: "Acknowledgement Receipt Transaction",
     SOA: "Statement of Account Transaction",
   };
 
