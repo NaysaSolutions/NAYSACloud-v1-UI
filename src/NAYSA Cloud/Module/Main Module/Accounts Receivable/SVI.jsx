@@ -936,11 +936,12 @@ const handleAddRowGL = () => {
 
 
 
+  
 const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  if (documentID && (documentStatus === '')) {
+  if (documentID) {
     updateState({ showSignatoryModal: true });
   }
 };

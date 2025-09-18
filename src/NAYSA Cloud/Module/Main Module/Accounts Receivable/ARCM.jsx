@@ -963,13 +963,13 @@ const handleAddRowGL = () => {
   };
 
 
-
 const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  updateState({ showSignatoryModal: true });
-
+  if (documentID) {
+    updateState({ showSignatoryModal: true });
+  }
 };
 
 
