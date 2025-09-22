@@ -18,10 +18,11 @@ import BankMastLookupModal from "../../../Lookup/SearchBankMast.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
-import AROpenBalanceLookupModal from "../../../Lookup/SearchARBalance.jsx";
+import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
+import PostCR from "../../../Module/Main Module/Accounts Receivable/PostCR.jsx";
 
 // Configuration
-import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
+import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
 
 import {
@@ -44,15 +45,20 @@ import {
   useTopCompanyRow,
   useTopDocControlRow,
   useTopDocDropDown,
-  useTopVatAmount,
-  useTopATCAmount,
-  useTopBillCodeRow,
   useTopBankMastRow,
 } from '@/NAYSA Cloud/Global/top1RefTable';
 
 
 import {
+  useGetCurrentDay,
+  useFormatToDate,
+} from '@/NAYSA Cloud/Global/dates';
+
+
+
+import {
   useSelectedOpenARBalance,
+  useSelectedHSColConfig,
 } from '@/NAYSA Cloud/Global/selectedData';
 
 
@@ -62,9 +68,13 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
   useHandleCancel,
 } from '@/NAYSA Cloud/Global/procedure';
+
+
+import {
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
 
 
 import { 
@@ -102,6 +112,7 @@ const CR = () => {
     documentID: null,
     documentNo: "",
     documentStatus:"",
+    documentDate:useGetCurrentDay(),
     status: "OPEN",
 
 
@@ -117,10 +128,6 @@ const CR = () => {
     isFetchDisabled: false,
 
 
-     // Header information
-    header: {
-      svi_date: new Date().toISOString().split('T')[0]
-    },
 
     branchCode: "HO",
     branchName: "Head Office",
@@ -165,9 +172,16 @@ const CR = () => {
     //Detail 1-2
     detailRows  :[],
     detailRowsGL :[],
+    globalLookupRow:[],
+    globalLookupHeader:[],
 
+  
     totalDebit:"0.00",
     totalCredit:"0.00",
+    totalDebitFx1:"0.00",
+    totalCreditFx1:"0.00",
+    totalDebitFx2:"0.00",
+    totalCreditFx2:"0.00",
 
  
     // Modal states
@@ -181,6 +195,7 @@ const CR = () => {
     showAtcModal:false,
     showSlModal:false,
     showARBalanceModal:false,
+    showPostingModal:false,
 
     currencyModalOpen:false,
     branchModalOpen:false,
@@ -203,6 +218,7 @@ const CR = () => {
   documentID,
   documentStatus,
   documentNo,
+  documentDate,
   status,
 
   // Tabs & loading
@@ -267,8 +283,14 @@ const CR = () => {
   // Transaction details
   detailRows,
   detailRowsGL,
+  globalLookupRow,
+  globalLookupHeader,
   totalDebit,
   totalCredit,
+  totalDebitFx1,
+  totalCreditFx1,
+  totalDebitFx2,
+  totalCreditFx2,
 
 
   // Contexts
@@ -292,6 +314,7 @@ const CR = () => {
   showAttachModal,
   showSignatoryModal,
   showARBalanceModal,
+  showPostingModal,
 
 
 } = state;
@@ -326,14 +349,7 @@ const CR = () => {
   totalAppliedAmount: '0.00',
   totalBalanceAmount: '0.00',
   totalUnappliedAmount: '0.00',
-  currAmount:"0.00",
-  checkAmount:"0.00"
-  });
-
-
-
-  const [header, setHeader] = useState({
-  svi_date: new Date().toISOString().split('T')[0]
+  currAmount:"0.00"
   });
 
 
@@ -342,9 +358,13 @@ const CR = () => {
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
     const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debitFx1) || 0), 0);
+    const creditFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.creditFx1) || 0), 0);
   updateState({
     totalDebit: formatNumber(debitSum),
-    totalCredit: formatNumber(creditSum)
+    totalCredit: formatNumber(creditSum),
+    totalDebitFx1: formatNumber(debitFx1Sum),
+    totalCreditFx1: formatNumber(creditFx1Sum)
   })
   }, [detailRowsGL]);
 
@@ -441,17 +461,20 @@ useEffect(() => {
           totalBalanceAmount: formatNumber(balance),
           totalUnappliedAmount: formatNumber(unapplied),
           currAmount:formatNumber(applied+unapplied),
-          checkAmount:formatNumber((applied+unapplied) * currRate)
       });
+
+
+      updateState({checkAmount:formatNumber((applied+unapplied) * currRate)})
   };
 
 
 
   const handleReset = () => { 
-      updateState({header:{svi_date:new Date().toISOString().split("T")[0]},
+      updateState({
 
       branchCode: "HO",
       branchName: "Head Office",
+      documentDate:useGetCurrentDay(),
       
       refDocNo1: "",
       refDocNo2:"",
@@ -610,10 +633,12 @@ const fetchTranData = async (documentNo, branchCode) => {
 
     // Format header date
     let crDateForHeader = '';
-    if (data.crDate) {
+    if (data.crDate) { 
       const d = new Date(data.crDate);
       crDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
     }
+
+   
 
     // Format rows
     const retrievedDetailRows = (data.dt1 || []).map(item => ({
@@ -636,16 +661,18 @@ const fetchTranData = async (documentNo, branchCode) => {
 
   
     // Update state with fetched data
+
+   
     updateState({
       documentStatus: data.crStatus,
       status: data.docStatus,
       documentID: data.crId,
       documentNo: data.crNo,
       branchCode: data.branchCode,
-      header: { cr_date: crDateForHeader },
+      documentDate: useFormatToDate(data.crDate),
       selectedCRType: data.crtranType,
-      selectedPayType:data.paymentTypes,
-      selectedCheckType:data.checkTypes,
+      selectedPayType:data.paymentType,
+      selectedCheckType:data.ckType,
       chainCode: data.chainCode,
       chainName: data.chainName,
       custCode: data.custCode,
@@ -694,8 +721,14 @@ const handleCurrRateNoBlur = (e) => {
   updateState({ 
         currRate: isNaN(num) ? "0.000000" : num,  
         withCurr2:((glCurrMode === "M" && glCurrDefault !== currCode) || glCurrMode === "D"),
-        withCurr3:glCurrMode === "T"
+        withCurr3:glCurrMode === "T",
         })
+
+   const checkAmount = formatNumber(
+      parseFormattedNumber(totals.currAmount) * parseFormattedNumber(currRate)
+      );
+  updateState({ checkAmount });
+
 };
 
 
@@ -708,7 +741,6 @@ const handleCurrRateNoBlur = (e) => {
     return;
   }
 
-
   if (documentStatus === '') {
    
   updateState({ isLoading: true });
@@ -717,7 +749,6 @@ const handleCurrRateNoBlur = (e) => {
         branchCode,
         documentNo,
         documentID,
-        header,
         selectedCRType,
         selectedPayType,
         selectedCheckType,
@@ -751,7 +782,7 @@ const handleCurrRateNoBlur = (e) => {
       branchCode: branchCode,
       crNo: documentNo || "",
       crId: documentID || "",
-      crDate: header.svi_date,
+      crDate: documentDate,
       crtranType: selectedCRType,
       paymentType:selectedPayType,
       ckType:selectedCheckType,
@@ -768,7 +799,7 @@ const handleCurrRateNoBlur = (e) => {
       checkNo:checkNo,
       checkDate:checkDate,
       currAmount:parseFormattedNumber(totals.currAmount),
-      amount:parseFormattedNumber(totals.checkAmount),
+      amount:parseFormattedNumber(checkAmount),
       currCode: currCode || "PHP",
       currRate: parseFormattedNumber(currRate),
       remarks: remarks|| "",
@@ -867,6 +898,13 @@ const handleCurrRateNoBlur = (e) => {
 
 
   const handleAddRow = async () => {
+
+    if(selectedCRType ==="CR11" ) {
+      await handleOpenARBalance();
+      return;
+    }
+   
+
   try {
     const items = await handleFetchDetail(custCode);
     const itemList = Array.isArray(items) ? items : [items];
@@ -875,8 +913,8 @@ const handleCurrRateNoBlur = (e) => {
       return {
         lnNo: "",
         w2307: "",
-        siNo: "",
-        siDate: null,
+        siNo: "00000000",
+        siDate: documentDate,
         siAmount:"0.00",
         appliedAmount: "0.00",
         unappliedAmount: "0.00",
@@ -990,15 +1028,32 @@ const handleAddRowGL = () => {
     }
   };
 
-
+  
 
 const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  updateState({ showSignatoryModal: true });
-
+  if (documentID) {
+    updateState({ showSignatoryModal: true });
+  }
 };
+
+
+
+
+const handlePost = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostingModal: true });
+  }
+};
+
+
+
 
 
 
@@ -1016,14 +1071,16 @@ const handleCancel = async () => {
 
 
 const handleAttach = async () => {
-  updateState({ showAttachModal: true });
+  if(documentID){
+    updateState({ showAttachModal: true });
+  }
 };
 
 
 
 
 const handleCopy = async () => {
- if (!detailRows || detailRows.length === 0) {
+ if (!detailRows || selectedCRType === "CR11" ) {
       return;
       }
 
@@ -1032,7 +1089,8 @@ const handleCopy = async () => {
     updateState({ documentNo:"",
                   documentID:"",
                   documentStatus:"",
-                  status:"OPEN"
+                  status:"OPEN",
+                  documentDate:useGetCurrentDay(), 
      });
   }
 };
@@ -1068,6 +1126,7 @@ const handleCopy = async () => {
             custCode: selectedData.custCode
         });
         
+
         if (!selectedData.currCode) {
             const payload = { CUST_CODE: selectedData.custCode };
             const response = await postRequest("getCustomer", JSON.stringify(payload));
@@ -1080,9 +1139,23 @@ const handleCopy = async () => {
             }
         }
 
-        await Promise.all([
-            handleSelectCurrency(custDetails.currCode),
-        ]);
+
+
+          // Replace Customer Info in Invoice Details on Change of Customer
+        const responseCurrRate = await handleSelectCurrency(custDetails.currCode)
+        if (responseCurrRate) {
+          if (detailRows && selectedCRType !== "CR11" ) {
+          const updatedRows = detailRows.map((row) => ({
+            ...row,
+            custCode: custDetails.custCode,
+            custName: custDetails.custName,
+            currCode: custDetails.currCode,
+            currRate: responseCurrRate
+          }));
+
+          updateState({ detailRows: updatedRows , detailRowsGL: [] });
+        }
+        }
 
     } catch (error) {
         console.error("Error fetching customer details:", error);
@@ -1117,7 +1190,7 @@ const handleCopy = async () => {
   });
 
 
-    updateTotalsDisplay (totalSIAmt,totalApplied,totalUnApplied, totalBalance);
+    updateTotalsDisplay (totalSIAmt,totalApplied, totalBalance,totalUnApplied);
 
 };
 
@@ -1139,34 +1212,43 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       row[field] = value.acctCode;
     }
 
+if (runCalculations) {
+  const origSIAmt = parseFormattedNumber(row.siAmount) || 0;
+  const origUnApplied = parseFormattedNumber(row.unappliedAmount) || 0;
+  const origApplied = parseFormattedNumber(row.appliedAmount) || 0;
+  const newCheckAmt = origApplied + origUnApplied;
 
-    if (runCalculations) {  
-      const origSIAmt = parseFormattedNumber(row.siAmount) || 0;
-      const origCurrRate = parseFormattedNumber(row.currRate) || 0;
-      const origUnApplied = parseFormattedNumber(row.unappliedAmount) || 0;
-      const origApplied = parseFormattedNumber(row.appliedAmount) || 0;
-  
-      if (field === 'appliedAmount') {
-        const newCheckAmt = origApplied+origUnApplied;
-        const newBalance = origSIAmt-origApplied;
-  
-        row.checkAmount = formatNumber(newCheckAmt);
-        row.balance = formatNumber(
-              origApplied > origSIAmt ? 0 : newBalance
-            );
-        row.appliedAmount = formatNumber(
-              origApplied > origSIAmt ? origSIAmt : origApplied
-            );
-      }
 
-      if (field === 'unappliedAmount') {
-        const newCheckAmt = origApplied+origUnApplied;
-        const newBalance = origSIAmt-origApplied;
-        row.checkAmount = formatNumber(newCheckAmt);
-        row.balance = formatNumber(newBalance);
-        row.unappliedAmount = formatNumber(origUnApplied);
-      }   
+  if (field === "appliedAmount") {
+    if (selectedCRType === "CR11") {
+      const newBalance = origSIAmt - origApplied;
+      row.checkAmount = formatNumber(newCheckAmt);
+      row.balance = formatNumber(origApplied > origSIAmt ? 0 : newBalance);
+
+
+     const applied =
+      origSIAmt < 0
+        ? (Math.abs(origApplied) <= Math.abs(origSIAmt) ? origApplied : origSIAmt)
+        : Math.min(origApplied, origSIAmt);
+        row.appliedAmount = formatNumber(applied);    
+        }
+
+
+    if (selectedCRType === "CR13" || selectedCRType === "CR12" ) {
+      row.checkAmount = formatNumber(newCheckAmt);
+      row.balance = formatNumber(0);
+      row.siAmount = formatNumber(newCheckAmt);
+      row.appliedAmount = formatNumber(origApplied);
+    }
   }
+
+  if (field === "unappliedAmount") {
+    row.checkAmount = formatNumber(newCheckAmt);
+    row.balance = formatNumber(selectedCRType === "CR11" ? origSIAmt - origApplied : 0);
+    row.unappliedAmount = formatNumber(origUnApplied);
+  }
+}
+
 
     updatedRows[index] = row;
     updateState({ detailRows: updatedRows });
@@ -1176,84 +1258,117 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 
 
-  const handleDetailVisibility = (field) => {
-      if(field==="siAmt"){
 
+const handleFieldBehavior = (option) => {
+  switch (option) {
+
+    case "disableOnNonCheckPay":
+      return (
+        isFormDisabled ||
+        selectedPayType !== "CR01" ||
+        selectedCheckType === "CR22"
+      );
+
+    case "hiddenDetailSingleCheck":
+     return (
+        selectedCheckType !== "CR22" || selectedPayType !== "CR01"
+      );
+
+
+    case "hiddenDetailAdvaces":
+     return (
+        selectedCRType === "CR13" ||  selectedCRType === "CR12"
+      );
+
+
+    case "disableOnSaved":
+     return (
+        isFormDisabled ||
+        (selectedCRType === "CR11" && state.documentNo !== "" )
+      );
+
+
+
+    default:
+      return false; 
+  }
+};
+
+
+
+
+const handleColumnLabel = (columnName) =>{
+  switch (columnName) {
+
+     case "SINo":
+      if(selectedCRType === "CR13"  ||  selectedCRType === "CR12") {
+        return "Reference No"
+      }
+      return "SI/SVI No."
+
+
+      case "SIDate":
+      if(selectedCRType === "CR13"||  selectedCRType === "CR12") {
+        return "Reference Date"
+      }
+      return "SI/SVI Date"
+
+      case "Applied":
+      if(selectedCRType === "CR13") {
+        return "Advances Amount"
       }
 
+      else if(selectedCRType === "CR12") {
+        return "Amount"
+      }
+      return "Applied Amount"
 
+
+
+       case "ARAcct":
+      if(selectedCRType === "CR13") {
+        return "Advances Account"
+      }
+      return "AR Account"
+
+
+
+       default:
+      return ""; 
   }
+}
+  
 
 
 
-
-
-  const handleCRTranTypeChange = (event) => {
-    const selectedType = event.target.value;
-    updateState({ selectedCRType: selectedType });
-
-    // Default: show all fields
-    let visibility = {
-      sltypeCode: true,
-      slName: true,
-      address: true,
-      tin: true,
-      invType: true,
-      rrNo: true,
-      poNo: true,
-      siNo: true,
-      siDate: true,
-    };
-
-    switch (selectedType) {
-      case "CR11": // purchases
-        visibility.sltypeCode = false;
-        visibility.slName = false;
-        visibility.address = false;
-        visibility.tin = false;
-        break;
-
-      case "CR12": // non purchases
-        visibility.invType = false;
-        visibility.rrNo = false;
-        visibility.poNo = false;
-        visibility.siNo = false;
-        visibility.siDate = false;
-        break;
-
-      case "CR13": // advances
-        visibility.sltypeCode = false;
-        visibility.slName = false;
-        visibility.address = false;
-        visibility.tin = false;
-        break;
-
-      case "APV05": // reimbursements
-        visibility.invType = false;
-        visibility.rrNo = false;
-        visibility.poNo = false;
-        visibility.sltypeCode = true;
-        visibility.slName = true;
-        visibility.address = true;
-        visibility.tin = true;
-        break;
-
-      case "APV06": // liquidation
-        visibility.invType = false;
-        visibility.rrNo = false;
-        visibility.poNo = false;
-        visibility.sltypeCode = true;
-        visibility.slName = true;
-        visibility.address = true;
-        visibility.tin = true;
-        break;
-
-      default:
-        break;
-    }
-
-    updateState({ fieldVisibility: visibility });
+  const handlePaymentTypeChange = (e) => {
+    const selectedType = e.target.value;
+    updateState({selectedPayType:selectedType})
+ 
   };
+
+  
+  const handleCheckTypeChange = (e) => {
+    const selectedType = e.target.value;
+    updateState({selectedCheckType:selectedType})
+    
+  };
+
+
+  
+  const handleCRTypeChange = (e) => {
+   const selectedType = e.target.value;
+    updateState({selectedCRType:selectedType})
+     
+  };
+
+  
+
+
+
+
+
+
 
 
 
@@ -1315,7 +1430,7 @@ const handleBlurGL = async (index, field, value, autoCompute = false) => {
 
   if(autoCompute && ((withCurr2 && currCode !== glCurrDefault) || (withCurr3))){
   if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,header.svi_date); 
+    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,documentDate); 
         if(data) {
            row.debit = formatNumber(data.debit)
            row.credit = formatNumber(data.credit)
@@ -1438,12 +1553,13 @@ const handleCloseCancel = async (confirmation) => {
 
 const handleCloseSignatory = async () => {
 
-    updateState({ showSpinner: true });
+    updateState({ showSpinner: true,
+      showSignatoryModal: false,
+     });
     await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+      showSpinner: false
     });
 };
 
@@ -1457,7 +1573,8 @@ const handleCloseBankMast = async (selectedBankCode) => {
      if (result) {   
       updateState({ depBankCode: selectedBankCode.bankCode,
                     depAcctName:result.acctName,
-                    depAcctNo:selectedBankCode.bankAcctNo
+                    depAcctNo:selectedBankCode.bankAcctNo,
+                    detailRowsGL: []
              });
     }  
   }
@@ -1467,9 +1584,50 @@ const handleCloseBankMast = async (selectedBankCode) => {
 
 
 
+const handleOpenARBalance = async () => {
+  try {
+    updateState({ isLoading: true });
 
 
-const handleCloseOpenARBalance = async (payload) => {
+    const endpoint ="getOpenARBalance"
+    const response = await fetchDataJson(endpoint, { custCode, branchCode });
+    const custData = response?.data?.[0]?.result ? JSON.parse(response.data[0].result) : [];
+
+    const colConfig = await useSelectedHSColConfig(endpoint);
+
+   if (custData.length === 0) {
+      await Swal.fire({
+        icon: "info",
+        title: "Open AR Balance",
+        text: "There are no AR balance records for the selected customer/branch.",
+      });
+       updateState({ isLoading: false });
+      return; 
+    }
+
+    updateState({ globalLookupRow: custData,
+                  globalLookupHeader:colConfig,
+                  showARBalanceModal: true
+      });
+
+  } catch (error) {
+    console.error("Failed to fetch Open AR Balance:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to fetch Open AR Balance.",
+    });
+    updateState({ 
+        globalLookupRow: [] ,
+        globalLookupHeader: [] });
+  }
+
+   updateState({ isLoading: false });
+};
+
+
+
+const handleCloseARBalance = async (payload) => {
     if (payload && payload !== null) {
       
        updateState({ isLoading: true });
@@ -1495,7 +1653,7 @@ const handleCloseOpenARBalance = async (payload) => {
         custCode: entry.custCode,
         custName: entry.custName,
         refBranchcode: branchCode,
-        refDocCode:  "CR",
+        refDocCode: entry.refDocCode,
         groupId: entry.groupId,
       
       }));
@@ -1603,15 +1761,40 @@ const handleCloseBranchModal = (selectedBranch) => {
       if (result) {
         const rate = currCode === glCurrDefault
           ? defaultCurrRate
-          : await useTopForexRate(currCode, header.svi_date);
+          : await useTopForexRate(currCode, documentDate);
 
         updateState({
           currCode: result.currCode,
           currName: result.currName,
           currRate: formatNumber(parseFormattedNumber(rate),6)
         });
-      }
+        
+
+        // Recompute Check Amount on Change of Currency
+        const checkAmount = formatNumber(
+          parseFormattedNumber(totals.currAmount) * parseFormattedNumber(rate)
+          );
+        updateState({ checkAmount });  
+
+
+        // Replace Currency on Change of Currecy
+        if (detailRows && selectedCRType !== "CR11" ) {
+          const updatedRows = detailRows.map((row) => ({
+            ...row,
+            currCode: currCode,
+            currRate: formatNumber(parseFormattedNumber(rate),6)
+          }));
+
+          updateState({ detailRows: updatedRows , detailRowsGL:[]});
+        }
+
+          
+
+
+        return formatNumber(parseFormattedNumber(rate),6)
+      }  
     }
+   return formatNumber(1,6)
   };
 
 
@@ -1630,6 +1813,7 @@ const handleCloseBranchModal = (selectedBranch) => {
   pdfLink={pdfLink} 
   videoLink={videoLink}
   onPrint={handlePrint} 
+  onPost={handlePost} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
@@ -1707,6 +1891,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
                         disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
+                        onClick={() => updateState({ branchModalOpen: true })}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1754,12 +1939,50 @@ const handleCloseBranchModal = (selectedBranch) => {
                     <input type="date"
                         id="crDate"
                         className="peer global-tran-textbox-ui"
-                        value={header.svi_date}
-                        onChange={(e) => setHeader((prev) => ({ ...prev, svi_date: e.target.value }))}
+                        value={documentDate}
+                        onChange={(e) => updateState({ documentDate: e.target.value })} 
                         disabled={isFormDisabled} 
                     />
                     <label htmlFor="crDate" className="global-tran-floating-label">CR Date</label>
                 </div>
+
+                
+                         
+                {/* Transaction Type */}
+                <div className="relative">
+                    <select id="crType"
+                        className="peer global-tran-textbox-ui"
+                        value={selectedCRType}
+                        disabled={handleFieldBehavior("disableOnSaved")} 
+                        onChange={(e) => handleCRTypeChange(e)}
+                    >
+                        {crTypes.length > 0 ?
+                        (
+                            <>  
+                                {crTypes.map((type) =>
+                                (
+                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                        {type.DROPDOWN_NAME}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (<option value="">Loading Transaction Types...</option>)}
+                    </select>
+                    <label htmlFor="crType" className="global-tran-floating-label">CR Type</label>
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+
+
+            </div>
+
+
+
+            {/* Column 2 */}
+            <div className="global-tran-textbox-group-div-ui">
 
                 
                 {/* Chain Code */}
@@ -1782,7 +2005,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
-                        disabled={isFormDisabled} 
+                        disabled={handleFieldBehavior("disableOnSaved")} 
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1796,9 +2019,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     </label>
                 </div>            
 
-
-
-
+                
 
                 {/* Customer Code */}
                 <div className="relative">
@@ -1820,7 +2041,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
-                        disabled={isFormDisabled} 
+                        disabled={handleFieldBehavior("disableOnSaved")} 
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1834,68 +2055,15 @@ const handleCloseBranchModal = (selectedBranch) => {
                     </label>
                 </div>
 
+                 
+
             </div>
 
-            {/* Column 2 */}
+            {/* Column 3 */}
             <div className="global-tran-textbox-group-div-ui">
+
                 
-                <div className="relative">
-                    <select id="crType"
-                        className="peer global-tran-textbox-ui"
-                        value={selectedCRType}
-                        disabled={isFormDisabled} 
-                    >
-                        {crTypes.length > 0 ?
-                        (
-                            <>
-                                <option value="">Select Billing Type</option>
-                                {crTypes.map((type) =>
-                                (
-                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-                                        {type.DROPDOWN_NAME}
-                                    </option>
-                                ))}
-                            </>
-                        ) : (<option value="">Loading Billing Types...</option>)}
-                    </select>
-                    <label htmlFor="crType" className="global-tran-floating-label">CR Type</label>
-                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </div>
-
-
                  <div className="relative">
-                    <select id="payType"
-                        className="peer global-tran-textbox-ui"
-                        value={selectedPayType}
-                        disabled={isFormDisabled} 
-                    >
-                        {paymentTypes.length > 0 ?
-                        (
-                            <>
-                                <option value="">Select Payment Type</option>
-                                {paymentTypes.map((type) =>
-                                (
-                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-                                        {type.DROPDOWN_NAME}
-                                    </option>
-                                ))}
-                            </>
-                        ) : (<option value="">Loading Payment Types...</option>)}
-                    </select>
-                    <label htmlFor="payType" className="global-tran-floating-label">Payment Type</label>
-                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </div>
-
-
-                  <div className="relative">
                     <input
                         type="text"
                         id="depAcctName"
@@ -1916,7 +2084,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
                         onClick={() => updateState({ showBankMastModal: true })}
-                        disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
+                        disabled={isFormDisabled}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1926,7 +2094,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     <input type="text" id="depAcctNo" value={depAcctNo} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
                     <label htmlFor="depAcctNo" className="global-tran-floating-label">Bank Account No.</label>
                 </div>
-
+                
 
                 <div className="relative">
                 <input
@@ -1947,11 +2115,6 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
                 
-
-
-
-               
-
                 {/* NEW FLEX CONTAINER FOR CURRENCY AND CURRENCY RATE */}
                 <div className="flex space-x-4"> {/* Added flex container with spacing */}
 
@@ -1988,7 +2151,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             onChange={(e) => {
                             const inputValue = e.target.value;
                             const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                            if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            if (/^\d*\.?\d{0,6}$/.test(sanitizedValue) || sanitizedValue === "") {
                                 updateState({ currRate: sanitizedValue })
                             }}}
                             onBlur={handleCurrRateNoBlur}
@@ -2016,7 +2179,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 <input
                     type="text"
                     id="checkAmount"
-                    value={totals.checkAmount}
+                    value={checkAmount}
                     placeholder=" "
                     className="peer global-tran-textbox-ui text-right" 
                     disabled={isFormDisabled}
@@ -2028,13 +2191,40 @@ const handleCloseBranchModal = (selectedBranch) => {
                     Check Amount
                 </label>
                 </div>
-
-
+        
             </div>
 
-            {/* Column 3 */}
-            <div className="global-tran-textbox-group-div-ui">
 
+             {/* Remarks Section - Now inside the 3-column container, spanning all 3 */}
+            <div className="col-span-full">
+                <div className="relative p-2"> 
+                    <textarea
+                        id="remarks"
+                        placeholder=""
+                        rows={6}
+                        className="peer global-tran-textbox-remarks-ui pt-2"
+                        value={remarks}
+                        onChange={(e) => updateState({ remarks: e.target.value })}
+                        disabled={isFormDisabled} 
+                    />
+                    <label
+                        htmlFor="remarks"
+                        className="global-tran-floating-label-remarks"
+                    >
+                        Remarks
+                    </label>
+                </div>
+            </div>
+
+            
+        </div> {/* End of the 3-column container */}
+
+
+
+        {/* Column 4 - Totals (remains unchanged, but its parent is now the main 4-column grid) */}
+        <div className="global-tran-textbox-group-div-ui flex flex-col">
+                
+                
                  <div className="relative">
                     <input
                         type="text"
@@ -2060,17 +2250,47 @@ const handleCloseBranchModal = (selectedBranch) => {
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
                 </div>
-                
+
+               
+                 <div className="relative">
+                    <select id="payType"
+                        className="peer global-tran-textbox-ui"
+                        value={selectedPayType}
+                        disabled={isFormDisabled} 
+                        onChange={(e) => handlePaymentTypeChange(e)}
+                    >
+                        {paymentTypes.length > 0 ?
+                        (
+                            <>
+                                {paymentTypes.map((type) =>
+                                (
+                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
+                                        {type.DROPDOWN_NAME}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (<option value="">Loading Payment Types...</option>)}
+                    </select>
+                    <label htmlFor="payType" className="global-tran-floating-label">Payment Type</label>
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+
+
+
                 <div className="relative">
                     <select id="checkType"
                         className="peer global-tran-textbox-ui"
                         value={selectedCheckType}
                         disabled={isFormDisabled} 
+                        onChange={(e) => handleCheckTypeChange(e)}
                     >
                         {checkTypes.length > 0 ?
                         (
                             <>
-                                <option value="">Select Check Type</option>
                                 {checkTypes.map((type) =>
                                 (
                                     <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
@@ -2089,49 +2309,64 @@ const handleCloseBranchModal = (selectedBranch) => {
                 </div>
                 
                 <div className="relative">
-                    <input type="text" id="checkNo"  value={checkNo} placeholder=" " onChange={(e) => updateState({ checkNo: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} />
+                    <input type="text" id="checkNo"  
+                           value={checkNo} placeholder=" " 
+                           onChange={(e) => updateState({ checkNo: e.target.value })} 
+                           className="peer global-tran-textbox-ui " 
+                           disabled={handleFieldBehavior("disableOnNonCheckPay")} 
+                      />
                     <label htmlFor="checkNo" className="global-tran-floating-label">Check No</label>
                 </div>
 
                  <div className="relative">
                     <input type="date"
-                        id="checkDate" value={checkDate} onChange={(e) => updateState({ checkDate: e.target.value })} 
+                        id="checkDate" 
+                        value={checkDate} 
+                        onChange={(e) => updateState({ checkDate: e.target.value })} 
                         className="peer global-tran-textbox-ui"
-                        disabled={isFormDisabled} 
+                        disabled={handleFieldBehavior("disableOnNonCheckPay")} 
                     />
                     <label htmlFor="checkDate" className="global-tran-floating-label">Check Date</label>
                 </div>
 
                  <div className="relative">
-                    <input type="text" id="bank"  value={bank} placeholder=" " onChange={(e) => updateState({ bank: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} />
+                    <input type="text" 
+                           id="bank"  
+                           value={bank} 
+                           placeholder=" " 
+                           onChange={(e) => updateState({ bank: e.target.value })} 
+                           className="peer global-tran-textbox-ui " 
+                           disabled={handleFieldBehavior("disableOnNonCheckPay")}  
+                        />
                     <label htmlFor="bank" className="global-tran-floating-label">Bank</label>
                 </div>
 
                 <div className="relative">
-                    <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} />
+                    <input type="text" id="refDocNo1"  
+                           value={refDocNo1} 
+                           placeholder=" " 
+                           onChange={(e) => updateState({ refDocNo1: e.target.value })} 
+                           className="peer global-tran-textbox-ui " 
+                           disabled={isFormDisabled} />
                     <label htmlFor="refDocNo1" className="global-tran-floating-label">Ref Doc No. 1</label>
                 </div>
 
                 <div className="relative">
-                    <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                    <input type="text" 
+                          id="refDocNo2" 
+                          value={refDocNo2} 
+                          placeholder=" " 
+                          onChange={(e) => updateState({ refDocNo2: e.target.value })}  
+                          className="peer global-tran-textbox-ui" 
+                          disabled={isFormDisabled} />
                     <label htmlFor="refDocNo2" className="global-tran-floating-label">Ref Doc No. 2</label>
                 </div>
 
               
-
-            </div>
-
-            
-        </div> {/* End of the 3-column container */}
-
-
-
-        {/* Column 4 - Totals (remains unchanged, but its parent is now the main 4-column grid) */}
-        <div className="global-tran-textbox-group-div-ui flex flex-col">
      
         {/* Remarks Section - Now inside the 3-column container, spanning all 3 */}
             {/* <div className="col-span-full h-full"> */}
-                <div className="relative flex-1 p-2"> 
+                {/* <div className="relative flex-1 p-2"> 
                     <textarea
                         id="remarks"
                         placeholder=""
@@ -2147,7 +2382,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     >
                         Remarks
                     </label>
-                </div>
+                </div> */}
             {/* </div> */}
 
         </div>
@@ -2183,20 +2418,20 @@ const handleCloseBranchModal = (selectedBranch) => {
       <thead className="global-tran-thead-div-ui">
         <tr>
           <th className="global-tran-th-ui">LN</th>
-          <th className="global-tran-th-ui">With 2307?</th>
-          <th className="global-tran-th-ui">SI No.</th>
-          <th className="global-tran-th-ui">SI Date</th>
-          <th className="global-tran-th-ui">SI Amount</th>
-          <th className="global-tran-th-ui">Applied</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailAdvaces")}>With 2307?</th>
+          <th className="global-tran-th-ui">{handleColumnLabel("SINo")}</th>
+          <th className="global-tran-th-ui">{handleColumnLabel("SIDate")}</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailAdvaces")}>SI Amount</th>
+          <th className="global-tran-th-ui">{handleColumnLabel("Applied")}</th>
           <th className="global-tran-th-ui">UnApplied</th>
-          <th className="global-tran-th-ui">Balance</th>
-          <th className="global-tran-th-ui">AR Account</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailAdvaces")}>Balance</th>
+          <th className="global-tran-th-ui">{handleColumnLabel("ARAcct")}</th>
           <th className="global-tran-th-ui">Curr Code</th>
           <th className="global-tran-th-ui">Curr Rate</th>
-          <th className="global-tran-th-ui">Bank</th>
-          <th className="global-tran-th-ui">Check No</th>
-          <th className="global-tran-th-ui">Check Date</th>
-          <th className="global-tran-th-ui">Check Amount</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")} >Bank</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")}>Check No</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")} >Check Date</th>
+          <th className="global-tran-th-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")} >Check Amount</th>
           <th className="global-tran-th-ui">Customer Code</th>
           <th className="global-tran-th-ui">Customer Name</th>
           <th className="global-tran-th-ui hidden">Ref Branch</th>
@@ -2227,10 +2462,10 @@ const handleCloseBranchModal = (selectedBranch) => {
 
           
           {/* With 2307 */}
-          <td className="global-tran-td-ui">
+          <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailAdvaces")} >
                           <select
                             className="w-[50px] global-tran-td-inputclass-ui"
-                            value={row.invType || ""}
+                            value={""}
                           >
                             <option value=""></option>
                             <option value="Y">Yes</option>
@@ -2245,7 +2480,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.siNo || ""}
                 onChange={(e) => handleDetailChange(index, 'siNo', e.target.value)}
-                readOnly={!!row.groupId}
+                readOnly={row.groupId !== null && row.groupId !== ""}
               />
             </td>
             
@@ -2256,20 +2491,20 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="date"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.siDate || ""}
-                  onChange={(e) => handleDetailChangeGL(index, 'siDate', e.target.value)}
-                  readOnly={!!row.groupId}
+                  onChange={(e) => handleDetailChange(index, 'siDate', e.target.value)}
+                  readOnly={row.groupId !== null && row.groupId !== ""}
                 />
             </td>
 
 
 
             {/* SI Amount */}
-            <td className="global-tran-td-ui">
+            <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailAdvaces")}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                 value={formatNumber(parseFormattedNumber(row.siAmount)) || formatNumber(parseFormattedNumber(row.siAmount)) || ""}
-                readOnly={!!row.groupId}
+                readOnly={row.groupId !== null && row.groupId !== ""}
               />
             </td>
 
@@ -2281,13 +2516,39 @@ const handleCloseBranchModal = (selectedBranch) => {
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                     value={row.appliedAmount || ""}
+                    // onChange={(e) => {
+                    //     const inputValue = e.target.value;
+                    //     const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                    //     if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                    //         handleDetailChange(index, "appliedAmount", sanitizedValue, false);
+                    //     }
+                    // }}   
                     onChange={(e) => {
-                        const inputValue = e.target.value;
-                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChange(index, "appliedAmount", sanitizedValue, false);
+                        const raw = e.target.value;
+
+                        const siAmt = parseFormattedNumber(row.siAmount); // or from state
+                        const allowNegative = siAmt < 0;
+
+                        // Keep digits + dot; if negatives are allowed, also keep '-'
+                        let sanitized = raw.replace(allowNegative ? /[^0-9.\-]/g : /[^0-9.]/g, "");
+
+                        // If negatives allowed, ensure at most one leading '-' (move it to the front)
+                        if (allowNegative) {
+                          const hasMinus = sanitized.includes("-");
+                          sanitized = sanitized.replace(/-/g, "");
+                          if (hasMinus) sanitized = "-" + sanitized;
                         }
-                    }}                   
+
+                        // Valid number (up to 2 decimals). Allow "" or "-" as intermediate while typing.
+                        const re = allowNegative ? /^-?\d*(\.\d{0,2})?$/ : /^\d*(\.\d{0,2})?$/;
+                        const isIntermediate = sanitized === "" || (allowNegative && sanitized === "-");
+
+                        if (re.test(sanitized) || isIntermediate) {
+                          handleDetailChange(index, "appliedAmount", sanitized, false);
+                        }
+                      }}
+
+                    
                      onFocus={(e) => {
                         if (e.target.value === "0.00" || e.target.value === "0") {
                           e.target.value = "";
@@ -2322,11 +2583,12 @@ const handleCloseBranchModal = (selectedBranch) => {
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                     value={row.unappliedAmount || ""}
+                    // onChange={(e) => { handleDetailChange(index, "unappliedAmount", e.target.value, false) }}   
                     onChange={(e) => {
                         const inputValue = e.target.value;
-                        const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                        if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChange(index, "unappliedAmount", sanitizedValue, false);
+                        const sanitizedValue = inputValue.replace(/[^0-9.-]/g, '');
+                        if (/^-?\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                          handleDetailChange(index, "unappliedAmount", sanitizedValue, false);
                         }
                     }}                   
                      onFocus={(e) => {
@@ -2357,7 +2619,7 @@ const handleCloseBranchModal = (selectedBranch) => {
             </td>
 
              {/* Balance */}
-             <td className="global-tran-td-ui">
+             <td className="global-tran-td-ui"  hidden={handleFieldBehavior("hiddenDetailAdvaces")}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2376,17 +2638,17 @@ const handleCloseBranchModal = (selectedBranch) => {
                 value={row.arAcct || ""}
                 readOnly
               />
-              {!isFormDisabled || groupId.length === 0 && (
-              <FontAwesomeIcon 
-                icon={faMagnifyingGlass} 
-                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                onClick={() => {
-                  updateState({ selectedRowIndex: index });
-                  updateState({ showAccountModal: true});
-              
-                }}
-                
-              />)}
+              {(!isFormDisabled && (row.groupId == null || row.groupId === "")) && (
+                <FontAwesomeIcon 
+                  icon={faMagnifyingGlass} 
+                  className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                  onClick={() => {
+                    updateState({ selectedRowIndex: index ,
+                                  showAccountModal: true,
+                                  accountModalSource: "arAcct"  });
+                  }}
+                />
+              )}
             </div>        
             </td>
 
@@ -2396,7 +2658,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.currCode || ""}
-                onChange={(e) => handleDetailChange(index, 'currCode', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2415,7 +2677,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
             {/* Bank */}
-           <td className="global-tran-td-ui">
+           <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2427,7 +2689,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 
             
             {/* Check No */}
-           <td className="global-tran-td-ui">
+           <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2439,7 +2701,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
             {/* Check Date */}
-            <td className="global-tran-td-ui">
+            <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")}>
                 <input
                   type="date"
                   className="w-[100px] global-tran-td-inputclass-ui"
@@ -2450,7 +2712,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
              {/* Check Amount */}
-             <td className="global-tran-td-ui">
+             <td className="global-tran-td-ui" hidden={handleFieldBehavior("hiddenDetailSingleCheck")}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2466,7 +2728,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.custCode || ""}
-                onChange={(e) => handleDetailChange(index, 'custCode', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2475,9 +2737,9 @@ const handleCloseBranchModal = (selectedBranch) => {
            <td className="global-tran-td-ui">
               <input
                 type="text"
-                className="w-[100px] global-tran-td-inputclass-ui"
+                className="w-[250px] global-tran-td-inputclass-ui"
                 value={row.custName || ""}
-                onChange={(e) => handleDetailChange(index, 'custName', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2488,7 +2750,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.refBranchcode || ""}
-                onChange={(e) => handleDetailChange(index, 'refBranchcode', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2499,7 +2761,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.refDocCode || ""}
-                onChange={(e) => handleDetailChange(index, 'refDocCode', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2510,7 +2772,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
                 value={row.groupId || ""}                
-                onChange={(e) => handleDetailChange(index, 'groupId', e.target.value)}
+                readOnly
               />
             </td>
 
@@ -2525,7 +2787,7 @@ const handleCloseBranchModal = (selectedBranch) => {
             <td className="global-tran-td-ui text-center sticky right-12">
               <button
                 className="global-tran-td-button-add-ui"
-                // onClick={() => handleAddRow(index)}
+                onClick={() => handleAddRow(index)}
                 
               >
                 <FontAwesomeIcon icon={faPlus} />
@@ -2561,7 +2823,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 <div className="global-tran-tab-footer-button-div-ui">
   <button
     //  onClick={() =>handleAddRow()}
-     onClick={() => updateState({showARBalanceModal:true})}
+     onClick={() => handleAddRow()}
      className="global-tran-tab-footer-button-add-ui"
      style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
   >
@@ -2574,45 +2836,47 @@ const handleCloseBranchModal = (selectedBranch) => {
 {/* Totals Section */}
 <div className="global-tran-tab-footer-total-main-div-ui">
 
-  {/* Total Invoice Amount */}
+  {!handleFieldBehavior("hiddenDetailAdvaces") && (
   <div className="global-tran-tab-footer-total-div-ui">
     <label className="global-tran-tab-footer-total-label-ui">
       Total Invoice Amount:
     </label>
-    <label id="totInvoiceAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totalSIAmount" className="global-tran-tab-footer-total-value-ui">
       {totals.totalSIAmount}
     </label>
   </div>
-
+  )}
   {/* Total VAT Amount */}
-  <div className="global-tran-tab-footer-total-div-ui">
+  <div className="global-tran-tab-footer-total-div-ui" >
     <label className="global-tran-tab-footer-total-label-ui">
-      Total Applied Amount:
+       {handleFieldBehavior("hiddenDetailAdvaces")? "Total Advances Amount:" : "Total Applied Amount:"}
     </label>
-    <label id="totVATAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totalAppliedAmount" className="global-tran-tab-footer-total-value-ui">
       {totals.totalAppliedAmount}
     </label>
   </div>
 
   {/* Total ATC Amount */}
-  <div className="global-tran-tab-footer-total-div-ui">
+  <div className="global-tran-tab-footer-total-div-ui" >
     <label className="global-tran-tab-footer-total-label-ui">
       Total UnApplied Amount:
     </label>
-    <label id="totATCAmount" className="global-tran-tab-footer-total-value-ui">
+    <label id="totalUnappliedAmount" className="global-tran-tab-footer-total-value-ui">
       {totals.totalUnappliedAmount}
     </label>
   </div>
 
   {/* Total Payable Amount (Invoice + VAT - ATC) */}
+  {!handleFieldBehavior("hiddenDetailAdvaces") && (
   <div className="global-tran-tab-footer-total-div-ui">
     <label className="global-tran-tab-footer-total-label-ui">
       Total Balance:
     </label>
-    <label id="totAmountDue" className="global-tran-tab-footer-total-value-ui">
+    <label id="totalBalanceAmount" className="global-tran-tab-footer-total-value-ui">
       {totals.totalBalanceAmount}
     </label>
   </div>
+  )}
 </div>
 </div>
 
@@ -3070,7 +3334,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 <input
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.remarks || header.remarks || ""}
+                  value={row.remarks || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                 />
              </td>
@@ -3124,34 +3388,60 @@ const handleCloseBranchModal = (selectedBranch) => {
       
 
       {/* Totals Section */}
-      <div className="global-tran-tab-footer-total-main-div-ui">
+<div className="global-tran-tab-footer-total-main-div-ui">
 
-      {/* Total Debit */}
+  {/* Total Debit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+      Total Debit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+      {totalDebit}
+    </label>
+  </div>
+
+  {/* Total Credit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+      Total Credit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+      {totalCredit}
+    </label>
+  </div>
+
+  {/* Totals in Forex Section (if currRate > 1) */}
+  {currRate !== 1 && (
+    <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
-          Total Debit:
+          Total Debit ({currCode}):
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-      {totalDebit}
-      </label>
+          {totalDebitFx1}
+        </label>
       </div>
 
-      {/* Total Credit */}
+      {/* Total Credit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
-          Total Credit:
+          Total Credit ({currCode}):
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-      {totalCredit}
-      </label>
+          {totalCreditFx1}
+        </label>
       </div>
+
     </div>
+  )}
+
+</div>
 
     
 
   </div>
-
-
 
 </div>
 
@@ -3195,13 +3485,13 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
 {showARBalanceModal && (
-  <AROpenBalanceLookupModal
+  <GlobalLookupModalv1
     isOpen={showARBalanceModal}
-     params={{
-      branchCode: branchCode,
-      custCode: custCode
-    }}
-    onClose={handleCloseOpenARBalance}
+    data={globalLookupRow}
+    btnCaption="Get Selected Invoice"
+    title="Open AR Balance"
+    endpoint={globalLookupHeader}
+    onClose={handleCloseARBalance}
     onCancel={() => updateState({ showARBalanceModal: false })}
   />
 )}
@@ -3271,6 +3561,12 @@ const handleCloseBranchModal = (selectedBranch) => {
 )}
 
 
+ {showPostingModal && (
+  <PostCR
+    isOpen={showPostingModal}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)} 
 
 {showAttachModal && (
   <AttachDocumentModal

@@ -1,8 +1,3 @@
-// import React from 'react';
-// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-// import './App.css';
-// import Login from './NAYSA Cloud/Login';
-// import Register from './NAYSA Cloud/Register'; // Make sure to import Register
 
 // function App() {
 //   return (
@@ -105,6 +100,34 @@ import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
 // Minimal blank landing after login (navbar + sidebar still render)
 const HomeBlank = () => <div className="p-6" />;
 
+
+
+
+const ModalHost = ({ modalKey, onClose }) => {
+  if (!modalKey) return null;
+  const Cmp = pageRegistry[modalKey];
+   
+  if (!Cmp) {
+    console.warn("[ModalHost] No component found for key:", modalKey);
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Cmp isOpen={true} onClose={onClose} userCode={"NSI"} />
+      </div>
+    </div>
+  );
+};
+
+
 const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -165,11 +188,15 @@ const AppContent = () => {
       {/* Slide-in Sidebar */}
       {isSidebarVisible && (
         <div className="fixed inset-0 z-50 flex">
-          <Sidebar />
-          <div
-            className="flex-1 bg-black bg-opacity-50"
-            onClick={toggleSidebar}
+          <Sidebar
+            menuItems={menuItems}
+            onNavigate={() => setIsSidebarVisible(false)}
+            onOpenModal={(key) => {
+              setIsSidebarVisible(false);
+              openModal(key);
+            }}
           />
+          <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
         </div>
       )}
 
@@ -182,6 +209,9 @@ const AppContent = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
+
+      {/* Modal host */}
+      <ModalHost modalKey={activeModalKey} onClose={handleCloseModal} />
     </div>
   );
 };
@@ -260,26 +290,55 @@ export default App;
 
 
 
-// // src/App.jsx
-// import React from 'react';
-// import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-// import EmployeeList from './Components/EmployeeList';
-// import EmployeeForm from './Components/EmployeeForm';
-// //import Button from './Components/Button';
 
-// const App = () => {
-//   return (
-//     // <Button/>
-//     <Router>
-//       <div className="max-w-4xl mx-auto p-6">
-//         <Routes>
-//           <Route path="/" element={<EmployeeList />} />
-//           <Route path="/add" element={<EmployeeForm />} />
-//           <Route path="/edit/:id" element={<EmployeeForm />} />
-//         </Routes>
-//       </div>
-//     </Router>
-//   );
-// };
 
-// export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

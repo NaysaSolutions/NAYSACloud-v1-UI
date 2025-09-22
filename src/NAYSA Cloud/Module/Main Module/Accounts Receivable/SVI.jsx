@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Swal from 'sweetalert2';
 
 // UI
@@ -19,6 +19,10 @@ import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
+import PostSVI from "../../../Module/Main Module/Accounts Receivable/PostSVI.jsx";
+import ARReportModal from "../../../Printing/ARReport.jsx";
+import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
+
 
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -41,7 +45,6 @@ import {
   useTopForexRate,
   useTopCurrencyRow,
   useTopHSOption,
-  useTopCompanyRow,
   useTopDocControlRow,
   useTopDocDropDown,
   useTopVatAmount,
@@ -55,9 +58,17 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
   useHandleCancel,
 } from '@/NAYSA Cloud/Global/procedure';
+
+import {
+  useGetCurrentDay,
+  useFormatToDate,
+} from '@/NAYSA Cloud/Global/dates';
+
+import {
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
 
 
 import { 
@@ -93,6 +104,7 @@ const SVI = () => {
     documentSeries: "Auto",
     documentDocLen: 8,
     documentID: null,
+    documentDate:useGetCurrentDay(),   
     documentNo: "",
     documentStatus:"",
     status: "OPEN",
@@ -110,10 +122,6 @@ const SVI = () => {
     isFetchDisabled: false,
 
 
-     // Header information
-    header: {
-      svi_date: new Date().toISOString().split('T')[0]
-    },
 
     branchCode: "HO",
     branchName: "Head Office",
@@ -147,8 +155,14 @@ const SVI = () => {
     detailRows  :[],
     detailRowsGL :[],
 
+   
     totalDebit:"0.00",
     totalCredit:"0.00",
+    totalDebitFx1:"0.00",
+    totalCreditFx1:"0.00",
+    totalDebitFx2:"0.00",
+    totalCreditFx2:"0.00",
+
 
  
     // Modal states
@@ -171,6 +185,7 @@ const SVI = () => {
     showCancelModal:false,
     showAttachModal:false,
     showSignatoryModal:false,
+    showPostingModal:false,
    });
 
   const updateState = (updates) => {
@@ -185,7 +200,9 @@ const SVI = () => {
   documentID,
   documentStatus,
   documentNo,
+  documentDate,
   status,
+  userCode,
 
   // Tabs & loading
   activeTab,
@@ -239,6 +256,10 @@ const SVI = () => {
   detailRowsGL,
   totalDebit,
   totalCredit,
+  totalDebitFx1,
+  totalCreditFx1,
+  totalDebitFx2,
+  totalCreditFx2,
 
 
   // Contexts
@@ -254,7 +275,6 @@ const SVI = () => {
   showAtcModal,
   showBillCodeModal,
   showSlModal,
-  showBilltermModal,
   currencyModalOpen,
   branchModalOpen,
   custModalOpen,
@@ -262,7 +282,7 @@ const SVI = () => {
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-
+  showPostingModal
 
 } = state;
 
@@ -308,10 +328,7 @@ const SVI = () => {
         discAcct:glAccountFilter.ActiveAll
   };
   const customParam = customParamMap[accountModalSource] || null;
-  const [header, setHeader] = useState({
-  svi_date: new Date().toISOString().split('T')[0]
-  });
-
+  
 
 
   const updateTotalsDisplay = (grossAmt, discAmt, netDisc, vat, atc, amtDue) => {
@@ -332,11 +349,17 @@ const SVI = () => {
   useEffect(() => {
     const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
     const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debitFx1) || 0), 0);
+    const creditFx1Sum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.creditFx1) || 0), 0);
   updateState({
     totalDebit: formatNumber(debitSum),
-    totalCredit: formatNumber(creditSum)
+    totalCredit: formatNumber(creditSum),
+    totalDebitFx1: formatNumber(debitFx1Sum),
+    totalCreditFx1: formatNumber(creditFx1Sum)
   })
   }, [detailRowsGL]);
+
+
 
 
   useEffect(() => {
@@ -357,9 +380,7 @@ const SVI = () => {
   useEffect(() => {
   }, [custCode]);
 
-
-
-
+ 
 useEffect(() => {
   if (triggerGLEntries) {
     handleActivityOption("GenerateGL").then(() => {
@@ -378,7 +399,7 @@ useEffect(() => {
   if (glCurrMode && glCurrDefault && currCode) {
     loadCurrencyMode(glCurrMode, glCurrDefault, currCode);
   }
-}, [glCurrMode, glCurrDefault, currCode]);
+  }, [glCurrMode, glCurrDefault, currCode]);
 
 
 
@@ -420,11 +441,12 @@ useEffect(() => {
   
   const handleReset = () => {
 
-      updateState({header:{svi_date:new Date().toISOString().split("T")[0]},
-
+      updateState({
+        
       branchCode: "HO",
       branchName: "Head Office",
-      
+      documentDate:useGetCurrentDay(),
+
       refDocNo1: "",
       refDocNo2:"",
       fromDate:null,
@@ -547,12 +569,6 @@ const fetchTranData = async (documentNo, branchCode) => {
       return resetState();
     }
 
-    // Format header date
-    let sviDateForHeader = '';
-    if (data.sviDate) {
-      const d = new Date(data.sviDate);
-      sviDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
 
     // Format rows
     const retrievedDetailRows = (data.dt1 || []).map(item => ({
@@ -586,7 +602,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.sviId,
       documentNo: data.sviNo,
       branchCode: data.branchCode,
-      header: { svi_date: sviDateForHeader },
+      documentDate: useFormatToDate(data.sviDate),
       selectedSVIType: data.svitranType,
       custCode: data.custCode,
       custName: data.custName,
@@ -656,7 +672,6 @@ const handleCurrRateNoBlur = (e) => {
         branchCode,
         documentNo,
         documentID,
-        header,
         selectedSVIType,
         billtermCode,
         custCode,
@@ -669,7 +684,7 @@ const handleCurrRateNoBlur = (e) => {
         currName,
         currRate,
         remarks,
-        // userCode, // Assuming userCode is also part of your state
+        userCode, 
         detailRows,
         detailRowsGL
     } = state;
@@ -680,7 +695,7 @@ const handleCurrRateNoBlur = (e) => {
       branchCode: branchCode,
       sviNo: documentNo || "",
       sviId: documentID || "",
-      sviDate: header.svi_date,
+      sviDate: documentDate,
       svitranType: selectedSVIType,
       billtermCode:billtermCode,
       custCode: custCode,
@@ -799,7 +814,7 @@ const handleCurrRateNoBlur = (e) => {
         billCode: "",
         billName: "",
         sviSpecs: "",
-        quantity:"0.00",
+        quantity:"1.00",
         uomCode: "",
         unitPrice: "0.00",
         grossAmount: "0.00",
@@ -921,16 +936,32 @@ const handleAddRowGL = () => {
 
 
 
+  
 const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  updateState({ showSignatoryModal: true });
-
-  // updateState({ showSpinner: true });
-  // await useHandlePrint(documentID, docType);
-  // updateState({ showSpinner: false });
+  if (documentID) {
+    updateState({ showSignatoryModal: true });
+  }
 };
+
+
+
+
+const handlePost = async () => {
+ if (!detailRows || detailRows.length === 0) {
+      return;
+      }
+
+  if (documentID && (documentStatus === '')) {
+    updateState({ showPostingModal: true });
+  }
+};
+
+
+
+
 
 
 
@@ -949,14 +980,9 @@ const handleCancel = async () => {
 
 
 const handleAttach = async () => {
-//  if (!detailRows || detailRows.length === 0) {
-//       return;
-//       }
-
-
-//   if (documentID ) {
+  if (documentID ) {
     updateState({ showAttachModal: true });
-  // }
+   }
 };
 
 
@@ -972,7 +998,8 @@ const handleCopy = async () => {
     updateState({ documentNo:"",
                   documentID:"",
                   documentStatus:"",
-                  status:"OPEN"
+                  status:"OPEN",
+                  documentDate:useGetCurrentDay(), 
      });
   }
 };
@@ -1035,7 +1062,10 @@ const handleCopy = async () => {
     } catch (error) {
         console.error("Error fetching customer details:", error);
     } finally {
-        updateState({ isLoading: false });
+       updateState({
+            isLoading: false,
+            triggerGLEntries: parseFormattedNumber(totalDebit)>0
+          });
     }
 };
 
@@ -1052,22 +1082,14 @@ const handleCopy = async () => {
   let totalDiscAmt=0;
 
   rows.forEach(row => {
-        // console.log("Row values before parseFormattedNumber:", {
-        //     vatAmountRaw: row.vatAmount,
-        //     atcAmountRaw: row.atcAmount,
-        //     grossAmountRaw: row.grossAmount,
-        //     netDiscRaw: row.netDisc,
-        //     discAmountRaw: row.discAmount
-        // });
+
     const vatAmount = parseFormattedNumber(row.vatAmount || 0) || 0;
     const atcAmount = parseFormattedNumber(row.atcAmount || 0) || 0;
     const invoiceGross = parseFormattedNumber(row.grossAmount || 0) || 0;
     const invoiceNetDisc = parseFormattedNumber(row.netDisc || row.netDisc || 0) || 0;
     const invoiceDiscount = parseFormattedNumber(row.discAmount || 0) || 0;
 
-        // console.log("Row values after parseFormattedNumber:", {
-        //     vatAmount, atcAmount, invoiceGross, invoiceNetDisc, invoiceDiscount
-        // });
+
     totalGrossAmt+= invoiceGross;
     totalDiscAmt+= invoiceDiscount;
     totalNetDiscount+= invoiceNetDisc;
@@ -1075,10 +1097,7 @@ const handleCopy = async () => {
     totalATC += atcAmount;
   });
 
-  totalAmtDue = totalNetDiscount - totalATC; // <--- POTENTIAL CORRECTION HERE
-    // console.log("Calculated RAW totals (before formatting):", {
-    //     totalGrossAmt, totalDiscAmt, totalNetDiscount, totalVAT, totalATC, totalAmtDue
-    // });
+  totalAmtDue = totalNetDiscount - totalATC; 
     updateTotalsDisplay (totalGrossAmt,totalDiscAmt,totalNetDiscount, totalVAT, totalATC, totalAmtDue);
 
 };
@@ -1116,7 +1135,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
           row.salesAcct= value.salesAcct,
           row.discAcct= value.sDiscAcct,
           row.rcCode= value.rcCode,
-          row.quantity= "0.00",
+          row.quantity= "1.00",
           row.grossAmount= "0.00",
           row.unitPrice= "0.00",
           row.vatAmount= "0.00",
@@ -1293,7 +1312,7 @@ const handleBlurGL = async (index, field, value, autoCompute = false) => {
 
   if(autoCompute && ((withCurr2 && currCode !== glCurrDefault) || (withCurr3))){
   if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,header.svi_date); 
+    const data = await useUpdateRowEditEntries(row,field,value,currCode,currRate,documentDate); 
         if(data) {
            row.debit = formatNumber(data.debit)
            row.credit = formatNumber(data.credit)
@@ -1416,12 +1435,13 @@ const handleCloseCancel = async (confirmation) => {
 
 const handleCloseSignatory = async () => {
 
-    updateState({ showSpinner: true });
+    updateState({ 
+        showSpinner: true,
+        showSignatoryModal: false, });
     await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+      showSpinner: false 
     });
 };
 
@@ -1533,7 +1553,7 @@ const handleCloseBranchModal = (selectedBranch) => {
       if (result) {
         const rate = currCode === glCurrDefault
           ? defaultCurrRate
-          : await useTopForexRate(currCode, header.svi_date);
+          : await useTopForexRate(currCode, documentDate);
 
         updateState({
           currCode: result.currCode,
@@ -1586,6 +1606,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   pdfLink={pdfLink} 
   videoLink={videoLink}
   onPrint={handlePrint} 
+  onPost={handlePost} 
   printData={printData} 
   onReset={handleReset}
   onSave={() => handleActivityOption("Upsert")}
@@ -1663,6 +1684,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
                         disabled={state.isFetchDisabled || state.isDocNoDisabled || isFormDisabled}
+                        onClick={() => updateState({ branchModalOpen: true })}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -1710,8 +1732,8 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                     <input type="date"
                         id="SVIDate"
                         className="peer global-tran-textbox-ui"
-                        value={header.svi_date}
-                        onChange={(e) => setHeader((prev) => ({ ...prev, svi_date: e.target.value }))}
+                        value={documentDate}
+                        onChange={(e) => updateState({ documentDate: e.target.value })} 
                         disabled={isFormDisabled} 
                     />
                     <label htmlFor="SVIDate" className="global-tran-floating-label">SVI Date</label>
@@ -1843,7 +1865,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             onChange={(e) => {
                             const inputValue = e.target.value;
                             const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                            if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                            if (/^\d*\.?\d{0,6}$/.test(sanitizedValue) || sanitizedValue === "") {
                                 updateState({ currRate: sanitizedValue })
                             }}}
                             onBlur={handleCurrRateNoBlur}
@@ -3015,7 +3037,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                 <input
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
-                  value={row.remarks || header.remarks || ""}
+                  value={row.remarks || ""}
                   onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                 />
              </td>
@@ -3067,38 +3089,64 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
       </div>
 
       
+{/* Totals Section */}
+<div className="global-tran-tab-footer-total-main-div-ui">
 
-      {/* Totals Section */}
-      <div className="global-tran-tab-footer-total-main-div-ui">
+  {/* Total Debit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+      Total Debit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+      {totalDebit}
+    </label>
+  </div>
 
-      {/* Total Debit */}
+  {/* Total Credit */}
+  <div className="global-tran-tab-footer-total-div-ui">
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+      Total Credit ({glCurrDefault}):
+    </label>
+    <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+      {totalCredit}
+    </label>
+  </div>
+
+  {/* Totals in Forex Section (if currRate > 1) */}
+  {currRate !== 1 && (
+    <div className="global-tran-tab-footer-total-main-div-ui">
+
+      {/* Total Debit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
-          Total Debit:
+          Total Debit ({currCode}):
         </label>
         <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
-      {totalDebit}
-      </label>
+          {totalDebitFx1}
+        </label>
       </div>
 
-      {/* Total Credit */}
+      {/* Total Credit in Forex */}
       <div className="global-tran-tab-footer-total-div-ui">
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
-          Total Credit:
+          Total Credit ({currCode}):
         </label>
         <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
-      {totalCredit}
-      </label>
+          {totalCreditFx1}
+        </label>
       </div>
+
     </div>
+  )}
+
+</div>
 
     
 
   </div>
 
-
-
 </div>
+
 
 
 
@@ -3177,7 +3225,6 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 )}
 
 
-
 {/* ATC Code Modal */}
 {showAtcModal && (
   <ATCLookupModal  
@@ -3231,6 +3278,25 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
 )}
+
+
+
+ {showPostingModal && (
+  <PostSVI
+    isOpen={showPostingModal}
+    userCode={userCode}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)} 
+{/* 
+{showPostingModal && (
+  <ARReportModal
+    isOpen={showPostingModal}
+    userCode ={userCode}
+    onClose={() => updateState({ showPostingModal: false })}
+  />
+)}  */}
+
 
 
 

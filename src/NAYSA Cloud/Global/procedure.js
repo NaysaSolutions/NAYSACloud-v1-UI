@@ -1,5 +1,4 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
-import { useTopDocControlRow } from '@/NAYSA Cloud/Global/top1RefTable';
 import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { useSwalValidationAlert,} from '@/NAYSA Cloud/Global/behavior';
 import Swal from 'sweetalert2';
@@ -9,7 +8,7 @@ import { parseFormattedNumber } from './behavior';
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
-  //  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
+    console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
 
   try {
@@ -53,8 +52,8 @@ export const useGenerateGLEntries = async (docCode, glData) => {
           creditFx1: entry.credit ? formatNumber(entry.creditFx1) : "0.00",
           debitFx2: entry.debit ? formatNumber(entry.debitFx2) : "0.00",
           creditFx2: entry.credit ? formatNumber(entry.creditFx2) : "0.00",
-          slRefNo: entry.slrefNo || "",
-          slrefDate: entry.slrefDate || "",
+          slRefNo: entry.slRefNo || "",
+          slRefDate: entry.slRefDate || "",
           remarks: entry.remarks || "",
           dt1Lineno: entry.dt1Lineno || ""
         }));
@@ -70,7 +69,7 @@ export const useGenerateGLEntries = async (docCode, glData) => {
     }
   } catch (error) {
     console.error("Error in generateGLEntries:", error);
-    swal.fire({
+    Swal.fire({
       icon: 'error',
       title: 'Generation Failed',
       text: error.message || 'Unknown error occurred',
@@ -462,3 +461,13 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
 
 
 
+
+// moved to printing.js
+export async function useHandlePrint(documentID, docCode) {
+
+}
+
+//use global posting from Post SVI
+export async function useHandlePost(documentID, docCode) {
+
+}

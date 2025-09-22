@@ -189,7 +189,7 @@ body {
   }
 
   .global-tran-floating-label-remarks {
-    @apply absolute left-4 top-4 z-10 origin-[0] scale-75 transform bg-white px-1 text-xs text-gray-600 transition-all 
+    @apply absolute left-4 top-0 z-10 origin-[0] scale-75 transform bg-white px-1 text-xs text-gray-600 transition-all 
     peer-placeholder-shown:top-4 peer-placeholder-shown:scale-100 
     peer-focus:top-0 peer-focus:scale-75 peer-focus:text-blue-600
     dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
