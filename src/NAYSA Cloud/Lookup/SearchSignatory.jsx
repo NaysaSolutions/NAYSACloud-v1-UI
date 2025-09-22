@@ -5,7 +5,7 @@ import {useTopDocSign} from '@/NAYSA Cloud/Global/top1RefTable';
 
 const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
   const [form, setForm] = useState({
-    preparedBy: "",
+    preparedBy: "NSI",
     checkedBy: "",
     notedBy: "",
     approvedBy: "",
@@ -19,7 +19,7 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
         const response = await useTopDocSign(params);
         if (response) {
           setForm({
-            preparedBy: response.preparedBy || "",
+            preparedBy: "NSI",
             checkedBy: response.checkedBy || "",
             notedBy: response.notedBy || "",
             approvedBy: response.approvedBy || "",

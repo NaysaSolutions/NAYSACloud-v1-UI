@@ -78,32 +78,91 @@
 // };
 
 // export default App;
+// App.jsx
+// App.jsx
+// App.jsx
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-import Header from "./NAYSA Cloud/Components/Header";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  Navigate,
+} from "react-router-dom";
+
+import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
+
+import Login from "./NAYSA Cloud/Authentication/Login.jsx";
+import Register from "./NAYSA Cloud/Authentication/Register.jsx";
+
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
-import SVI from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
-// import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
-import CV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CV.jsx";
-import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
-// import JVHistory from "./NAYSA Cloud/Module/Main Module/General Ledger/JVHistory.jsx";
-// import PCV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV.jsx";
-import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
-import BankRef from "./NAYSA Cloud/Reference File/BankRef.jsx";
-import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
+import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
+import Dashboard from "./NAYSA Cloud/Components/Dashboard.jsx";
+import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
+
+// Minimal blank landing after login (navbar + sidebar still render)
+const HomeBlank = () => <div className="p-6" />;
 
 const AppContent = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const location = useLocation();
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
 
-  const toggleSidebar = () => {
-    setIsSidebarVisible(prev => !prev);
+  const toggleSidebar = () => setIsSidebarVisible((s) => !s);
+
+  const handleLogin = (user) => {
+  setCurrentUser(user);
+  // localStorage.setItem("user", JSON.stringify(user)); // already done in Login.jsx if you kept it
+  setIsLoggedIn(true);
+  navigate("/", { replace: true });
+};
+
+  const handleLogout = () => {
+    // localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    setIsSidebarVisible(false); // ensure the drawer is closed
+    navigate("/", { replace: true }); // back to Login
   };
 
+  if (!isLoggedIn) {
+    // AUTH PAGES (NO NAVBAR/SIDEBAR). LOGIN = DEFAULT
+    return (
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Login
+              onLogin={handleLogin}
+              onSwitchToRegister={() => navigate("/register")}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <Register
+              onRegister={() => navigate("/")} // after register, go back to login
+              onSwitchToLogin={() => navigate("/")}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  // APP PAGES (WITH NAVBAR + SIDEBAR)
   return (
-    <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
+    <div className="relative min-h-screen flex flex-col bg-white font-roboto dark:bg-black">
+      {/* Top bar */}
+      <div className="sticky top-0 z-40">
+        <Navbar onMenuClick={toggleSidebar} onLogout={handleLogout} />
+      </div>
+
+      {/* Slide-in Sidebar */}
       {isSidebarVisible && (
         <div className="fixed inset-0 z-50 flex">
           <Sidebar />
@@ -114,24 +173,13 @@ const AppContent = () => {
         </div>
       )}
 
-      <div className="sticky top-0 z-40">
-        <Navbar onMenuClick={toggleSidebar} />
-      </div>
-      
-      {/* <div className="sticky top-0 z-40 shadow-md">
-        <Header />
-      </div> */}
-
-
-      <div className="flex-1 p-4 overflow-y-auto">
+      {/* Main content area */}
+      <div className="flex-1 overflow-y-auto">
         <Routes>
-          {/* <Route path="/history" element={<JVHistory />} /> */}
-          {/* <Route path="/" element={<APV />} /> */}
-          <Route path="/tran-ap-cvtran" element={<CV />} />
-          <Route path="/" element={<CV />} />
-          <Route path="/tran-ar-svitran" element={<SVI/>} /> 
-          {/* <Route path="/" element={<BranchRef/>} />  */}
-          {/* <Route path="/" element={<BankRef/>} />  */}
+          <Route path="/" element={<Dashboard1 user={currentUser} />} />
+          <Route path="/tran-ap-aptran" element={<APV />} /> 
+          <Route path="/history" element={<APVHistory />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>

@@ -1,97 +1,252 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef } from "react";
+import axios from "axios";
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiUserPlus } from "react-icons/fi";
+import Swal from "sweetalert2";
 
+const API_URL = import.meta?.env?.VITE_API_URL ?? "http://127.0.0.1:8000";
 
-function Register() {
- 
+export default function Register({ onRegister, onSwitchToLogin }) {
+  const [form, setForm] = useState({
+    userId: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [showCPwd, setShowCPwd] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+  const pwdRef = useRef(null);
 
-    return (
-        <div className="bg-[linear-gradient(to_bottom,#7392b7,#d8e1e9)] flex items-center justify-center min-h-screen px-4">
-            <div className="relative px-20 py-10 rounded-3xl shadow-md" style={{ width: '530px', height: '700px', position: 'relative' }}>
-                <div className="absolute inset-0 rounded-3xl" style={{ backgroundColor: '#5882C1', opacity: 0.5, zIndex: 0 }}></div>
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((s) => ({ ...s, [name]: value }));
+  };
+  const handleCaps = (e) => setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
 
-                <div className="relative z-10">
-                <img src="public/naysa_logo.png" alt="Logo" className="w-200 h-20 mb-3" />
+  const validate = async () => {
+    if (!form.userId.trim()) return alertSwal("User ID is required");
+    if (!form.username.trim()) return alertSwal("Username is required");
+    if (!form.email.trim()) return alertSwal("Email is required");
+    if (!/\S+@\S+\.\S+/.test(form.email)) return alertSwal("Please enter a valid email address");
+    if (form.password.length < 6) return alertSwal("Password must be at least 6 characters long");
+    return true;
+  };
 
-                    <h2 className="text-white m-1" style={{ fontFamily: 'SF Pro Rounded, sans-serif' }}>
-                        NAYSA Financials
-                    </h2>
-                    <h2 className="text-4xl font-bold mb-5 text-white" style={{ fontFamily: 'SF Pro Rounded, sans-serif' }}>
-                        Create Your Account
-                    </h2>
+  const alertSwal = async (text) => {
+    await Swal.fire({ title: "Error", text, icon: "error", confirmButtonText: "OK" });
+    return false;
+  };
 
-                    <form>
-                        <div className="mb-3">
-                            <label htmlFor="userId" className="block text-base font-normal text-gray-700">
-                                User ID
-                            </label>
-                            <input
-                                type="text"
-                                id="userId"
-                                name="userId"
-                                required
-                                placeholder="Enter your User ID"
-                                className="mt-1 p-2 w-[380px] h-[45px] border-[1px] rounded-[12px]"
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="username" className="block text-base font-normal text-gray-700">
-                                Username
-                            </label>
-                            <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                required
-                                placeholder="Enter your username"
-                                className="mt-1 p-2 w-[380px] h-[45px] border-[1px] rounded-[12px]"
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="email" className="block text-base font-normal text-gray-700">
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                required
-                                placeholder="email@gmail.com"
-                                className="mt-1 p-2 w-[380px] h-[45px] border-[1px] rounded-[12px]"
-                            />
-                        </div>
-                        <div className="mb-5">
-                            <label htmlFor="password" className="block text-base font-normal text-gray-700">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="At least 8 characters"
-                                required
-                                className="mt-1 p-2 w-[380px] h-[45px] border-[1px] rounded-[12px]"
-                            />
-                        </div>
-                        <button type="submit" className="w-full bg-[#162e3a] text-base text-white p-3 rounded-lg">
-                            Register
-                        </button>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const ok = await validate();
+      if (!ok) return;
 
-                        <div className="text-center mt-5 flex justify-center items-center">
-                            <span className="text-sm text-gray-300">Already have an account?&nbsp;</span>
-                            <Link to="/" className="text-sm text-white hover:underline">
-                                Sign In
-                            </Link>
-                        </div>
+      const { data, status } = await axios.post(`${API_URL}/api/register`, {
+        userId: form.userId.trim(),
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
 
-                        <span className="text-white text-xs flex items-center justify-center mt-2 mb-2">
-                            © 2025 ALL RIGHTS RESERVED
-                        </span>
-                    </form>
-                </div>
-            </div>
+      const success = data?.status === "success" || status === 201;
+      if (!success) throw new Error(data?.message || "Registration failed");
+
+      onRegister?.(data?.data || { userId: form.userId, username: form.username, email: form.email });
+
+      await Swal.fire({
+        icon: "success",
+        title: "Registration Successful!",
+        text: "You can now log in to your account.",
+        confirmButtonText: "OK",
+      });
+      onSwitchToLogin?.();
+    } catch (err) {
+      await Swal.fire({
+        icon: "error",
+        title: "Registration Failed",
+        text: err?.response?.data?.message || err?.message || "Something went wrong during registration",
+        confirmButtonText: "OK",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(to_bottom,#7392b7,#d8e1e9)]">
+      {/* Decorative blobs */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-gradient-to-tr from-indigo-300/30 to-sky-200/30 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-gradient-to-tr from-purple-500/25 to-fuchsia-400/25 blur-3xl" />
+      </div>
+
+      {/* Centered layout lifted up a bit (match Login.jsx) */}
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-start px-4 pt-10 md:pt-16 lg:pt-26">
+        {/* ===== Brand block outside the card ===== */}
+        <div className="mb-4 md:mb-6 flex flex-col items-center text-center">
+          <img src="/naysa_logo.png" alt="NAYSA Logo" className="w-50 drop-shadow-md md:w-44" />
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-blue-900 md:text-3xl">
+            NAYSA Financials Cloud
+          </h1>
         </div>
-    );
-}
 
-export default Register;
+        {/* ===== Auth card (form only) to mirror Login.jsx ===== */}
+        <div className="w-full max-w-md rounded-2xl border border-white/30 bg-white/30 p-6 shadow-xl backdrop-blur-md bg-[#7392b7]">
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-3">
+            {/* User ID */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">User ID</span>
+              <div className="relative">
+                <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  name="userId"
+                  value={form.userId}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="Enter your user ID"
+                />
+              </div>
+            </label>
+
+            {/* Username */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Username</span>
+              <div className="relative">
+                <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  autoComplete="username"
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="Choose a username"
+                />
+              </div>
+            </label>
+
+            {/* Email */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Email</span>
+              <div className="relative">
+                <FiMail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </label>
+
+            {/* Password */}
+            <label className="block">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">Password</span>
+                {capsOn && <span className="text-xs font-semibold text-white">Caps Lock is ON</span>}
+              </div>
+              <div className="relative">
+                <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={pwdRef}
+                  type={showPwd ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  onKeyUp={handleCaps}
+                  onKeyDown={handleCaps}
+                  autoComplete="new-password"
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white/90 py-3 pl-10 pr-12 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+                  aria-label={showPwd ? "Hide password" : "Show password"}
+                >
+                  {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                </button>
+              </div>
+            </label>
+
+            {/* Confirm Password */}
+            {/* <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Confirm Password</span>
+              <div className="relative">
+                <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showCPwd ? "text" : "password"}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white/90 py-3 pl-10 pr-12 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCPwd((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+                  aria-label={showCPwd ? "Hide password" : "Show password"}
+                >
+                  {showCPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                </button>
+              </div>
+            </label> */}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={
+                isLoading ||
+                !form.userId.trim() ||
+                !form.username.trim() ||
+                !form.email.trim() ||
+                !form.password 
+              }
+              className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 font-medium text-white shadow-lg shadow-sky-600/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? (
+                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0A12 12 0 002 12h2z" />
+                </svg>
+              ) : (
+                <>
+                  <span>Register</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={onSwitchToLogin}
+              className="text-sm text-slate-700 hover:underline"
+            >
+              Already have an account? <span className="text-sky-700">Log in</span>
+            </button>
+            <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} NAYSA. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

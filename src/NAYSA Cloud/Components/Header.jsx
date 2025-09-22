@@ -265,6 +265,7 @@ import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCi
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
+
 const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost, onCancel, onCopy, onAttach }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -360,7 +361,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" 
                                 : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
                             }`}
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate("")}
                     >
                         <FontAwesomeIcon icon={faPen} className="w-4 h-3 mr-2" />
                         <span className="group-hover:block">Transaction Details</span>
@@ -372,7 +373,7 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                                 : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
                             }`}
-                        onClick={() => navigate("/history")}
+                        onClick={() => navigate("/")}
                     >
                         <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
                         <span className="group-hover:block">Transaction History</span>

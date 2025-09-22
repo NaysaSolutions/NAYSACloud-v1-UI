@@ -6,20 +6,15 @@ import Swal from 'sweetalert2';
 import { parseFormattedNumber } from './behavior';
 
 
-
-
-
-
-
-
 export const useGenerateGLEntries = async (docCode, glData) => {
   const payload = { json_data: glData };
 
   //  console.log("Payload for GL generation:", JSON.stringify(payload, null, 2));
 
+
   try {
     const response = await postRequest("generateGL" + docCode, JSON.stringify(payload));
-    //  console.log("Raw response from generateGL API:", response);
+    console.log("Raw response from generateGL API:", response);
 
     if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
       let glEntries;
@@ -63,7 +58,8 @@ export const useGenerateGLEntries = async (docCode, glData) => {
           remarks: entry.remarks || "",
           dt1Lineno: entry.dt1Lineno || ""
         }));
-
+      
+      console.log("Transformed GL entries:", transformedEntries);
       return transformedEntries;
     } else {
       let errorMessage = response?.message || "Failed to generate GL entries. Unexpected API response format.";
@@ -276,22 +272,46 @@ export const useUpdateRowEditEntries = async (row, field, value,currCode,currRat
 
 
 
-// global update of GL Entries per record
-export const useFetchTranData = async (documentNo,branchCode,docType,fieldName) => {
-  
-if (!documentNo || !branchCode) {
+export const useFetchTranData = async (documentNo, branchCode, docType, fieldName) => { 
+  if (!documentNo || !branchCode) {
     throw new Error("Document No. or Branch Code missing.");
   }
 
-  const response = await fetchData(`get${docType}?${fieldName}=${documentNo}&branchCode=${branchCode}`);
-  if (!response?.success || !response.data?.length) {
-    return null; // no record
+  try {
+    const url = `get${docType}?${fieldName}=${documentNo}&branchCode=${branchCode}`;
+    console.log("🔍 Fetching transaction data with URL:", url);
+
+    const response = await postRequest(url);
+    console.log("✅ Raw response received:", response);
+
+    if (!response?.success) {
+      console.warn("⚠️ API call failed:", response);
+      return null;
+    }
+
+    if (!response.data?.length || !response.data[0]?.result) {
+      console.warn("⚠️ No record found in response:", response.data);
+      return null;
+    }
+
+    let data = JSON.parse(response.data[0].result || "{}");
+    console.log("📦 Parsed data:", data);
+    console.log("Vendor Code:", data.vendCode);
+    console.log("Vendor Name:", data.vendName);
+
+
+    if (!data || Object.keys(data).length === 0) {
+      console.warn("⚠️ Empty result after parsing.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error fetching transaction data:", error);
+    return null;
   }
-
-  let data = JSON.parse(response.data[0].result || "{}");
-  return data;
-
 };
+
 
 
 
