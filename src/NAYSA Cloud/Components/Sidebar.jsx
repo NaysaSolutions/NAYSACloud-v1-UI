@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiMenu,
   FiX,
@@ -13,7 +13,7 @@ import {
   FiShield,
   FiSearch,
   FiSun,
-  FiMoon
+  FiMoon,
 } from "react-icons/fi";
 
 const NaysaLogo = () => (
@@ -28,21 +28,26 @@ const NaysaLogo = () => (
 );
 
 const iconMap = {
-  "Dashboard": FiHome,
+  Dashboard: FiHome,
   "General Ledger": FiBook,
   "Accounts Payable": FiCreditCard,
   "Accounts Receivable": FiDollarSign,
   "Global Reference": FiGlobe,
-  "Application Security": FiShield
+  "Application Security": FiShield,
 };
 
-const MenuItem = ({ item, level = 0, searchTerm }) => {
+const MenuItem = ({ item, level = 0, searchTerm, onLeafClick }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const hasSubMenu = Array.isArray(item.subMenu);
   const Icon = iconMap[item.name];
-  const ChevronIcon = hasSubMenu ? (isOpen ? FiChevronDown : FiChevronRight) : null;
+  const ChevronIcon = hasSubMenu
+    ? isOpen
+      ? FiChevronDown
+      : FiChevronRight
+    : null;
 
-  const path = item.path || `/${item.name.toLowerCase().replace(/\s/g, '-')}`;
+  const path = item.path || `/${item.name.toLowerCase().replace(/\s/g, "-")}`;
 
   const [isVisible, setIsVisible] = useState(true);
 
@@ -53,11 +58,15 @@ const MenuItem = ({ item, level = 0, searchTerm }) => {
       return;
     }
 
-    const itemMatches = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const subMenuMatches = hasSubMenu && item.subMenu.some(subItem => {
-      const name = typeof subItem === 'string' ? subItem : subItem.name;
-      return name.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    const itemMatches = item.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const subMenuMatches =
+      hasSubMenu &&
+      item.subMenu.some((subItem) => {
+        const name = typeof subItem === "string" ? subItem : subItem.name;
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+      });
 
     setIsVisible(itemMatches || subMenuMatches);
     if (subMenuMatches) {
@@ -73,54 +82,86 @@ const MenuItem = ({ item, level = 0, searchTerm }) => {
 
   const highlightText = (text) => {
     if (!searchTerm) return text;
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    const regex = new RegExp(`(${searchTerm})`, "gi");
     return text.split(regex).map((part, index) =>
-      regex.test(part)
-        ? <mark key={index} className="bg-yellow-300 dark:bg-yellow-600 rounded px-1">{part}</mark>
-        : part
+      regex.test(part) ? (
+        <mark
+          key={index}
+          className="bg-yellow-300 dark:bg-yellow-600 rounded px-1"
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      )
     );
   };
 
   if (!isVisible) return null;
 
-  const paddingLeft = level === 0 ? 'pl-3' : level === 1 ? 'pl-8' : 'pl-12';
+  const paddingLeft = level === 0 ? "pl-3" : level === 1 ? "pl-8" : "pl-12";
 
   return (
     <li>
       <div
         className={`flex items-center justify-between cursor-pointer py-2 px-3 rounded-xl transition-all duration-200 group hover:scale-[1.02] ${paddingLeft} ${
           level === 0
-            ? 'text-gray-700 dark:text-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-gray-800 dark:hover:to-gray-700 hover:shadow-lg'
+            ? "text-gray-700 dark:text-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-gray-800 dark:hover:to-gray-700 hover:shadow-lg"
             : level === 1
-            ? 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-25 dark:hover:bg-gray-800/30'
+            ? "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+            : "text-gray-500 dark:text-gray-400 hover:bg-gray-25 dark:hover:bg-gray-800/30"
         }`}
-        onClick={toggleSubMenu}
+        onClick={() => {
+          if (hasSubMenu) {
+            setIsOpen((o) => !o);
+          } else {
+            navigate(path);
+            onLeafClick?.(); // close the sidebar on mobile
+          }
+        }}
         role="button"
         aria-expanded={isOpen}
-        aria-controls={`submenu-${item.name.replace(/\s/g, '-')}`}
+        aria-controls={`submenu-${item.name.replace(/\s/g, "-")}`}
       >
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           {level === 0 && Icon && (
-            <Icon className={`text-xl flex-shrink-0 transition-colors duration-200 ${
-              isOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
-            } group-hover:text-blue-600 dark:group-hover:text-blue-400`} />
+            <Icon
+              className={`text-xl flex-shrink-0 transition-colors duration-200 ${
+                isOpen
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-500 dark:text-gray-400"
+              } group-hover:text-blue-600 dark:group-hover:text-blue-400`}
+            />
           )}
           {level > 0 && (
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200 ${
-              level === 1 ? 'bg-blue-300 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-            } group-hover:bg-blue-400 dark:group-hover:bg-blue-500`} />
+            <div
+              className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200 ${
+                level === 1
+                  ? "bg-blue-300 dark:bg-blue-600"
+                  : "bg-gray-300 dark:bg-gray-600"
+              } group-hover:bg-blue-400 dark:group-hover:bg-blue-500`}
+            />
           )}
-          <span className={`truncate transition-colors duration-200 ${
-            level === 0 ? 'font-semibold text-sm' : level === 1 ? 'text-sm' : 'text-xs'
-          }`}>
+          <span
+            className={`truncate transition-colors duration-200 ${
+              level === 0
+                ? "font-semibold text-sm"
+                : level === 1
+                ? "text-sm"
+                : "text-xs"
+            }`}
+          >
             {highlightText(item.name)}
           </span>
         </div>
         {ChevronIcon && (
-          <ChevronIcon className={`text-gray-400 dark:text-gray-500 transition-all duration-200 flex-shrink-0 ${
-            isOpen ? 'rotate-0 text-blue-600 dark:text-blue-400' : 'group-hover:text-blue-600 dark:group-hover:text-blue-400'
-          }`} />
+          <ChevronIcon
+            className={`text-gray-400 dark:text-gray-500 transition-all duration-200 flex-shrink-0 ${
+              isOpen
+                ? "rotate-0 text-blue-600 dark:text-blue-400"
+                : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
+            }`}
+          />
         )}
       </div>
 
@@ -137,6 +178,7 @@ const MenuItem = ({ item, level = 0, searchTerm }) => {
                 item={typeof subItem === "string" ? { name: subItem } : subItem}
                 level={level + 1}
                 searchTerm={searchTerm}
+                onLeafClick={onLeafClick}
               />
             ))}
           </ul>
@@ -146,34 +188,57 @@ const MenuItem = ({ item, level = 0, searchTerm }) => {
   );
 };
 
-const Sidebar = () => {
+const Sidebar = ({ onNavigate }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
   }, [isDarkMode]);
 
   const menuItems = [
-    { name: "Dashboard", subMenu: ["General Accounting", "Sales", "Receivables", "Payables", "Expense"] },
+    {
+      name: "Dashboard",
+      subMenu: [
+        "General Accounting",
+        "Sales",
+        { name: "Receivables", path: "/receivables" },
+        "Payables",
+        "Expense",
+      ],
+    },
     {
       name: "General Ledger",
       subMenu: [
         {
           name: "Transactions",
-          subMenu: ["Journal Voucher", "Post Journal Voucher", "Petty Cash Voucher", "Post Petty Cash Voucher"],
+          subMenu: [
+            "Journal Voucher",
+            "Post Journal Voucher",
+            "Petty Cash Voucher",
+            "Post Petty Cash Voucher",
+          ],
         },
         {
           name: "Reference Files",
-          subMenu: ["Chart of Account", "FS Consolidation Codes", "Responsibility Center", "SL Masterdata", "Bank Masterdata"],
+          subMenu: [
+            "Chart of Account",
+            "FS Consolidation Codes",
+            "Responsibility Center",
+            "SL Masterdata",
+            "Bank Masterdata",
+          ],
         },
         { name: "Inquiry", subMenu: ["GL Query", "GL Analysis", "SL Query"] },
-        { name: "Processing", subMenu: ["Month-End Processing", "Year-End Processing"] },
+        {
+          name: "Processing",
+          subMenu: ["Month-End Processing", "Year-End Processing"],
+        },
         { name: "Reports", subMenu: ["GL Reports", "BIR Books"] },
       ],
     },
@@ -184,7 +249,10 @@ const Sidebar = () => {
           name: "Transactions",
           subMenu: [
             { name: "Accounts Payable Voucher", path: "/tran-ap-aptran" },
-            { name: "Post Accounts Payable Voucher", path: "/tran-ap-postaptran" },
+            {
+              name: "Post Accounts Payable Voucher",
+              path: "/tran-ap-postaptran",
+            },
             { name: "AP Debit Memo Voucher", path: "/tran-ap-aptran" },
             { name: "Post AP Debit Memo Voucher", path: "/tran-ap-aptran" },
             { name: "AP Credit Memo Voucher", path: "/tran-ap-aptran" },
@@ -193,12 +261,24 @@ const Sidebar = () => {
             { name: "Post Check Voucher", path: "/tran-ap-aptran" },
           ],
         },
-        { name: "Reference Files", subMenu: ["Payee Masterdata", "Alphanumeric Tax Codes", "VAT Codes"] },
+        {
+          name: "Reference Files",
+          subMenu: ["Payee Masterdata", "Alphanumeric Tax Codes", "VAT Codes"],
+        },
         {
           name: "Inquiry",
-          subMenu: ["AP Query", "VAT Input Query", "EWT Query", "2307 Monitoring", "Check Releasing and Return"],
+          subMenu: [
+            "AP Query",
+            "VAT Input Query",
+            "EWT Query",
+            "2307 Monitoring",
+            "Check Releasing and Return",
+          ],
         },
-        { name: "Reports", subMenu: ["AP Reports", "VAT Input Reports", "EWT Reports"] },
+        {
+          name: "Reports",
+          subMenu: ["AP Reports", "VAT Input Reports", "EWT Reports"],
+        },
       ],
     },
     {
@@ -210,19 +290,41 @@ const Sidebar = () => {
             { name: "Service Invoice", path: "/tran-ar-svitran" },
             { name: "Post Service Invoice", path: "/tran-ar-postsvitran" },
             { name: "AR Debit Memo Voucher", path: "/tran-ar-ardmtran" },
-            { name: "Post AR Debit Memo Voucher", path: "/tran-ar-postardmtran" },
+            {
+              name: "Post AR Debit Memo Voucher",
+              path: "/tran-ar-postardmtran",
+            },
             { name: "AR Credit Memo Voucher", path: "/tran-ar-arcmtran" },
-            { name: "Post AR Credit Memo Voucher", path: "/tran-ar-postarcmtran" },
+            {
+              name: "Post AR Credit Memo Voucher",
+              path: "/tran-ar-postarcmtran",
+            },
             { name: "Collection Receipt", path: "/tran-ar-crtran" },
             { name: "Post Collection Receipt", path: "/tran-ar-postcrtran" },
           ],
         },
         {
           name: "Reference Files",
-          subMenu: ["Customer Masterdata", "Billing Codes", "Alphanumeric Tax Codes", "VAT Codes"],
+          subMenu: [
+            "Customer Masterdata",
+            "Billing Codes",
+            "Alphanumeric Tax Codes",
+            "VAT Codes",
+          ],
         },
-        { name: "Inquiry", subMenu: ["AR Query", "VAT Output Query", "CWT Query", "CWT Monitoring"] },
-        { name: "Reports", subMenu: ["AR Reports", "VAT Output Reports", "CWT Reports"] },
+        {
+          name: "Inquiry",
+          subMenu: [
+            "AR Query",
+            "VAT Output Query",
+            "CWT Query",
+            "CWT Monitoring",
+          ],
+        },
+        {
+          name: "Reports",
+          subMenu: ["AR Reports", "VAT Output Reports", "CWT Reports"],
+        },
       ],
     },
     {
@@ -254,11 +356,21 @@ const Sidebar = () => {
             "Document Signatories",
           ],
         },
-        { name: "Data Security", subMenu: ["Email Notification", "Reset # of Reprint", "Audit Trail"] },
-        { name: "Account Security", subMenu: ["Log-In/Password Policy", "Audit Trail"] },
+        {
+          name: "Data Security",
+          subMenu: ["Email Notification", "Reset # of Reprint", "Audit Trail"],
+        },
+        {
+          name: "Account Security",
+          subMenu: ["Log-In/Password Policy", "Audit Trail"],
+        },
         {
           name: "System",
-          subMenu: ["Beginning Balance Template", "Database Backup Logs", "Database Backup Request"],
+          subMenu: [
+            "Beginning Balance Template",
+            "Database Backup Logs",
+            "Database Backup Request",
+          ],
         },
       ],
     },
@@ -271,7 +383,11 @@ const Sidebar = () => {
         className="md:hidden fixed top-4 left-4 z-50 p-3 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
         aria-label="Toggle menu"
       >
-        {isSidebarOpen ? <FiX className="text-xl" /> : <FiMenu className="text-xl" />}
+        {isSidebarOpen ? (
+          <FiX className="text-xl" />
+        ) : (
+          <FiMenu className="text-xl" />
+        )}
       </button>
 
       {isSidebarOpen && (
@@ -291,18 +407,24 @@ const Sidebar = () => {
         <div className="flex-shrink-0 p-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <img
-                            src="naysa_logo.png" // Ensure this path is correct if different from image_951ea3.png
-                            className="w-[80px] h-[50px] mb-1 object-contain"
-                            alt="Naysa Logo"
-                        />
-            <span className="text-blue-900 cursor-pointer dark:text-white text-lg font-bold">Financials</span>
+              src="naysa_logo.png" // Ensure this path is correct if different from image_951ea3.png
+              className="w-[80px] h-[50px] mb-1 object-contain"
+              alt="Naysa Logo"
+            />
+            <span className="text-blue-900 cursor-pointer dark:text-white text-lg font-bold">
+              Financials
+            </span>
           </div>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
             aria-label="Toggle dark mode"
           >
-            {isDarkMode ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
+            {isDarkMode ? (
+              <FiSun className="text-lg" />
+            ) : (
+              <FiMoon className="text-lg" />
+            )}
           </button>
         </div>
 
@@ -329,6 +451,10 @@ const Sidebar = () => {
                   key={index}
                   item={menuItem}
                   searchTerm={searchTerm}
+                  onLeafClick={() => {
+                    setIsSidebarOpen(false);
+                    onNavigate?.();
+                  }}
                 />
               ))}
             </ul>

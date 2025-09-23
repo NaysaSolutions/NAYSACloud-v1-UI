@@ -75,7 +75,6 @@
 // export default App;
 // App.jsx
 // App.jsx
-// App.jsx
 import React, { useState } from "react";
 import {
   BrowserRouter as Router,
@@ -94,64 +93,34 @@ import Register from "./NAYSA Cloud/Authentication/Register.jsx";
 
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
 import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
-import Dashboard from "./NAYSA Cloud/Components/Dashboard.jsx";
 import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
+import Receivable from "./NAYSA Cloud/Dashboard/Receivable.jsx";
 
-// Minimal blank landing after login (navbar + sidebar still render)
-const HomeBlank = () => <div className="p-6" />;
-
-
-
-
-const ModalHost = ({ modalKey, onClose }) => {
-  if (!modalKey) return null;
-  const Cmp = pageRegistry[modalKey];
-   
-  if (!Cmp) {
-    console.warn("[ModalHost] No component found for key:", modalKey);
-    return null;
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Cmp isOpen={true} onClose={onClose} userCode={"NSI"} />
-      </div>
-    </div>
-  );
-};
-
+// Minimal blank landing (not used now, kept if needed)
+// const HomeBlank = () => <div className="p-6" />;
 
 const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarVisible((s) => !s);
 
   const handleLogin = (user) => {
-  setCurrentUser(user);
-  // localStorage.setItem("user", JSON.stringify(user)); // already done in Login.jsx if you kept it
-  setIsLoggedIn(true);
-  navigate("/", { replace: true });
-};
-
-  const handleLogout = () => {
-    // localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    setIsSidebarVisible(false); // ensure the drawer is closed
-    navigate("/", { replace: true }); // back to Login
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    navigate("/", { replace: true });
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsSidebarVisible(false);
+    navigate("/", { replace: true });
+  };
+
+  // ===== Auth pages (no navbar/sidebar). Login is default. =====
   if (!isLoggedIn) {
-    // AUTH PAGES (NO NAVBAR/SIDEBAR). LOGIN = DEFAULT
     return (
       <Routes>
         <Route
@@ -167,7 +136,7 @@ const AppContent = () => {
           path="/register"
           element={
             <Register
-              onRegister={() => navigate("/")} // after register, go back to login
+              onRegister={() => navigate("/")}
               onSwitchToLogin={() => navigate("/")}
             />
           }
@@ -177,41 +146,42 @@ const AppContent = () => {
     );
   }
 
-  // APP PAGES (WITH NAVBAR + SIDEBAR)
+  // ===== App pages (with navbar + sidebar) =====
   return (
-    <div className="relative min-h-screen flex flex-col bg-white font-roboto dark:bg-black">
+    <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
       {/* Top bar */}
       <div className="sticky top-0 z-40">
         <Navbar onMenuClick={toggleSidebar} onLogout={handleLogout} />
       </div>
 
       {/* Slide-in Sidebar */}
-      {isSidebarVisible && (
-        <div className="fixed inset-0 z-50 flex">
-          <Sidebar
-            menuItems={menuItems}
-            onNavigate={() => setIsSidebarVisible(false)}
-            onOpenModal={(key) => {
-              setIsSidebarVisible(false);
-              openModal(key);
-            }}
-          />
-          <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
-        </div>
-      )}
+      {/* Slide-in Sidebar */}
+{isSidebarVisible && (
+  <div className="fixed inset-0 z-50 flex">
+    <Sidebar onNavigate={() => setIsSidebarVisible(false)} />
+    <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
+  </div>
+)}
 
-      {/* Main content area */}
-      <div className="flex-1 overflow-y-auto">
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto ">
         <Routes>
-          <Route path="/" element={<Dashboard1 user={currentUser} />} />
-          <Route path="/tran-ap-aptran" element={<APV />} /> 
-          <Route path="/history" element={<APVHistory />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
+  <Route path="/" element={<Dashboard1 user={currentUser} />} />
+  {/* APV (Accounts Payable Voucher) */}
+  <Route path="/tran-ap-aptran" element={<APV />} />
+  <Route path="/history" element={<APVHistory />} />
 
-      {/* Modal host */}
-      <ModalHost modalKey={activeModalKey} onClose={handleCloseModal} />
+  {/* Receivables dashboard */}
+  <Route path="/receivables" element={<Receivable />} />
+
+  {/* (Optional) keep an alias if you like */}
+  {/* <Route path="/ar-dashboard" element={<Receivable />} /> */}
+
+  <Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
+
+      </div>
     </div>
   );
 };

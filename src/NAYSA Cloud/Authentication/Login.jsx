@@ -26,13 +26,13 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
     (async () => {
       try {
         setIsLoadingCompanies(true);
-        const res = await fetch(`${API_URL}/api/companies`, { credentials: "include" });
+        const res = await fetch(`${API_URL}/api/companies`, {
+          credentials: "include",
+        });
         if (!res.ok) throw new Error();
         const list = await res.json();
         if (!alive) return;
-        const opts = Array.isArray(list)
-          ? list
-          : list?.data ?? [];
+        const opts = Array.isArray(list) ? list : list?.data ?? [];
         setCompanies(opts);
       } catch {
         // Fallback demo options (code + name or just a string)
@@ -46,7 +46,9 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
         if (alive) setIsLoadingCompanies(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const handleChange = (e) => {
@@ -64,18 +66,18 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
 
     try {
       const { data } = await axios.post(`${API_URL}/api/login`, {
-        userId: form.userID.trim(),      // backend expects `userId`
+        userId: form.userID.trim(), // backend expects `userId`
         password: form.password,
-        company: form.company,           // send selected company (id/code)
+        company: form.company, // send selected company (id/code)
       });
 
       if (data?.status === "success") {
         const normalizedUser = {
-          userId:   data?.data?.userId   ?? form.userID.trim(),
-          userID:   form.userID.trim(),
+          userId: data?.data?.userId ?? form.userID.trim(),
+          userID: form.userID.trim(),
           username: data?.data?.username ?? form.userID.trim(),
-          email:    data?.data?.email    ?? null,
-          company:  data?.data?.company  ?? form.company,
+          email: data?.data?.email ?? null,
+          company: data?.data?.company ?? form.company,
         };
 
         localStorage.setItem("user", JSON.stringify(normalizedUser));
@@ -119,17 +121,21 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
       </div>
 
       {/* Centered layout */}
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-start px-4 pt-10 md:pt-16 lg:pt-28">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-start px-4 pt-6 md:pt-10 lg:pt-12 pb-24">
         {/* Brand */}
-        <div className="mb-4 md:mb-6 flex flex-col items-center text-center">
-          <img src="/naysa_logo.png" alt="NAYSA Logo" className="w-50 drop-shadow-md md:w-44" />
-          <h1 className="mt-3 text-2xl font-bold tracking-tight text-blue-900 md:text-3xl">
+        <div className="mb-3 md:mb-4 flex flex-col items-center text-center">
+          <img
+            src="/naysa_logo.png"
+            alt="NAYSA Logo"
+            className="w-40 md:w-44 drop-shadow-md"
+          />
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-blue-900 md:text-3xl">
             NAYSA Financials Cloud
           </h1>
         </div>
 
         {/* Auth card */}
-        <div className="w-full max-w-md rounded-2xl border border-white/30 bg-white/30 p-6 shadow-xl backdrop-blur-md bg-[#7392b7]">
+        <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/40 dark:bg-white/10 p-6 shadow-xl backdrop-blur-md">
           <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-3">
             {/* Company (Dropdown) */}
             <label className="block">
@@ -147,7 +153,9 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
                   className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   <option value="" disabled>
-                    {isLoadingCompanies ? "Loading companies..." : "Select company"}
+                    {isLoadingCompanies
+                      ? "Loading companies..."
+                      : "Select company"}
                   </option>
                   {companies.map((c, idx) => {
                     const value = c?.id ?? c?.code ?? c?.value ?? c; // support various shapes
@@ -193,7 +201,9 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
                   Password
                 </span>
                 {capsOn && (
-                  <span className="text-xs font-semibold text-white">Caps Lock is ON</span>
+                  <span className="text-xs font-semibold text-white">
+                    Caps Lock is ON
+                  </span>
                 )}
               </div>
               <div className="relative">
@@ -217,7 +227,11 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
                   aria-label={showPwd ? "Hide password" : "Show password"}
                 >
-                  {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  {showPwd ? (
+                    <FiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <FiEye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </label>
@@ -246,9 +260,25 @@ export default function Login({ onLogin, onSwitchToRegister, onForgot }) {
               className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 font-medium text-white shadow-lg shadow-sky-600/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
-                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0A12 12 0 002 12h2z" />
+                <svg
+                  className="h-5 w-5 animate-spin"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    className="opacity-25"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0A12 12 0 002 12h2z"
+                  />
                 </svg>
               ) : (
                 <>Log In</>

@@ -460,13 +460,6 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
 
 
 
-
-
-// moved to printing.js
-export async function useHandlePrint(documentID, docCode) {
-
-}
-
 //use global posting from Post SVI
 export async function useHandlePost(documentID, docCode) {
 

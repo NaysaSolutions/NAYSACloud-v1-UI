@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
 import axios from "axios";
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiUserPlus } from "react-icons/fi";
+import {
+  FiUser,
+  FiMail,
+  FiLock,
+  FiEye,
+  FiEyeOff,
+  FiUserPlus,
+} from "react-icons/fi";
 import Swal from "sweetalert2";
 
 const API_URL = import.meta?.env?.VITE_API_URL ?? "http://127.0.0.1:8000";
@@ -23,19 +30,27 @@ export default function Register({ onRegister, onSwitchToLogin }) {
     const { name, value } = e.target;
     setForm((s) => ({ ...s, [name]: value }));
   };
-  const handleCaps = (e) => setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
+  const handleCaps = (e) =>
+    setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
 
   const validate = async () => {
     if (!form.userId.trim()) return alertSwal("User ID is required");
     if (!form.username.trim()) return alertSwal("Username is required");
     if (!form.email.trim()) return alertSwal("Email is required");
-    if (!/\S+@\S+\.\S+/.test(form.email)) return alertSwal("Please enter a valid email address");
-    if (form.password.length < 6) return alertSwal("Password must be at least 6 characters long");
+    if (!/\S+@\S+\.\S+/.test(form.email))
+      return alertSwal("Please enter a valid email address");
+    if (form.password.length < 6)
+      return alertSwal("Password must be at least 6 characters long");
     return true;
   };
 
   const alertSwal = async (text) => {
-    await Swal.fire({ title: "Error", text, icon: "error", confirmButtonText: "OK" });
+    await Swal.fire({
+      title: "Error",
+      text,
+      icon: "error",
+      confirmButtonText: "OK",
+    });
     return false;
   };
 
@@ -56,7 +71,13 @@ export default function Register({ onRegister, onSwitchToLogin }) {
       const success = data?.status === "success" || status === 201;
       if (!success) throw new Error(data?.message || "Registration failed");
 
-      onRegister?.(data?.data || { userId: form.userId, username: form.username, email: form.email });
+      onRegister?.(
+        data?.data || {
+          userId: form.userId,
+          username: form.username,
+          email: form.email,
+        }
+      );
 
       await Swal.fire({
         icon: "success",
@@ -69,7 +90,10 @@ export default function Register({ onRegister, onSwitchToLogin }) {
       await Swal.fire({
         icon: "error",
         title: "Registration Failed",
-        text: err?.response?.data?.message || err?.message || "Something went wrong during registration",
+        text:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Something went wrong during registration",
         confirmButtonText: "OK",
       });
     } finally {
@@ -86,22 +110,27 @@ export default function Register({ onRegister, onSwitchToLogin }) {
       </div>
 
       {/* Centered layout lifted up a bit (match Login.jsx) */}
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-start px-4 pt-10 md:pt-16 lg:pt-26">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-start px-4 pt-6 md:pt-10 lg:pt-12 pb-24">
         {/* ===== Brand block outside the card ===== */}
         <div className="mb-4 md:mb-6 flex flex-col items-center text-center">
-          <img src="/naysa_logo.png" alt="NAYSA Logo" className="w-50 drop-shadow-md md:w-44" />
+          <img
+            src="/naysa_logo.png"
+            alt="NAYSA Logo"
+            className="w-40 md:w-44 drop-shadow-md"
+          />
           <h1 className="mt-3 text-2xl font-bold tracking-tight text-blue-900 md:text-3xl">
             NAYSA Financials Cloud
           </h1>
         </div>
 
-        {/* ===== Auth card (form only) to mirror Login.jsx ===== */}
-        <div className="w-full max-w-md rounded-2xl border border-white/30 bg-white/30 p-6 shadow-xl backdrop-blur-md bg-[#7392b7]">
-
+        {/* ===== Auth card ===== */}
+        <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/40 dark:bg-white/10 p-6 shadow-xl backdrop-blur-md">
           <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-3">
             {/* User ID */}
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">User ID</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                User ID
+              </span>
               <div className="relative">
                 <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -118,7 +147,9 @@ export default function Register({ onRegister, onSwitchToLogin }) {
 
             {/* Username */}
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Username</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Username
+              </span>
               <div className="relative">
                 <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -136,7 +167,9 @@ export default function Register({ onRegister, onSwitchToLogin }) {
 
             {/* Email */}
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Email</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Email
+              </span>
               <div className="relative">
                 <FiMail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -155,8 +188,14 @@ export default function Register({ onRegister, onSwitchToLogin }) {
             {/* Password */}
             <label className="block">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Password</span>
-                {capsOn && <span className="text-xs font-semibold text-white">Caps Lock is ON</span>}
+                <span className="text-sm font-medium text-slate-700">
+                  Password
+                </span>
+                {capsOn && (
+                  <span className="text-xs font-semibold text-white">
+                    Caps Lock is ON
+                  </span>
+                )}
               </div>
               <div className="relative">
                 <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -179,7 +218,11 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
                   aria-label={showPwd ? "Hide password" : "Show password"}
                 >
-                  {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  {showPwd ? (
+                    <FiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <FiEye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </label>
@@ -218,14 +261,30 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                 !form.userId.trim() ||
                 !form.username.trim() ||
                 !form.email.trim() ||
-                !form.password 
+                !form.password
               }
               className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 font-medium text-white shadow-lg shadow-sky-600/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
-                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0A12 12 0 002 12h2z" />
+                <svg
+                  className="h-5 w-5 animate-spin"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    className="opacity-25"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0A12 12 0 002 12h2z"
+                  />
                 </svg>
               ) : (
                 <>
@@ -241,9 +300,12 @@ export default function Register({ onRegister, onSwitchToLogin }) {
               onClick={onSwitchToLogin}
               className="text-sm text-slate-700 hover:underline"
             >
-              Already have an account? <span className="text-sky-700">Log in</span>
+              Already have an account?{" "}
+              <span className="text-sky-700">Log in</span>
             </button>
-            <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} NAYSA. All rights reserved.</p>
+            <p className="mt-3 text-xs text-slate-500">
+              © {new Date().getFullYear()} NAYSA. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
