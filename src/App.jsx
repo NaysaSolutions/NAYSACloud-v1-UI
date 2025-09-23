@@ -1,135 +1,187 @@
 
-import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate  } from "react-router-dom";
-import { pageRegistry } from "./pageRegistry";
-import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
+// function App() {
+//   return (
+//     <Router>
+//       <div className="flex">
+//         <Routes>
+//           <Route path="/" element={<Login />} />
+//           <Route path="/register" element={<Register />} />
+//         </Routes>
+//       </div>
+//     </Router>
+//   );
+// }
+
+// export default App;
+
+
+
+
+// import React, { useState } from "react";
+// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// import Navbar from "./NAYSA Cloud/Components/Navbar";
+// import Sidebar from "./NAYSA Cloud/Components/Sidebar";
+// import Dashboard from "./NAYSA Cloud/Components/Dashboard";
+// import PayeeMasterData from "C:/Users/mendo/OneDrive/Desktop/NAYSACloud-v1-UI/src/NAYSA Cloud/REFERENCE FILES/PayeeMasterData.jsx";
+
+// const App = () => {
+//   const [selectedModule, setSelectedModule] = useState("");
+
+//   return (
+//     <Router>
+//       <div className="h-screen flex flex-col">
+//         {/* Navbar */}
+//         <div className="h-[60px]">
+//           <Navbar />
+//         </div>
+
+//         {/* Sidebar + Content */}
+//         <div className="flex flex-1 overflow-hidden">
+//           <Sidebar onMenuClick={setSelectedModule} />
+
+//           <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
+//             <Routes>
+//               {/* Dashboard when Accounts Payable is selected */}
+//               {selectedModule === "Accounts Payable" && (
+//                 <Route path="/" element={<Dashboard />} />
+//               )}
+
+//               {/* Other static route */}
+//               <Route path="/payeemasterdata" element={<PayeeMasterData />} />
+
+//               {/* Fallback for no selection */}
+//               <Route
+//                 path="*"
+//                 element={
+//                   selectedModule ? (
+//                     <div className="text-gray-600 text-lg">
+//                       {selectedModule} module selected.
+//                     </div>
+//                   ) : (
+//                     <div className="text-gray-400 text-lg">
+//                       Please select a module from the sidebar.
+//                     </div>
+//                   )
+//                 }
+//               />
+//             </Routes>
+//           </main>
+//         </div>
+//       </div>
+//     </Router>
+//   );
+// };
+
+// export default App;
+// App.jsx
+// App.jsx
+import React, { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  Navigate,
+} from "react-router-dom";
+
+import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
-import { ResetProvider } from "./NAYSA Cloud/Components/ResetContext";
 
+import Login from "./NAYSA Cloud/Authentication/Login.jsx";
+import Register from "./NAYSA Cloud/Authentication/Register.jsx";
 
+import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
+import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
+import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
+import Receivable from "./NAYSA Cloud/Dashboard/Receivable.jsx";
 
-
-const ModalHost = ({ modalKey, onClose }) => {
-  if (!modalKey) return null;
-  const Cmp = pageRegistry[modalKey];
-   
-  if (!Cmp) {
-    console.warn("[ModalHost] No component found for key:", modalKey);
-    return null;
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Cmp isOpen={true} onClose={onClose} userCode={"NSI"} />
-      </div>
-    </div>
-  );
-};
-
-
-
-
-
-
+// Minimal blank landing (not used now, kept if needed)
+// const HomeBlank = () => <div className="p-6" />;
 
 const AppContent = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [menuItems, setMenuItems] = useState([]);
-  const [routeRows, setRouteRows] = useState([]);
-  const [activeModalKey, setActiveModalKey] = useState(null);
-
-  const toggleSidebar = () => setIsSidebarVisible((prev) => !prev);
-  const openModal = (componentKey) => setActiveModalKey(componentKey);
-  const closeModal = () => setActiveModalKey(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const [menuResp, routesResp] = await Promise.all([
-          fetchData("menu-items"),
-          fetchData("menu-routes"),
-        ]);
-        if (!alive) return;
-        setMenuItems(menuResp?.menuItems ?? []);
-        setRouteRows(routesResp?.routes ?? []);
-      } catch (e) {
-        if (!alive) return;
-        console.error("[App] Failed to load menu/routes:", e);
-        setMenuItems([]);
-        setRouteRows([]);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
+  const toggleSidebar = () => setIsSidebarVisible((s) => !s);
 
-
-  // Lock body scroll when modal open
-  useEffect(() => {
-    document.body.style.overflow = activeModalKey ? "hidden" : "auto";
-    return () => { document.body.style.overflow = "auto"; };
-  }, [activeModalKey]);
-
-
-
-
-
-  const handleCloseModal = () => {
-    setActiveModalKey(null);
-    navigate("/", { replace: true, state: {} });
+  const handleLogin = (user) => {
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    navigate("/", { replace: true });
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsSidebarVisible(false);
+    navigate("/", { replace: true });
+  };
 
+  // ===== Auth pages (no navbar/sidebar). Login is default. =====
+  if (!isLoggedIn) {
+    return (
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Login
+              onLogin={handleLogin}
+              onSwitchToRegister={() => navigate("/register")}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <Register
+              onRegister={() => navigate("/")}
+              onSwitchToLogin={() => navigate("/")}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
+  // ===== App pages (with navbar + sidebar) =====
   return (
     <div className="relative min-h-screen flex flex-col bg-gray-100 font-roboto dark:bg-black">
-      {/* Sidebar overlay (mobile) */}
-      {isSidebarVisible && (
-        <div className="fixed inset-0 z-50 flex">
-          <Sidebar
-            menuItems={menuItems}
-            onNavigate={() => setIsSidebarVisible(false)}
-            onOpenModal={(key) => {
-              setIsSidebarVisible(false);
-              openModal(key);
-            }}
-          />
-          <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
-        </div>
-      )}
-
-      {/* Top navbar */}
+      {/* Top bar */}
       <div className="sticky top-0 z-40">
-        <Navbar onMenuClick={toggleSidebar} />
+        <Navbar onMenuClick={toggleSidebar} onLogout={handleLogout} />
       </div>
 
-      {/* Routed pages (only non-modals) */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      {/* Slide-in Sidebar */}
+      {/* Slide-in Sidebar */}
+{isSidebarVisible && (
+  <div className="fixed inset-0 z-50 flex">
+    <Sidebar onNavigate={() => setIsSidebarVisible(false)} />
+    <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
+  </div>
+)}
+
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto ">
         <Routes>
-          {routeRows
-            .filter(r => r.path && r.componentKey && !r.isModal)   // <-- use API flag
-            .map(({ code, path, componentKey }) => {
-              const Cmp = pageRegistry[componentKey];
-              if (!Cmp) {
-                console.warn("[App] No page component for key:", componentKey, "path:", path);
-                return null;
-              }
-              return <Route key={code} path={path} element={<Cmp />} />;
-            })}
-        </Routes>
-      </div>
+  <Route path="/" element={<Dashboard1 user={currentUser} />} />
+  {/* APV (Accounts Payable Voucher) */}
+  <Route path="/tran-ap-aptran" element={<APV />} />
+  <Route path="/history" element={<APVHistory />} />
 
-      {/* Modal host */}
-      <ModalHost modalKey={activeModalKey} onClose={handleCloseModal} />
+  {/* Receivables dashboard */}
+  <Route path="/receivables" element={<Receivable />} />
+
+  {/* (Optional) keep an alias if you like */}
+  {/* <Route path="/ar-dashboard" element={<Receivable />} /> */}
+
+  <Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
+
+      </div>
     </div>
   );
 };

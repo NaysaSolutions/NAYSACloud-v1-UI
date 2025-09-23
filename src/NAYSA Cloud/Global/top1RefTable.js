@@ -1,7 +1,5 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
-import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
-import { parseFormattedNumber } from '@/NAYSA Cloud/Global/behavior';
-import Swal from 'sweetalert2';
+
 
 
 // Company
@@ -430,5 +428,26 @@ export async function useTopBankMastRow(bankCode) {
   }
 }
 
+export const useTopPayTermRow = async (paytermCode) => {
+  if (!paytermCode) return null;
+  
+  try {
+    const response = await fetchData("getPayterm", { 
+      PAYTERM_CODE: paytermCode 
+    });
+    
+    if (response.success) {
+      const paytermData = JSON.parse(response.data[0].result);
+      return {
+        paytermCode: paytermData[0]?.paytermCode || paytermData[0]?.PAYTERM_CODE || "",
+        paytermName: paytermData[0]?.paytermName || paytermData[0]?.PAYTERM_NAME || "",
+        daysDue: paytermData[0]?.daysDue || paytermData[0]?.DAYS_DUE || 0
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching payment term:", error);
+    return null;
+  }
+};
 
 
