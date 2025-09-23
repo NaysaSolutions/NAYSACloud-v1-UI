@@ -74,8 +74,8 @@
 
 // export default App;
 // App.jsx
-// App.jsx
-import React, { useState } from "react";
+// src/App.jsx
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -96,41 +96,27 @@ import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHis
 import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
 import Receivable from "./NAYSA Cloud/Dashboard/Receivable.jsx";
 
-// Minimal blank landing (not used now, kept if needed)
-// const HomeBlank = () => <div className="p-6" />;
+import { AuthProvider, useAuth } from "./NAYSA Cloud/Authentication/AuthContext.jsx";
 
 const AppContent = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [isSidebarVisible, setIsSidebarVisible] = React.useState(false);
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarVisible((s) => !s);
-
-  const handleLogin = (user) => {
-    setCurrentUser(user);
-    setIsLoggedIn(true);
-    navigate("/", { replace: true });
-  };
-
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    setUser(null);
     setIsSidebarVisible(false);
     navigate("/", { replace: true });
   };
 
   // ===== Auth pages (no navbar/sidebar). Login is default. =====
-  if (!isLoggedIn) {
+  if (!user) {
     return (
       <Routes>
         <Route
           path="/"
-          element={
-            <Login
-              onLogin={handleLogin}
-              onSwitchToRegister={() => navigate("/register")}
-            />
-          }
+          element={<Login onSwitchToRegister={() => navigate("/register")} />}
         />
         <Route
           path="/register"
@@ -155,32 +141,22 @@ const AppContent = () => {
       </div>
 
       {/* Slide-in Sidebar */}
-      {/* Slide-in Sidebar */}
-{isSidebarVisible && (
-  <div className="fixed inset-0 z-50 flex">
-    <Sidebar onNavigate={() => setIsSidebarVisible(false)} />
-    <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
-  </div>
-)}
-
+      {isSidebarVisible && (
+        <div className="fixed inset-0 z-50 flex">
+          <Sidebar onNavigate={() => setIsSidebarVisible(false)} />
+          <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
+        </div>
+      )}
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto ">
+      <div className="flex-1 overflow-y-auto">
         <Routes>
-  <Route path="/" element={<Dashboard1 user={currentUser} />} />
-  {/* APV (Accounts Payable Voucher) */}
-  <Route path="/tran-ap-aptran" element={<APV />} />
-  <Route path="/history" element={<APVHistory />} />
-
-  {/* Receivables dashboard */}
-  <Route path="/receivables" element={<Receivable />} />
-
-  {/* (Optional) keep an alias if you like */}
-  {/* <Route path="/ar-dashboard" element={<Receivable />} /> */}
-
-  <Route path="*" element={<Navigate to="/" replace />} />
-</Routes>
-
+          <Route path="/" element={<Dashboard1 user={user} />} />
+          <Route path="/tran-ap-aptran" element={<APV />} />
+          <Route path="/history" element={<APVHistory />} />
+          <Route path="/receivables" element={<Receivable />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
     </div>
   );
@@ -189,16 +165,14 @@ const AppContent = () => {
 const App = () => (
   <Router>
     <ResetProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ResetProvider>
   </Router>
 );
 
 export default App;
-
-
-
-
 
 
 

@@ -14,11 +14,10 @@ const API_URL = import.meta?.env?.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 export default function Register({ onRegister, onSwitchToLogin }) {
   const [form, setForm] = useState({
-    userId: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+    USER_CODE: "",
+    USER_NAME: "",
+    EMAIL_ADD: "",
+    PASSWORD: ""
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
@@ -34,12 +33,12 @@ export default function Register({ onRegister, onSwitchToLogin }) {
     setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
 
   const validate = async () => {
-    if (!form.userId.trim()) return alertSwal("User ID is required");
-    if (!form.username.trim()) return alertSwal("Username is required");
-    if (!form.email.trim()) return alertSwal("Email is required");
-    if (!/\S+@\S+\.\S+/.test(form.email))
-      return alertSwal("Please enter a valid email address");
-    if (form.password.length < 6)
+    if (!form.USER_CODE.trim()) return alertSwal("User ID is required");
+    if (!form.USER_NAME.trim()) return alertSwal("Username is required");
+    if (!form.EMAIL_ADD.trim()) return alertSwal("Email is required");
+    if (!/\S+@\S+\.\S+/.test(form.EMAIL_ADD))
+      return alertSwal("Please enter a valid EMAIL_ADD address");
+    if (form.PASSWORD.length < 6)
       return alertSwal("Password must be at least 6 characters long");
     return true;
   };
@@ -62,10 +61,10 @@ export default function Register({ onRegister, onSwitchToLogin }) {
       if (!ok) return;
 
       const { data, status } = await axios.post(`${API_URL}/api/register`, {
-        userId: form.userId.trim(),
-        username: form.username.trim(),
-        email: form.email.trim(),
-        password: form.password,
+        USER_CODE: form.USER_CODE.trim(),
+        USER_NAME: form.USER_NAME.trim(),
+        EMAIL_ADD: form.EMAIL_ADD.trim(),
+        PASSWORD: form.PASSWORD,
       });
 
       const success = data?.status === "success" || status === 201;
@@ -73,9 +72,9 @@ export default function Register({ onRegister, onSwitchToLogin }) {
 
       onRegister?.(
         data?.data || {
-          userId: form.userId,
-          username: form.username,
-          email: form.email,
+          USER_CODE: form.USER_CODE,
+          USER_NAME: form.USER_NAME,
+          EMAIL_ADD: form.EMAIL_ADD,
         }
       );
 
@@ -135,8 +134,8 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                 <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  name="userId"
-                  value={form.userId}
+                  name="USER_CODE"
+                  value={form.USER_CODE}
                   onChange={handleChange}
                   required
                   className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
@@ -154,10 +153,10 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                 <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  name="username"
-                  value={form.username}
+                  name="USER_NAME"
+                  value={form.USER_NAME}
                   onChange={handleChange}
-                  autoComplete="username"
+                  autoComplete="USER_NAME"
                   required
                   className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                   placeholder="Choose a username"
@@ -173,11 +172,11 @@ export default function Register({ onRegister, onSwitchToLogin }) {
               <div className="relative">
                 <FiMail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="email"
-                  name="email"
-                  value={form.email}
+                  type="EMAIL_ADD"
+                  name="EMAIL_ADD"
+                  value={form.EMAIL_ADD}
                   onChange={handleChange}
-                  autoComplete="email"
+                  autoComplete="EMAIL_ADD"
                   required
                   className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-slate-900 shadow-sm outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                   placeholder="you@example.com"
@@ -201,13 +200,13 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                 <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   ref={pwdRef}
-                  type={showPwd ? "text" : "password"}
-                  name="password"
-                  value={form.password}
+                  type={showPwd ? "text" : "PASSWORD"}
+                  name="PASSWORD"
+                  value={form.PASSWORD}
                   onChange={handleChange}
                   onKeyUp={handleCaps}
                   onKeyDown={handleCaps}
-                  autoComplete="new-password"
+                  autoComplete="new-PASSWORD"
                   required
                   className="w-full rounded-xl border border-slate-200 bg-white/90 py-3 pl-10 pr-12 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                   placeholder="••••••••"
@@ -216,7 +215,7 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                   type="button"
                   onClick={() => setShowPwd((s) => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
-                  aria-label={showPwd ? "Hide password" : "Show password"}
+                  aria-label={showPwd ? "Hide PASSWORD" : "Show PASSWORD"}
                 >
                   {showPwd ? (
                     <FiEyeOff className="h-5 w-5" />
@@ -233,11 +232,11 @@ export default function Register({ onRegister, onSwitchToLogin }) {
               <div className="relative">
                 <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type={showCPwd ? "text" : "password"}
+                  type={showCPwd ? "text" : "PASSWORD"}
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  autoComplete="new-password"
+                  autoComplete="new-PASSWORD"
                   required
                   className="w-full rounded-xl border border-slate-200 bg-white/90 py-3 pl-10 pr-12 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                   placeholder="••••••••"
@@ -246,7 +245,7 @@ export default function Register({ onRegister, onSwitchToLogin }) {
                   type="button"
                   onClick={() => setShowCPwd((s) => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
-                  aria-label={showCPwd ? "Hide password" : "Show password"}
+                  aria-label={showCPwd ? "Hide PASSWORD" : "Show PASSWORD"}
                 >
                   {showCPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
                 </button>
@@ -258,10 +257,10 @@ export default function Register({ onRegister, onSwitchToLogin }) {
               type="submit"
               disabled={
                 isLoading ||
-                !form.userId.trim() ||
-                !form.username.trim() ||
-                !form.email.trim() ||
-                !form.password
+                !form.USER_CODE.trim() ||
+                !form.USER_NAME.trim() ||
+                !form.EMAIL_ADD.trim() ||
+                !form.PASSWORD
               }
               className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 font-medium text-white shadow-lg shadow-sky-600/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
