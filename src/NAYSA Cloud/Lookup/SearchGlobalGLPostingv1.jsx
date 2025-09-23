@@ -1,387 +1,20 @@
-
-// import  { useState, useEffect, useMemo } from 'react';
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import { faTimes, faSort, faSortUp, faSortDown, faSpinner } from '@fortawesome/free-solid-svg-icons';
-// import { formatNumber } from '../Global/behavior';
-
-
-
-// const GlobalGLPostingModalv1 = ({ data,colConfigData,title, btnCaption, onClose, onPost }) => {
-
-//     const [records, setRecords] = useState([]);
-//     const [filtered, setFiltered] = useState([]);
-//     const [selected, setSelected] = useState([]);
-//     const [filters, setFilters] = useState({});
-//     const [columnConfig, setColumnConfig] = useState([]);
-//     const [loading, setLoading] = useState(false);
-//     const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
-//     const [currentPage, setCurrentPage] = useState(1);
-//     const itemsPerPage = 50;
-
-//     useEffect(() => {
- 
-//         setRecords([]);
-//         setFiltered([]);
-//         setSelected([]);
-//         setFilters({});
-//         setColumnConfig([]);
-//         setSortConfig({ key: '', direction: 'asc' });
-//         setCurrentPage(1);
-    
-//         fetchData();
-//     }, [data]);
-
-
-
-
-//     const fetchData = async () => {
-//         setLoading(true);
-//       try {
-//             setLoading(true);
-//             if (colConfigData) setColumnConfig(colConfigData);
-//             if (data) setRecords(data);
-//         } catch (error) {
-//             console.error("Failed to fetch record:", error);
-//             setRecords([]);
-//             setColumnConfig([]);
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-
-
-
-
-//   const renderValue = (column, value,decimal=2) => {
-//   if (!value && value !== 0) return ""; 
-//   switch (column.renderType) {
-//     case "number": {
-//       const digits = parseInt(decimal, 10);
-//       const safeDecimal = isNaN(digits) ? 2 : digits;
-//       return formatNumber(value, safeDecimal); 
-//     }
-//     case "date":
-//         const date = new Date(value);
-//         const month = String(date.getMonth() + 1).padStart(2, "0"); 
-//         const day = String(date.getDate()).padStart(2, "0");
-//         const year = date.getFullYear();
-//         return `${month}/${day}/${year}`;
-//     default:
-//       return value;
-//   }
-// };
-
-
-
-
-
-//    useEffect(() => {
-//   let currentFiltered = [...records];
-
-//   currentFiltered = currentFiltered.filter(item =>
-//     Object.entries(filters).every(([key, value]) => {
-//       if (!value) return true;
-//       const itemValue = String(item[key] ?? '').toLowerCase().replace(/,/g, '');
-//       const filterValue = String(value).toLowerCase().replace(/,/g, '');
-//       return itemValue.includes(filterValue);
-//     })
-//   );
-
-
-//   if (sortConfig?.direction) {
-//     currentFiltered.sort((a, b) => {
-//       if (sortConfig.key) {
-//         const aValue = String(a[sortConfig.key] ?? '').toLowerCase();
-//         const bValue = String(b[sortConfig.key] ?? '').toLowerCase();
-
-//         if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-//         if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-//         return 0;
-//       } else {
-//         const aValue = JSON.stringify(Object.values(a)).toLowerCase();
-//         const bValue = JSON.stringify(Object.values(b)).toLowerCase();
-//         return sortConfig.direction === "asc"
-//           ? aValue.localeCompare(bValue)
-//           : bValue.localeCompare(aValue);
-//       }
-//     });
-//   }
-
-//   setFiltered(currentFiltered);
-// }, [records, filters, sortConfig]);
-
-
-
-
-
-
-// const handleFilterChange = (e, key) => {
-//   setFilters(prev => ({ ...prev, [key]: e.target.value }));
-// };
-
-
-// const handleGetSelected = () => {
-//   const payload = {
-//     data: selected.map(item => item.groupId),
-//   };
-//    onPost(payload.data);
-// };
-
-
-// const handleSort = (key) => {
-//   let direction = "asc";
-//   if (sortConfig.key === key && sortConfig.direction === "asc") {
-//     direction = "desc";
-//   }
-//   setSortConfig({ key, direction });
-// };
-
-
-
-// const renderSortIcon = (column) => {
-//   if (sortConfig.key === column) {
-//     return sortConfig.direction === "asc"
-//       ? <FontAwesomeIcon icon={faSortUp} className="ml-1 text-blue-500" />
-//       : <FontAwesomeIcon icon={faSortDown} className="ml-1 text-blue-500" />;
-//   }
-//   return <FontAwesomeIcon icon={faSort} className="ml-1 text-gray-400" />;
-// };
-
-
-//     const toggleSelect = (data) => {
-//         if (selected.some(s => s.groupId === data.groupId)) {
-//             setSelected(selected.filter(s => !(s.groupId === data.groupId )));
-//         } else {
-//             setSelected([...selected, data]);
-//         }
-//     };
-
-//     const toggleSelectAll = () => {
-//         if (selected.length === filtered.length) {
-//             setSelected([]);
-//         } else {
-//             setSelected(filtered);
-//         }
-//     };
-
-//     const handleNextPage = () => setCurrentPage(prev => prev + 1);
-//     const handlePrevPage = () => setCurrentPage(prev => prev - 1);
-
-//     const getPaginatedData = useMemo(() => {
-//         const startIndex = (currentPage - 1) * itemsPerPage;
-//         return filtered.slice(startIndex, startIndex + itemsPerPage);
-//     }, [filtered, currentPage, itemsPerPage]);
-
-
-//     const paginatedData = getPaginatedData;
-//     const totalItems = filtered.length;
-//     const startItem = totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-//     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-
-
-
-
-//     return (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-6 lg:p-8 animate-fade-in">
-//             <div className="bg-white rounded-lg shadow-xl w-full max-w-8xl max-h-[90vh] flex flex-col relative overflow-hidden transform scale-95 animate-scale-in">
-//                 {/* Close Icon */}
-//                 <button
-//                     onClick={onClose}
-//                     className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-blue-100"
-//                     aria-label="Close modal"
-//                 >
-//                     <FontAwesomeIcon icon={faTimes} size="lg" />
-//                 </button>
-
-//                 <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">{title}</h2>
-
-//                 <div className="flex-grow overflow-hidden">
-//                     {loading ? (
-//                         <div className="flex items-center justify-center h-full min-h-[200px] text-blue-500">
-//                             <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mr-3" />
-//                             <span>Loading Open AR Balance...</span>
-//                         </div>
-//                     ) : (
-//                         <div className="overflow-auto max-h-[calc(90vh-160px)] custom-scrollbar">
-//                             <table className="min-w-full divide-y divide-gray-100">
-//                                 <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
-//                                     <tr>
-//                                         <th className="px-2 py-2 text-center text-xs font-bold text-blue-900">Select</th>
-//                                         {columnConfig.map(column => (
-//                                             // Conditional rendering for the header cell
-//                                             !column.hidden && (
-//                                                 <th
-//                                                     key={column.key}
-//                                                     onClick={() => handleSort(column.key)}
-//                                                     className={`px-4 py-2 text-xs font-bold text-blue-900 ${column.className} ${column.sortable ? 'cursor-pointer' : ''}`}
-//                                                 >
-//                                                     {column.label} { renderSortIcon(column.key)}
-//                                                 </th>
-//                                             )
-//                                         ))}
-//                                     </tr>
-
-//                                     <tr className="bg-white">
-//                                         <td></td>
-//                                         {columnConfig.map(column => (
-//                                             // Conditionally render the entire td element
-//                                             !column.hidden && (
-//                                                 <td key={column.key} className="px-2 py-1">
-//                                                         <input
-//                                                             type="text"
-//                                                             value={filters[column.key] || ""}
-//                                                             onChange={(e) => handleFilterChange(e, column.key)}
-//                                                             className="w-full border rounded px-2 py-1 text-xs"
-//                                                             placeholder="Filter..."
-//                                                         />
-//                                                 </td>
-//                                             )
-//                                         ))}
-//                                     </tr>
-//                                 </thead>
-
-//                                 <tbody className="bg-white divide-y divide-gray-200">
-//                                     {paginatedData.length > 0 ? (
-//                                         paginatedData.map((data, index) => (
-//                                             <tr key={index} className="hover:bg-blue-50 text-xs">
-//                                                 <td className="px-2 py-1 text-center">
-//                                                     <input
-//                                                         type="checkbox"
-//                                                         checked={selected.some(s => s.groupId === data.groupId)}
-//                                                         onChange={() => toggleSelect(data)}
-//                                                         className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-//                                                     />
-//                                                 </td>
-
-//                                                {columnConfig.map(column => (
-//                                                 !column.hidden && (
-//                                                     <td key={column.key} className={`px-4 py-1 ${column.classNames}`}>
-//                                                     {renderValue(column, data[column.key], Number(column.roundingOff))}
-//                                                     </td>
-//                                                 )
-//                                                 ))}
-//                                             </tr>
-//                                         ))
-//                                     ) : (
-//                                         <tr>
-//                                             <td colSpan={columnConfig.length + 1} className="px-4 py-6 text-center text-gray-500 text-lg">
-//                                                 No matching records found.
-//                                             </td>
-//                                         </tr>
-//                                     )}
-//                                 </tbody>
-//                             </table>
-//                         </div>
-//                     )}
-//                 </div>
-                
-                
-//                {/* New Posting Condition Bar */}
-// <div className="p-4 border-t border-gray-300 bg-white flex items-center justify-between text-xs">
-//   {/* Left Section */}
-//   <div className="flex flex-col gap-2">
-    
-//     {/* Select All on top */}
-//     <label className="flex items-center gap-2 cursor-pointer">
-//       <input 
-//         type="checkbox"
-//         checked={selected.length === filtered.length && filtered.length > 0}
-//         onChange={toggleSelectAll}
-//         className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-//       />
-//       Select All
-//     </label>
-
-//     {/* Password Row */}
-//     <div className="flex items-center gap-2">
-//       <label className="font-medium">Password</label>
-//       <input
-//         type="password"
-//         className="border border-gray-300 rounded px-2 py-1 text-xs w-40"
-//       />
-
-//       {/* Action Buttons */}
-//       <button 
-//         disabled={selected.length === 0}
-//         className="px-4 py-1 bg-blue-600 text-white rounded text-xs"
-//         onClick={handleGetSelected}        
-//         >
-//         {btnCaption}
-//       </button>
-
-//       <button 
-//         className="px-4 py-1 bg-red-400 text-white rounded text-xs"
-//         onClick={onClose}
-//         >
-//         Cancel
-//       </button>
-
-//       <button className="px-4 py-1 bg-gray-200 text-gray-800 border rounded text-xs">
-//         View Document
-//       </button>
-//     </div>
-//   </div>
-
-//   {/* Right Section */}
-//   <div className="flex items-center gap-4">
-//     <div>
-//       <label className="font-medium">Progress Status</label>
-//       <input
-//         type="text"
-//         readOnly
-//         value="0%"
-//         className="ml-2 border border-gray-300 rounded px-2 py-1 text-xs w-20 text-center"
-//       />
-//     </div>
-//     <div className="text-red-600 font-medium">
-//       Warning! <br />
-//       <span className="font-normal text-gray-700">
-//         Before running this routine make sure that the transaction entries are correct.  
-//         NO un-posting of transaction.
-//       </span>
-//     </div>
-//   </div>
-// </div>
-
-// {/* Keep your pagination footer as-is */}
-// <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600">
-//   <div className="font-semibold">
-//     Showing {startItem}-{endItem} of {totalItems} entries
-//   </div>
-
-//   <div className="flex items-center gap-2">
-//     <button
-//       onClick={handlePrevPage}
-//       disabled={currentPage === 1}
-//       className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-//     >
-//       Previous
-//     </button>
-//     <button
-//       onClick={handleNextPage}
-//       disabled={endItem >= totalItems}
-//       className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-//     >
-//       Next
-//     </button>
-//   </div>
-// </div>
-
-
-
-//             </div>
-//         </div>
-//     );
-// };
-
-// export default GlobalGLPostingModalv1;
-
-
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faSort, faSortUp, faSortDown, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTimes, faSort, faSortUp, faSortDown, faSpinner,
+  faFilterCircleXmark, faMagnifyingGlass, faCircleExclamation,
+  faEye, faEyeSlash, faListCheck
+} from '@fortawesome/free-solid-svg-icons';
 import { formatNumber } from '../Global/behavior';
+
+function useDebouncedValue(value, delay = 250) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClose, onPost }) => {
   const [records, setRecords] = useState([]);
@@ -390,29 +23,41 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
   const [filters, setFilters] = useState({});
   const [columnConfig, setColumnConfig] = useState([]);
   const [loading, setLoading] = useState(false);
-  // tri-state: {key:null, direction:null} means "no sort" => keep API order
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null }); // tri-state
   const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(true);
+  const [globalQuery, setGlobalQuery] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   const itemsPerPage = 50;
+  const firstFocusableRef = useRef(null);
+
+  // focus first control, allow ESC to close
+  useEffect(() => {
+    firstFocusableRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   useEffect(() => {
+    // reset on new data
     setRecords([]);
-    setFiltered([]);
     setSelected([]);
-    setFilters({});
     setColumnConfig([]);
     setSortConfig({ key: null, direction: null });
     setCurrentPage(1);
-
     fetchData();
-  }, [data]); // re-run when incoming data changes
+    setFiltered([]);
+    setFilters({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       if (colConfigData) setColumnConfig(colConfigData);
-      // preserve API order by adding a stable index
-      if (data) setRecords(data.map((row, i) => ({ ...row, __idx: i })));
+      if (data) setRecords(data.map((row, i) => ({ ...row, __idx: i }))); // preserve API order
     } catch (error) {
       console.error('Failed to fetch record:', error);
       setRecords([]);
@@ -426,23 +71,23 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
     if (!value && value !== 0) return '';
     switch (column.renderType) {
       case 'number': {
-        const digits = parseInt(decimal, 10);
-        const safeDecimal = isNaN(digits) ? 2 : digits;
-        return formatNumber(value, safeDecimal);
+        const digits = Number.isFinite(parseInt(decimal, 10)) ? parseInt(decimal, 10) : 2;
+        return formatNumber(value, digits);
       }
       case 'date': {
-        const date = new Date(value);
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${month}/${day}/${year}`;
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const y = d.getFullYear();
+        return `${m}/${day}/${y}`;
       }
       default:
         return value;
     }
   };
 
-  // --- sorting helpers ---
+  // sorting helpers
   const coerceForSort = (val, type) => {
     if (val == null) return null;
     if (type === 'number') return Number(String(val).replace(/,/g, ''));
@@ -454,12 +99,24 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
   };
   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
-  useEffect(() => {
-    let current = records.slice(); 
+  const debouncedFilters = useDebouncedValue(filters, 200);
+  const debouncedGlobal = useDebouncedValue(globalQuery, 250);
 
-    // filtering
+  useEffect(() => {
+    let current = records.slice();
+
+    // global search (simple contains across visible cols)
+    if (debouncedGlobal?.trim()) {
+      const q = debouncedGlobal.trim().toLowerCase();
+      const visibleKeys = columnConfig.filter(c => !c.hidden).map(c => c.key);
+      current = current.filter(row =>
+        visibleKeys.some(k => String(row[k] ?? '').toLowerCase().includes(q))
+      );
+    }
+
+    // per-column filtering
     current = current.filter((item) =>
-      Object.entries(filters).every(([key, value]) => {
+      Object.entries(debouncedFilters).every(([key, value]) => {
         if (!value) return true;
         const itemValue = String(item[key] ?? '').toLowerCase().replace(/,/g, '');
         const filterValue = String(value).toLowerCase().replace(/,/g, '');
@@ -467,9 +124,7 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
       })
     );
 
-
-
-    
+    // sorting
     if (sortConfig?.key && sortConfig?.direction) {
       const col = columnConfig.find((c) => c.key === sortConfig.key);
       const type = col?.renderType || 'string';
@@ -484,30 +139,23 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
       current.sort((a, b) => (a.__idx ?? 0) - (b.__idx ?? 0));
     }
 
-
     setFiltered(current);
-  }, [records, filters, sortConfig, columnConfig]);
-
-
+  }, [records, debouncedFilters, sortConfig, columnConfig, debouncedGlobal]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
-
-
+  }, [debouncedFilters, debouncedGlobal]);
 
   const handleFilterChange = (e, key) => {
-    setFilters((prev) => ({ ...prev, [key]: e.target.value }));
+    const v = e.target.value;
+    setFilters((prev) => ({ ...prev, [key]: v }));
   };
+  const clearAllFilters = () => setFilters({});
 
   const handleGetSelected = () => {
-    const payload = {
-      data: selected.map((item) => item.groupId),
-    };
-    onPost(payload.data);
+    const payload = selected.map((item) => item.groupId);
+    onPost?.(payload);
   };
-
-
 
   const handleSort = (key) => {
     setCurrentPage(1);
@@ -518,32 +166,26 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
     });
   };
 
-
   const renderSortIcon = (columnKey) => {
     if (sortConfig.key === columnKey) {
-      return sortConfig.direction === 'asc' ? (
-        <FontAwesomeIcon icon={faSortUp} className="ml-1 text-blue-500" />
-      ) : (
-        <FontAwesomeIcon icon={faSortDown} className="ml-1 text-blue-500" />
-      );
+      return sortConfig.direction === 'asc'
+        ? <FontAwesomeIcon icon={faSortUp} className="ml-1 text-blue-500" />
+        : <FontAwesomeIcon icon={faSortDown} className="ml-1 text-blue-500" />;
     }
     return <FontAwesomeIcon icon={faSort} className="ml-1 text-gray-400" />;
   };
 
   const toggleSelect = (row) => {
-    if (selected.some((s) => s.groupId === row.groupId)) {
-      setSelected(selected.filter((s) => !(s.groupId === row.groupId)));
-    } else {
-      setSelected([...selected, row]);
-    }
+    setSelected((prev) =>
+      prev.some((s) => s.groupId === row.groupId)
+        ? prev.filter((s) => s.groupId !== row.groupId)
+        : [...prev, row]
+    );
   };
 
   const toggleSelectAll = () => {
-    if (selected.length === filtered.length) {
-      setSelected([]);
-    } else {
-      setSelected(filtered);
-    }
+    if (selected.length === filtered.length) setSelected([]);
+    else setSelected(filtered);
   };
 
   const handleNextPage = () => setCurrentPage((prev) => prev + 1);
@@ -558,185 +200,372 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
   const startItem = totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
+  const activeFilterChips = Object.entries(filters).filter(([, v]) => v);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-6 lg:p-8 animate-fade-in">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-8xl max-h-[90vh] flex flex-col relative overflow-hidden transform scale-95 animate-scale-in">
-        {/* Close Icon */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 lg:p-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1280px] max-h-[92vh] flex flex-col relative overflow-hidden">
+        {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 transition duration-200 focus:outline-none p-1 rounded-full hover:bg-blue-100"
+          className="absolute top-3 right-3 text-blue-600 hover:text-blue-800 focus:outline-none p-2 rounded-full hover:bg-blue-50"
           aria-label="Close modal"
         >
-          <FontAwesomeIcon icon={faTimes} size="lg" />
+          <FontAwesomeIcon icon={faTimes} />
         </button>
 
-        <h2 className="text-sm font-semibold text-blue-800 p-3 border-b border-gray-100">{title}</h2>
+        {/* Header */}
+        <div className="border-b border-gray-100 bg-white/95 sticky top-0 z-20">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <h2 className="text-sm font-semibold text-blue-900 truncate">{title}</h2>
 
+            {/* Selection badge */}
+            <span className="ml-auto inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+              <FontAwesomeIcon icon={faListCheck} />
+              {selected.length} selected
+            </span>
+          </div>
+
+          {/* Toolbar */}
+          <div className="px-4 pb-3 flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2 top-2.5 text-gray-400 text-xs" />
+              <input
+                ref={firstFocusableRef}
+                value={globalQuery}
+                onChange={(e) => setGlobalQuery(e.target.value)}
+                placeholder="Global search…"
+                className="pl-7 pr-3 py-2 text-xs border rounded-md w-72 focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+
+            <button
+              onClick={() => setShowFilters((s) => !s)}
+              className="text-xs px-3 py-2 rounded-md border hover:bg-gray-50"
+            >
+              {showFilters ? 'Hide filters' : 'Show filters'}
+            </button>
+
+            <button
+              onClick={clearAllFilters}
+              disabled={activeFilterChips.length === 0}
+              className="text-xs px-3 py-2 rounded-md border hover:bg-gray-50 disabled:opacity-40 inline-flex items-center gap-2"
+              title="Clear all filters"
+            >
+              <FontAwesomeIcon icon={faFilterCircleXmark} />
+              Clear filters
+            </button>
+
+            {/* Active filter chips */}
+            <div className="flex flex-wrap gap-1">
+              {activeFilterChips.map(([k, v]) => (
+                <button
+                  key={k}
+                  className="text-[11px] px-2 py-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                  onClick={() => setFilters(prev => ({ ...prev, [k]: '' }))}
+                  title={`Remove filter: ${k}`}
+                >
+                  {k}: <span className="font-medium">{String(v)}</span> ✕
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== Table area ===== */}
         <div className="flex-grow overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center h-full min-h-[200px] text-blue-500">
-              <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mr-3" />
-              <span>Loading Open AR Balance...</span>
+            <div className="flex flex-col items-center justify-center h-full min-h-[240px] text-blue-500">
+              <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mb-3" />
+              <span className="text-sm">Loading records…</span>
             </div>
           ) : (
-            <div className="overflow-auto max-h-[calc(90vh-160px)] custom-scrollbar">
-              <table className="min-w-full divide-y divide-gray-100">
-                <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
-                  <tr>
-                    <th className="px-2 py-2 text-center text-xs font-bold text-blue-900">Select</th>
-                    {columnConfig.map((column) =>
-                      !column.hidden ? (
-                        <th
-                          key={column.key}
-                          onClick={() => handleSort(column.key)}
-                          className={`px-4 py-2 text-xs font-bold text-blue-900 ${column.className || ''} ${
-                            column.sortable ? 'cursor-pointer' : ''
-                          }`}
-                        >
-                          <span className="inline-flex items-center">
-                            {column.label} {renderSortIcon(column.key)}
-                          </span>
-                        </th>
-                      ) : null
-                    )}
-                  </tr>
+            <div className="overflow-auto max-h-[calc(92vh-220px)] custom-scrollbar overscroll-x-contain">
+              {(() => {
+                
 
-                  <tr className="bg-white">
-                    <td></td>
-                    {columnConfig.map((column) =>
-                      !column.hidden ? (
-                        <td key={column.key} className="px-2 py-1">
-                          <input
-                            type="text"
-                            value={filters[column.key] || ''}
-                            onChange={(e) => handleFilterChange(e, column.key)}
-                            className="w-full border rounded px-2 py-1 text-xs"
-                            placeholder="Filter..."
-                          />
-                        </td>
-                      ) : null
-                    )}
-                  </tr>
-                </thead>
+                return (
+                  <table className="min-w-full table-fixed">
+                  {(() => {
+                    const visibleCols = columnConfig.filter((c) => !c.hidden);
 
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedData.length > 0 ? (
-                    paginatedData.map((row, index) => (
-                      <tr key={row.__idx ?? index} className="hover:bg-blue-50 text-xs">
-                        <td className="px-2 py-1 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selected.some((s) => s.groupId === row.groupId)}
-                            onChange={() => toggleSelect(row)}
-                            className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                          />
-                        </td>
+                    // Freeze first 5 columns: [Select, C1, C2, C3, C4]
+                    const FROZEN_COUNT = 5;
 
-                        {columnConfig.map((column) =>
-                          !column.hidden ? (
-                            <td key={column.key} className={`px-4 py-1 ${column.className || ''}`}>
-                              {renderValue(column, row[column.key], Number(column.roundingOff))}
-                            </td>
-                          ) : null
-                        )}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={columnConfig.filter((c) => !c.hidden).length + 1}
-                        className="px-4 py-6 text-center text-gray-500 text-lg"
-                      >
-                        No matching records found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    // Pixel widths for frozen columns (tweak to your data)
+                    const COL_WIDTHS = [50, 70, 100, 80, 200];
+
+                    // cumulative left offsets for 0..4 (including Select at 0)
+                    const cumulativeLeft = COL_WIDTHS.map((_, i) =>
+                      COL_WIDTHS.slice(0, i).reduce((sum, w) => sum + w, 0)
+                    );
+
+                    // visibleIdx: 0 = Select, 1..4 = next frozen cols
+                    const stickyMeta = (visibleIdx) => {
+                      if (visibleIdx < FROZEN_COUNT) {
+                        return {
+                          sticky: true,
+                          left: cumulativeLeft[visibleIdx],
+                          width: COL_WIDTHS[visibleIdx],
+                        };
+                      }
+                      return { sticky: false, left: 0, width: undefined };
+                    };
+
+                    const numberAlignClass = (col) =>
+                      col?.renderType === 'number' ? 'text-right tabular-nums' : '';
+
+                    const remarksCellClass = (col) => {
+                      const key = String(col?.key ?? '');
+                      const label = String(col?.label ?? '');
+                      const isRemarks = /remarks/i.test(key) || /remarks/i.test(label);
+                      return isRemarks ? 'max-w-[400px] truncate md:whitespace-nowrap' : '';
+                    };
+
+                    return (
+                      <>
+                        <thead className="sticky top-0 z-30">
+                          {/* Header labels */}
+                          <tr className="bg-gray-100/90 backdrop-blur border-b border-gray-200 whitespace-nowrap text-[10px] sm:text-[11px]">
+                            {/* Select header (frozen 0) */}
+                            {(() => {
+                              const m = stickyMeta(0);
+                              return (
+                                <th
+                                  className="sticky bg-gray-100 z-40 px-2 py-2 text-center font-bold text-blue-900"
+                                  style={{ left: m.left, width: m.width }}
+                                >
+                                  Select
+                                </th>
+                              );
+                            })()}
+
+                            {/* Other headers */}
+                            {visibleCols.map((column, vIdx) => {
+                              const m = stickyMeta(vIdx + 1);
+                              return (
+                                <th
+                                  key={column.key}
+                                  onClick={() => column.sortable && handleSort(column.key)}
+                                  className={[
+                                    'px-3 py-2 font-bold text-blue-900 select-none',
+                                    column.sortable ? 'cursor-pointer hover:bg-gray-200/50' : '',
+                                    numberAlignClass(column),
+                                    remarksCellClass(column),
+                                    m.sticky ? 'sticky bg-gray-100 z-30' : '',
+                                  ].join(' ')}
+                                  style={m.sticky ? { left: m.left, width: m.width } : {}}
+                                >
+                                  <span className="inline-flex items-center">
+                                    {column.label} {renderSortIcon(column.key)}
+                                  </span>
+                                </th>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Header filter row */}
+                          {showFilters && (
+                            <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
+                              {/* Select filter cell */}
+                              {(() => {
+                                const m = stickyMeta(0);
+                                return (
+                                  <td
+                                    className="sticky bg-white z-40 px-2 py-1"
+                                    style={{ left: m.left, width: m.width }}
+                                  />
+                                );
+                              })()}
+
+                              {visibleCols.map((column, vIdx) => {
+                                const m = stickyMeta(vIdx + 1);
+                                return (
+                                  <td
+                                    key={column.key}
+                                    className={['px-2 py-1', m.sticky ? 'sticky bg-white z-30' : ''].join(' ')}
+                                    style={m.sticky ? { left: m.left, width: m.width } : {}}
+                                  >
+                                    <input
+                                      type="text"
+                                      value={filters[column.key] || ''}
+                                      onChange={(e) => handleFilterChange(e, column.key)}
+                                      placeholder="Filter ..."
+                                      className="w-full border rounded px-2 py-1 text-[10px] sm:text-[11px] focus:ring-2 focus:ring-blue-200"
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          )}
+                        </thead>
+
+                        <tbody className="bg-white whitespace-nowrap">
+                          {paginatedData.length > 0 ? (
+                            paginatedData.map((row, rIdx) => (
+                              <tr
+                                key={row.__idx ?? rIdx}
+                                className={`text-[10px] sm:text-[11px] hover:bg-blue-50 ${
+                                  rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                }`}
+                              >
+                                {/* Select data cell (frozen 0) */}
+                                {(() => {
+                                  const m = stickyMeta(0);
+                                  return (
+                                    <td
+                                      className="sticky bg-inherit z-20 text-center"
+                                      style={{ left: m.left, width: m.width }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selected.some((s) => s.groupId === row.groupId)}
+                                        onChange={() => toggleSelect(row)}
+                                        className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                                      />
+                                    </td>
+                                  );
+                                })()}
+
+                                {/* Other data cells */}
+                                {visibleCols.map((column, vIdx) => {
+                                  const m = stickyMeta(vIdx + 1);
+                                  return (
+                                    <td
+                                      key={column.key}
+                                      className={[
+                                        'px-3 py-[6px]',
+                                        numberAlignClass(column),
+                                        remarksCellClass(column),
+                                        m.sticky ? 'sticky bg-inherit z-10' : '',
+                                      ].join(' ')}
+                                      style={m.sticky ? { left: m.left, width: m.width } : {}}
+                                      title={/remarks/i.test(String(column?.key ?? '')) ? String(row[column.key] ?? '') : undefined}
+                                    >
+                                      {renderValue(column, row[column.key], Number(column.roundingOff))}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={visibleCols.length + 1} className="px-4 py-10 text-center">
+                                <div className="inline-flex items-center gap-3 text-gray-500">
+                                  <FontAwesomeIcon icon={faCircleExclamation} />
+                                  <span className="text-sm">No matching records found.</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </>
+                    );
+                  })()}
+                </table>
+
+                );
+              })()}
             </div>
           )}
         </div>
 
-        {/* Posting Condition Bar */}
-        <div className="p-4 border-t border-gray-300 bg-white flex items-center justify-between text-xs">
-          {/* Left Section */}
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selected.length === filtered.length && filtered.length > 0}
-                onChange={toggleSelectAll}
-                className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              Select All
-            </label>
+
+
+        {/* Action bar */}
+        <div className="border-t border-gray-200 bg-white sticky bottom-0 z-10">
+          <div className="p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            {/* Left */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={selected.length === filtered.length && filtered.length > 0}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                Select all (filtered)
+              </label>
+
+              <div className="flex items-center gap-2">
+                <label className="font-medium">Password</label>
+                <div className="relative">
+                  <input
+                    // value="password" 
+                    type={showPassword ? 'text' : 'password'}
+                    className="border border-gray-300 rounded px-2 py-1 text-xs w-44 pr-8"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(s => !s)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    title={showPassword ? 'Hide' : 'Show'}
+                  >
+                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                  </button>
+                </div>
+
+                <button
+                  disabled={selected.length === 0}
+                  className="px-6 py-1.5 bg-blue-600 text-white rounded-md text-xs disabled:opacity-50 hover:bg-blue-700 transition"
+                  onClick={handleGetSelected}
+                >
+                  {btnCaption} {selected.length ? `(${selected.length})` : ''}
+                </button>
+
+                <button className="px-6 py-1.5 bg-gray-100 text-gray-800 border rounded-md text-xs hover:bg-gray-200"
+                        onClick={onClose}>
+                  Cancel
+                </button>
+
+                <button
+                  className="px-3 py-1.5 bg-white text-blue-700 border border-blue-200 rounded-md text-xs hover:bg-blue-50 disabled:opacity-50"
+                  disabled={selected.length !== 1}
+                  title={selected.length !== 1 ? 'Select exactly one to view' : 'View selected document'}
+                >
+                  View Document
+                </button>
+              </div>
+            </div>
+
+            {/* Right warning */}
+            <div className="flex items-start gap-2 max-w-[520px]">
+              <div className="text-red-600 mt-0.5">
+                <FontAwesomeIcon icon={faCircleExclamation} />
+              </div>
+              <div className="text-[11px] leading-snug">
+                <div className="font-semibold text-red-700">Warning!</div>
+                <div className="text-gray-700">
+                  Before running this routine, ensure that the transaction entries are correct.
+                  <span className="font-semibold"> Un-posting is not available.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="px-3 pb-3 flex justify-between items-center text-xs text-gray-600">
+            <div className="font-semibold">
+              Showing {startItem}-{endItem} of {totalItems} entries
+            </div>
 
             <div className="flex items-center gap-2">
-              <label className="font-medium">Password</label>
-              <input
-                type="password"
-                className="border border-gray-300 rounded px-2 py-1 text-xs w-40"
-              />
-
               <button
-                disabled={selected.length === 0}
-                className="px-4 py-1 bg-blue-600 text-white rounded text-xs disabled:opacity-50"
-                onClick={handleGetSelected}
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
               >
-                {btnCaption}
+                Previous
               </button>
-
-              <button className="px-4 py-1 bg-red-400 text-white rounded text-xs" onClick={onClose}>
-                Cancel
-              </button>
-
-              <button className="px-4 py-1 bg-gray-200 text-gray-800 border rounded text-xs">
-                View Document
+              <span className="px-2">Page {currentPage}</span>
+              <button
+                onClick={handleNextPage}
+                disabled={endItem >= totalItems}
+                className="px-3 py-1.5 font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
+              >
+                Next
               </button>
             </div>
-          </div>
-
-          {/* Right Section */}
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="font-medium">Progress Status</label>
-              <input
-                type="text"
-                readOnly
-                value="0%"
-                className="ml-2 border border-gray-300 rounded px-2 py-1 text-xs w-20 text-center"
-              />
-            </div>
-            <div className="text-red-600 font-medium">
-              Warning! <br />
-              <span className="font-normal text-gray-700">
-                Before running this routine make sure that the transaction entries are correct. NO un-posting of transaction.
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Pagination footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-xs text-gray-600">
-          <div className="font-semibold">
-            Showing {startItem}-{endItem} of {totalItems} entries
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleNextPage}
-              disabled={endItem >= totalItems}
-              className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50"
-            >
-              Next
-            </button>
           </div>
         </div>
       </div>
@@ -745,4 +574,3 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
 };
 
 export default GlobalGLPostingModalv1;
-
