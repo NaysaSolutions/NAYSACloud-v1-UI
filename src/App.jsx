@@ -95,6 +95,8 @@ import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
 import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
 import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
 import Receivable from "./NAYSA Cloud/Dashboard/Receivable.jsx";
+import Branch from "./NAYSA Cloud/Reference File/BranchRef.jsx";
+import Billcode from "./NAYSA Cloud/Reference File/BillCodeRef.jsx";
 
 import { AuthProvider, useAuth } from "./NAYSA Cloud/Authentication/AuthContext.jsx";
 
@@ -147,11 +149,11 @@ const AppContent = () => {
           <div className="flex-1 bg-black bg-opacity-50" onClick={toggleSidebar} />
         </div>
       )}
-
+  
       {/* Main content */}
       <div className="flex-1 overflow-y-auto">
         <Routes>
-          <Route path="/" element={<Dashboard1 user={user} />} />
+          <Route path="/" element={<Billcode user={user} />} />
           <Route path="/tran-ap-aptran" element={<APV />} />
           <Route path="/history" element={<APVHistory />} />
           <Route path="/receivables" element={<Receivable />} />
