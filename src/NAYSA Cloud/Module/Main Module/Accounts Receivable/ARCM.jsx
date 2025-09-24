@@ -115,7 +115,6 @@ const ARCM = () => {
     documentDate:useGetCurrentDay(),    
     documentStatus:"",
     status: "OPEN",
-    noReprints:"0",
 
 
     // UI state
@@ -211,7 +210,6 @@ const ARCM = () => {
   documentNo,
   documentDate,
   status,
-  noReprints,
 
   // Tabs & loading
   activeTab,
@@ -440,7 +438,6 @@ useEffect(() => {
       branchName: "Head Office",
       documentDate:useGetCurrentDay(),
       selectedARCMType : "ARCM01",
-      noReprints:"0",
 
 
       refDocNo1: "",
@@ -1456,18 +1453,16 @@ const handleCloseCancel = async (confirmation) => {
 
 
 
-const handleCloseSignatory = async (mode) => {
-  
-    updateState({ 
-        showSpinner: true,
-        showSignatoryModal: false,
-        noReprints: mode === "Final" ? 1 : 0, });
-    await useHandlePrint(documentID, docType, mode );
+const handleCloseSignatory = async () => {
+
+    updateState({ showSpinner: true,
+      showSignatoryModal: false,
+     });
+    await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false 
+      showSpinner: false
     });
-
 };
 
 
@@ -3279,7 +3274,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={{noReprints,documentID,docType}}
+    params={documentID}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />

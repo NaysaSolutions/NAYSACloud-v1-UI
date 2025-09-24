@@ -65,7 +65,7 @@ export function injectLoadingSpinner(printWindow) {
 
 
 
-export async function useHandlePrint(documentID, docCode, printMode) {
+export async function useHandlePrint(documentID, docCode) {
   try {
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -81,7 +81,7 @@ export async function useHandlePrint(documentID, docCode, printMode) {
       throw new Error("Report Name not defined");
     }
 
-    const payload = { tranId: documentID, formName, docCode, printMode };
+    const payload = { tranId: documentID, formName };
 
 
 

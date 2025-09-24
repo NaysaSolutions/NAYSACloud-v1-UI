@@ -15,7 +15,6 @@ const PostSVI = ({ isOpen, onClose, userCode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    console.log(userCode);
     const fetchData = async () => {
       if (!isOpen) return;
       setLoading(true);

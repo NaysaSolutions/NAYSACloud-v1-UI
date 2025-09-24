@@ -115,7 +115,6 @@ const ARDM = () => {
     documentDate:useGetCurrentDay(),    
     documentStatus:"",
     status: "OPEN",
-    noReprints:"0",
 
 
     // UI state
@@ -211,7 +210,6 @@ const ARDM = () => {
   documentNo,
   documentDate,
   status,
-  noReprints,
 
   // Tabs & loading
   activeTab,
@@ -440,7 +438,6 @@ useEffect(() => {
       branchName: "Head Office",
       documentDate:useGetCurrentDay(),
       selectedARDMType : "ARDM01",
-      noReprints:"0",
 
 
       refDocNo1: "",
@@ -1453,19 +1450,16 @@ const handleCloseCancel = async (confirmation) => {
 
 
 
+const handleCloseSignatory = async () => {
 
-const handleCloseSignatory = async (mode) => {
-  
-    updateState({ 
-        showSpinner: true,
-        showSignatoryModal: false,
-        noReprints: mode === "Final" ? 1 : 0, });
-    await useHandlePrint(documentID, docType, mode );
+    updateState({ showSpinner: true,
+      showSignatoryModal: false,
+     });
+    await useHandlePrint(documentID, docType);
 
     updateState({
-      showSpinner: false 
+      showSpinner: false
     });
-
 };
 
 
@@ -3277,7 +3271,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={{noReprints,documentID,docType}}
+    params={documentID}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
