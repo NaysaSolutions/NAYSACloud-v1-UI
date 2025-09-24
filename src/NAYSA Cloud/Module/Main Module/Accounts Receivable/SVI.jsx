@@ -24,9 +24,11 @@ import ARReportModal from "../../../Printing/ARReport.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 
 
+
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { openPdfViewer } from "../../../Printing/PdfViewer.jsx";
 
 import {
   docTypeNames,
@@ -108,6 +110,7 @@ const SVI = () => {
     documentNo: "",
     documentStatus:"",
     status: "OPEN",
+    noReprints:"0",
 
 
     // UI state
@@ -203,6 +206,7 @@ const SVI = () => {
   documentDate,
   status,
   userCode,
+  noReprints,
 
   // Tabs & loading
   activeTab,
@@ -452,6 +456,7 @@ useEffect(() => {
       fromDate:null,
       toDate:null,
       remarks:"",
+      noReprints:"0",
 
       custName:"",
       custCode:"",
@@ -564,6 +569,7 @@ const fetchTranData = async (documentNo, branchCode) => {
   try {
     const data = await useFetchTranData(documentNo, branchCode,docType,"sviNo");
 
+
     if (!data?.sviId) {
       Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
       return resetState();
@@ -599,6 +605,7 @@ const fetchTranData = async (documentNo, branchCode) => {
     updateState({
       documentStatus: data.sviStatus,
       status: data.docStatus,
+      noReprints:data.noReprints,
       documentID: data.sviId,
       documentNo: data.sviNo,
       branchCode: data.branchCode,
@@ -1433,16 +1440,18 @@ const handleCloseCancel = async (confirmation) => {
 
 
 
-const handleCloseSignatory = async () => {
-
+const handleCloseSignatory = async (mode) => {
+  
     updateState({ 
         showSpinner: true,
-        showSignatoryModal: false, });
-    await useHandlePrint(documentID, docType);
+        showSignatoryModal: false,
+        noReprints: mode === "Final" ? 1 : 0, });
+    await useHandlePrint(documentID, docType, mode );
 
     updateState({
       showSpinner: false 
     });
+
 };
 
 
@@ -3273,7 +3282,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={documentID}
+    params={{noReprints,documentID,docType}}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
