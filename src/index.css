@@ -108,7 +108,7 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-4 mt-2
+    @apply bg-white shadow-md rounded-lg p-4 mt-2 mb-4
     dark:bg-gray-800;
   }
 
@@ -312,19 +312,19 @@ body {
 
     .global-ref-header-ui {
       /* @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg */
-      @apply bg-blue-300 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg
+      @apply bg-blue-300 to-purple-300 p-2 rounded-lg text-blue-900 shadow-lg
       dark:from-blue-900 dark:to-purple-900 dark:text-white;
     }
   
     .global-ref-headertext-ui {
-      @apply text-xl sm:text-xl lg:text-2xl font-semibold;
+      @apply text-xl sm:text-xl lg:text-2xl font-semibold ml-2;
     }
 
     
   /* REFERENCE FILES TABLE UI */
 
   .global-ref-table-main-div-ui {
-    @apply bg-white
+    @apply bg-white rounded-lg
     /* h-[360px] */
     dark:bg-black;
   }
@@ -344,7 +344,7 @@ body {
   }
 
   .global-ref-th-ui {
-    @apply px-2 py-2 sm:py-2 lg:py-3 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900 cursor-pointer whitespace-nowrap
+    @apply px-2 py-2 sm:py-2 lg:py-2 text-center text-[10px] sm:text-[10px] lg:text-xs font-bold text-gray-900 cursor-pointer whitespace-nowrap
     dark:text-gray-300;
   }
 
@@ -354,7 +354,7 @@ body {
   }
 
   .global-ref-td-ui {
-    @apply border text-[10px] sm:text-[10px] lg:text-xs text-gray-900 whitespace-normal px-2 py-1
+    @apply border text-[8px] sm:text-[10px] lg:text-[12px] text-gray-900 whitespace-normal px-2 py-1
     dark:text-white;
   }
 
@@ -363,12 +363,12 @@ body {
   }
 
   .global-ref-td-button-edit-ui {
-    @apply bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition w-[35px]
+    @apply bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition w-[35px] text-[13px]
     dark:bg-blue-800 dark:hover:bg-blue-900;
   }
 
   .global-ref-td-button-delete-ui {
-    @apply bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition w-[35px]
+    @apply bg-red-500 text-white rounded-lg hover:bg-red-700 transition w-[35px] text-[13px]
     dark:bg-red-800 dark:hover:bg-red-900;
   }
 
@@ -384,7 +384,7 @@ body {
     @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
     px-2 pb-2 pt-2 text-xs text-black 
     focus:border-blue-600 focus:outline-none focus:ring-0 
-    h-[30px] sm:h-[30px] lg:h-[40px]
+    h-[30px] sm:h-[30px] lg:h-[35px]
     dark:bg-gray-600 dark:text-white;
   }
 
@@ -413,7 +413,7 @@ body {
 
 .global-ref-floating-label {
   @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
-                    bg-gray-100 px-2 text-sm text-gray-600 transition-all 
+                    bg-gray-100 px-2 text-xs text-gray-600 transition-all 
                     peer-placeholder-shown:top-1/2 
                     peer-placeholder-shown:-translate-y-1/2 
                     peer-placeholder-shown:scale-100 
@@ -444,6 +444,13 @@ body {
           dark:bg-gray-600 dark:text-gray-500 dark:peer-focus:text-white;
 }
 
+.global-ref-filterbox-ui {
+    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
+    px-2 text-xs text-black 
+    focus:border-blue-600 focus:outline-none focus:ring-0 
+    h-[30px] sm:h-[30px] lg:h-[30px]
+    dark:bg-gray-600 dark:text-white;
+  }
 
 
 .global-ref-asterisk-ui {
