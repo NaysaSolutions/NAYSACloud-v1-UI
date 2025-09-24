@@ -79,9 +79,10 @@ const AppContent = () => {
     (async () => {
       try {
         const [menuResp, routesResp] = await Promise.all([
-          fetchData("menu-items"),
-          fetchData("menu-routes"),
+          fetchData("menu-items",{ USER_CODE: user?.USER_CODE}),
+          fetchData("menu-routes",{ USER_CODE: user?.USER_CODE}),
         ]);
+
         if (!alive) return;
         setMenuItems(menuResp?.menuItems ?? []);
         setRouteRows(routesResp?.routes ?? []);

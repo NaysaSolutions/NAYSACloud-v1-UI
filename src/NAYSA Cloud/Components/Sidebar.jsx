@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink  } from "react-router-dom";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
+import { AuthProvider, useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 import {
   FiChevronDown,
   FiChevronRight,
@@ -189,6 +190,7 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
 const Sidebar = ({ menuItems = null, onNavigate, onOpenModal }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { user } = useAuth();
 
   // internal fetch (only if menuItems prop not provided)
   const [fetched, setFetched] = useState([]);
@@ -203,7 +205,7 @@ const Sidebar = ({ menuItems = null, onNavigate, onOpenModal }) => {
       try {
         setLoading(true);
         setError("");
-        const res = await fetchData("menu-items"); // GET /api/menu-items
+        const res = await fetchData("menu-items",{ USER_CODE: user?.USER_CODE}); // GET /api/menu-items
         if (!alive) return;
         setFetched(res?.menuItems ?? []);
       } catch (e) {
