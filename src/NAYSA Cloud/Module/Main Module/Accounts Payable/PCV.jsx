@@ -1358,17 +1358,19 @@ const handleCloseCancel = async (confirmation) => {
 
 
 
-const handleCloseSignatory = async () => {
-  
-    updateState({ showSpinner: true,
-      showSignatoryModal: false,
-     });
 
-    await useHandlePrint(documentID, docType);
+const handleCloseSignatory = async (mode) => {
+  
+    updateState({ 
+        showSpinner: true,
+        showSignatoryModal: false,
+        noReprints: mode === "Final" ? 1 : 0, });
+    await useHandlePrint(documentID, docType, mode );
 
     updateState({
-      showSpinner: false
+      showSpinner: false 
     });
+
 };
 
 
@@ -2949,7 +2951,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={documentID}
+    params={{noReprints,documentID,docType}}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
