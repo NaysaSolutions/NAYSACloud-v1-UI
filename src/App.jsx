@@ -93,6 +93,7 @@ import Register from "./NAYSA Cloud/Authentication/Register.jsx";
 
 import APV from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx";
 import APVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APVHistory.jsx";
+import JV from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
 import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
 import Receivable from "./NAYSA Cloud/Dashboard/Receivable.jsx";
 import Branch from "./NAYSA Cloud/Reference File/BranchRef.jsx";
@@ -154,7 +155,7 @@ const AppContent = () => {
       <div className="flex-1 overflow-y-auto">
         <Routes>
           <Route path="/" element={<Billcode user={user} />} />
-          <Route path="/tran-ap-aptran" element={<APV />} />
+          <Route path="/tran-ap-aptran" element={<JV />} />
           <Route path="/history" element={<APVHistory />} />
           <Route path="/receivables" element={<Receivable />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -510,7 +510,7 @@ const BillCodeRef = () => {
         </div>
         {/* Form Card */}
         <div className="mt-40">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md p-5">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md p-5 hower:shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Col 1 */}
               <div className="space-y-10">
@@ -613,7 +613,7 @@ const BillCodeRef = () => {
                   />
                   <label
                     htmlFor="arAcct"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
+                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-semibold opacity-90"
                   >
                     <span className="text-red-500">*</span> AR Account
                   </label>
@@ -728,11 +728,11 @@ const BillCodeRef = () => {
         </div>
 
         {/* Table */}
-        <div className="mt-6">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800/60 sticky top-[116px] z-10">
+        <div className="mt-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-red dark:bg -gray-900 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">*
+              <table className="min-w-full text-s">
+                <thead className="bg-gray-50 dark:bg-gray-800/60 sticky top-[116px] z-5">
                   {/* Sortable header row */}
                   <tr className="text-left">
                     {[
@@ -749,7 +749,7 @@ const BillCodeRef = () => {
                     ].map(([key, label]) => (
                       <th
                         key={key}
-                        className={`px-3 py-2 font-semibold border-b border-gray-200 dark:border-gray-800 ${
+                        className={`px-3 py-1 font-normal border-b border-gray-200 dark:border-gray-800 ${
                           key.startsWith("_") ? "" : "cursor-pointer select-none"
                         }`}
                         onClick={() => {
@@ -850,7 +850,7 @@ const BillCodeRef = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={10} className="px-6 py-10 text-center">
+                      <td colSpan={10} className="px-5 py-10 text-center">
                         <div className="text-sm opacity-70">No bill codes found</div>
                       </td>
                     </tr>
