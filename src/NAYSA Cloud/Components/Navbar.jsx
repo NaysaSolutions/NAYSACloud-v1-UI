@@ -44,7 +44,7 @@ const Navbar = ({ onMenuClick }) => {
             </div> */}
 
             {/* Main Navbar Content */}
-            <div className="w-full bg-white h-16 flex items-center justify-between px-4 dark:bg-gray-800 dark:text-white">
+            <div className="w-full bg-white h-12 flex items-center justify-between px-4 dark:bg-gray-800 dark:text-white">
                 {/* Left side: Menu, Logo, and Financials */}
                 <div className="flex items-center space-x-1 text-blue-900 font-extrabold dark:text-gray-100">
                     <Menu className="text-blue-900 cursor-pointer dark:text-white" onClick={onMenuClick} />

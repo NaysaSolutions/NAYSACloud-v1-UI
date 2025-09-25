@@ -7,6 +7,8 @@
 
 body {
     font-family: 'Roboto', sans-serif;
+    /* font-family: Calibri, Arial, sans-serif; */
+    /* font-family: Verdana, Geneva, Tahoma, sans-serif */
   }
 
   .oswald-text {
@@ -40,7 +42,7 @@ body {
 
   /* bg-gradient-to-r from-blue-400 to-purple-300 */
   .global-tran-header-ui {
-    @apply fixed mt-24 top-14 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
+    @apply fixed mt-24 top-12 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
             lg:p-1 mb-4 flex flex-col 
             sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4
             md:mt-14
@@ -108,7 +110,7 @@ body {
   }
 
   .global-tran-tab-div-ui {
-    @apply bg-white shadow-md rounded-lg p-4 mt-2 mb-4
+    @apply bg-white shadow-md rounded-lg p-4 mt-2 mb-3
     dark:bg-gray-800;
   }
 
@@ -230,7 +232,7 @@ body {
   }
 
   .global-tran-tr-ui {
-    @apply hover:bg-blue-100 border
+    @apply hover:bg-blue-50 border
     dark:text-black dark:hover:bg-blue-700;
   }
 
@@ -317,14 +319,14 @@ body {
     }
   
     .global-ref-headertext-ui {
-      @apply text-xl sm:text-xl lg:text-2xl font-semibold ml-2;
+      @apply text-xs sm:text-sm lg:text-2xl font-semibold ml-2 whitespace-nowrap;
     }
 
     
   /* REFERENCE FILES TABLE UI */
 
   .global-ref-table-main-div-ui {
-    @apply bg-white rounded-lg
+    @apply bg-white rounded-lg shadow-lg
     /* h-[360px] */
     dark:bg-black;
   }
@@ -339,7 +341,9 @@ body {
   }
 
   .global-ref-thead-div-ui {
-    @apply sticky top-0 bg-blue-300 z-10
+    /* @apply sticky top-0 bg-blue-300 z-10
+    dark:bg-blue-900 dark:text-white; */
+    @apply sticky top-0 bg-blue-100
     dark:bg-blue-900 dark:text-white;
   }
 
@@ -349,12 +353,14 @@ body {
   }
 
   .global-ref-tr-ui {
-    @apply hover:bg-blue-200 border
-    dark:text-black dark:hover:bg-blue-700;
+    /* @apply hover:bg-blue-200 border
+    dark:text-black dark:hover:bg-blue-700; */
+    @apply sticky top-0 bg-blue-300 z-10
+    dark:bg-blue-900 dark:text-white;
   }
 
   .global-ref-td-ui {
-    @apply border text-[8px] sm:text-[10px] lg:text-[12px] text-gray-900 whitespace-normal px-2 py-1
+    @apply border text-[9px] sm:text-[10px] lg:text-[11px] text-gray-900 whitespace-normal px-2 py-1
     dark:text-white;
   }
 
@@ -413,7 +419,7 @@ body {
 
 .global-ref-floating-label {
   @apply absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 transform 
-                    bg-gray-100 px-2 text-xs text-gray-600 transition-all 
+                    bg-gray-100 px-2 text-xs text-gray-400 transition-all 
                     peer-placeholder-shown:top-1/2 
                     peer-placeholder-shown:-translate-y-1/2 
                     peer-placeholder-shown:scale-100 
@@ -421,34 +427,37 @@ body {
                     peer-focus:-translate-y-4 
                     peer-focus:scale-75 
                     peer-focus:text-blue-600
+                    /* @apply absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90 */
                     dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
 }
 
 .global-ref-label-enabled {
-  @apply bg-white text-gray-800
+  @apply bg-white text-gray-600
           dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
 }
 
 .global-ref-label-disabled {
-  @apply bg-blue-100 text-gray-500
+  @apply bg-gray-100 text-gray-500
           dark:bg-gray-600 dark:text-gray-500 dark:peer-focus:text-white;
 }
 
 .global-ref-textbox-enabled {
-  @apply bg-white border border-gray-400 focus:border-blue-600 text-black
+  @apply bg-white border border-gray-300 focus:border-blue-600 text-black
           dark:bg-gray-600 dark:text-white dark:peer-focus:text-white;
 }
 
 .global-ref-textbox-disabled {
-  @apply bg-blue-100 border border-gray-300 text-gray-500 cursor-not-allowed
+  @apply bg-gray-100 border border-gray-300 text-gray-500 cursor-not-allowed
           dark:bg-gray-600 dark:text-gray-500 dark:peer-focus:text-white;
 }
 
 .global-ref-filterbox-ui {
-    @apply block w-full appearance-none rounded-lg border border-gray-400 bg-white 
-    px-2 text-xs text-black 
-    focus:border-blue-600 focus:outline-none focus:ring-0 
-    h-[30px] sm:h-[30px] lg:h-[30px]
+    @apply block w-full appearance-none rounded-lg border border-gray-300 bg-white 
+    px-2 text-black 
+    focus:border-blue-500 focus:outline-none focus:ring-0 
+    text-[10px] sm:text-[11px] lg:text-[12px]
+    h-[20px] sm:h-[20px] lg:h-[25px]
+    font-medium
     dark:bg-gray-600 dark:text-white;
   }
 

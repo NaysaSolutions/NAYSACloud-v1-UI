@@ -181,7 +181,7 @@ const BranchRef = () => {
       telNo: "",
       faxNo: "",
       zipCode: "",
-      active: "1",
+      active: "Y",
     });
     setIsEditing(true);
   };
@@ -193,6 +193,7 @@ const BranchRef = () => {
   };
 
   const resetForm = () => {
+    fetchBranches();
     setEditingBranch(null);
     setIsEditing(false);
     setOpenExport(false);
@@ -230,7 +231,7 @@ const BranchRef = () => {
         faxNo: editingBranch.faxNo || "",
         zipCode: editingBranch.zipCode || "",
         main: editingBranch.main,
-        active: editingBranch.active ?? "1",
+        active: editingBranch.active ?? "Y",
         userCode: "NSI",
       },
     };
@@ -365,16 +366,16 @@ const BranchRef = () => {
 
   // Render
   return (
-    <div className="global-ref-main-div-ui mt-24">
+    <div className="global-ref-main-div-ui mt-20">
       <div className="mx-auto">
         {/* Header */}
-        <div className="fixed mt-4 top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="fixed top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
             <div className="relative ml-auto sm:ml-4 w-full sm:w-64">
               <input
                 className="global-ref-filterbox-ui global-ref-filterbox-enabled pl-8"
-                placeholder="Search branches…"
+                placeholder="Search keyword..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
               />
@@ -462,175 +463,186 @@ const BranchRef = () => {
         <div className="global-tran-tab-div-ui">
           {(loading || saving) && (
             <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm flex items-center justify-center">
-              <div className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl">
-                {saving ? "Saving…" : "Loading…"}
+              <div
+                className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl flex items-center gap-3"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                {/* Spinner */}
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-white" />
+                {/* Text */}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {saving ? "Saving…" : "Loading…"}
+                </span>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Col 1 */}
-            <div className="global-ref-textbox-group-div-ui">
-              {/* Branch Code */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="branchCode"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.branchCode || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), branchCode: e.target.value }))
-                  }
-                  disabled={!!editingBranch?.__existing}
-                  readOnly={!isEditing}
-                  maxLength={10}
-                />
-                <label htmlFor="branchCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Branch Code
-                </label>
-              </div>
 
-              {/* Branch Name */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="branchName"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.branchName || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), branchName: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="branchName" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Branch Name
-                </label>
-              </div>
+          {/* Form grid (flattened) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
-              {/* Branch Type */}
-              <div className="relative">
-                <select
-                  id="main"
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.main || "Branch"}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), main: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                >
-                  <option value="Main Branch">Main Branch</option>
-                  <option value="Branch">Branch</option>
-                </select>
-                <label htmlFor="main" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Branch Type
-                </label>
-                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                  <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+            {/* Branch Code */}
+            <div className="relative md:col-span-1">
+              <input
+                type="text"
+                id="branchCode"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.branchCode || ""}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), branchCode: e.target.value }))
+                }
+                disabled={!!editingBranch?.__existing}
+                readOnly={!isEditing}
+                maxLength={10}
+              />
+              <label htmlFor="branchCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Branch Code
+              </label>
+            </div>
+
+            {/* Branch Name */}
+            <div className="relative md:col-span-1">
+              <input
+                type="text"
+                id="branchName"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.branchName || ""}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), branchName: e.target.value }))
+                }
+                disabled={!isEditing}
+              />
+              <label htmlFor="branchName" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Branch Name
+              </label>
+            </div>
+
+            {/* Branch Type */}
+            <div className="relative md:col-span-1">
+              <select
+                id="main"
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.main || "Branch"}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), main: e.target.value }))
+                }
+                disabled={!isEditing}
+              >
+                <option value="Main Branch">Main Branch</option>
+                <option value="Branch">Branch</option>
+              </select>
+              <label htmlFor="main" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Branch Type
+              </label>
+              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
 
-            {/* Col 2 */}
-            <div className="global-ref-textbox-group-div-ui">
-              {/* Address */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="address"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.branchAddr1 || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), branchAddr1: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="address" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Address
-                </label>
-              </div>
-
-              {/* Zip Code */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="zipCode"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.zipCode || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), zipCode: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="zipCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Zip Code
-                </label>
-              </div>
-
-              {/* TIN */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="tin"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.branchTin || ""}
-                  onChange={(e) => {
-                    const sanitized = e.target.value.replace(/[^0-9-]/g, "");
-                    setEditingBranch((prev) => ({ ...(prev || {}), branchTin: sanitized }));
-                  }}
-                  disabled={!isEditing}
-                />
-                <label htmlFor="tin" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Tax Identification Number (TIN)
-                </label>
-              </div>
+            {/* TIN */}
+            <div className="relative md:col-span-1">
+              <input
+                type="text"
+                id="tin"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.branchTin || ""}
+                onChange={(e) => {
+                  const sanitized = e.target.value.replace(/[^0-9-]/g, "");
+                  setEditingBranch((prev) => ({ ...(prev || {}), branchTin: sanitized }));
+                }}
+                disabled={!isEditing}
+              />
+              <label htmlFor="tin" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Tax Identification Number (TIN)
+              </label>
             </div>
 
-            {/* Col 3 */}
-            <div className="global-ref-textbox-group-div-ui">
-              {/* Telephone No. */}
-              <div className="relative">
-                <input
-                  type="text"
-                  id="telNo"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.telNo || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), telNo: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="telNo" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  <span className="global-ref-asterisk-ui">*</span> Telephone No.
-                </label>
-              </div>
+            {/* Telephone No. */}
+            <div className="relative md:col-span-1">
+              <input
+                type="text"
+                id="telNo"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.telNo || ""}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), telNo: e.target.value }))
+                }
+                disabled={!isEditing}
+              />
+              <label htmlFor="telNo" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Telephone No.
+              </label>
+            </div>
 
-              {/* Fax No. */}
-              {/* <div className="relative">
-                <input
-                  type="text"
-                  id="faxNo"
-                  placeholder=" "
-                  className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                  value={editingBranch?.faxNo || ""}
-                  onChange={(e) =>
-                    setEditingBranch((prev) => ({ ...(prev || {}), faxNo: e.target.value }))
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="faxNo" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                  Fax No.
-                </label>
-              </div> */}
+            {/* Zip Code */}
+            <div className="relative md:col-span-1">
+              <input
+                type="text"
+                id="zipCode"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.zipCode || ""}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), zipCode: e.target.value }))
+                }
+                disabled={!isEditing}
+              />
+              <label htmlFor="zipCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Zip Code
+              </label>
+            </div>
+
+            {/* Address — spans 2 columns on md+ */}
+            <div className="relative md:col-span-2">
+              <input
+                type="text"
+                id="address"
+                placeholder=" "
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.branchAddr1 || ""}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), branchAddr1: e.target.value }))
+                }
+                disabled={!isEditing}
+              />
+              <label htmlFor="address" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Address
+              </label>
+            </div>
+
+            {/* Active */}
+            <div className="relative md:col-span-1">
+              <select
+                id="active"
+                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                value={editingBranch?.active || "Active"}
+                onChange={(e) =>
+                  setEditingBranch((prev) => ({ ...(prev || {}), active: e.target.value }))
+                }
+                disabled={!isEditing}
+              >
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+              </select>
+              <label htmlFor="active" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                <span className="global-ref-asterisk-ui">*</span> Active
+              </label>
+              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
+
         </div>
 
         {/* Table */}
@@ -640,7 +652,7 @@ const BranchRef = () => {
               <table className="global-ref-table-div-ui">
                 <thead className="global-ref-thead-div-ui">
                   {/* Sortable header row */}
-                  <tr className="">
+                  <tr className="global-ref-tr-ui">
                     {[
                       ["branchCode", "Branch Code"],
                       ["branchName", "Branch Name"],
@@ -729,14 +741,14 @@ const BranchRef = () => {
                       />
                     </th>
                     {/* Fax */}
-                    <th className="global-ref-th-ui">
+                    {/* <th className="global-ref-th-ui">
                       <input
                         className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
                         placeholder="Filter…"
                         value={columnFilters.faxNo}
                         onChange={(e) => { setColumnFilters(s => ({ ...s, faxNo: e.target.value })); setPage(1); }}
                       />
-                    </th>
+                    </th> */}
                     {/* Zip */}
                     <th className="global-ref-th-ui">
                       <input
@@ -754,8 +766,8 @@ const BranchRef = () => {
                         onChange={(e) => { setColumnFilters(s => ({ ...s, active: e.target.value })); setPage(1); }}
                       >
                         <option value="">All</option>
-                        <option value="Y">Yes</option>
-                        <option value="N">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
                       </select>
                     </th>
                     {/* Edit / Delete spacers */}
@@ -810,38 +822,42 @@ const BranchRef = () => {
                 <div className="text-xs opacity-80 font-semibold">
                   Total Records: {filtered.length}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+
+                  <div className="text-xs opacity-80 font-semibold">
+                    Page {page} of {totalPages}
+                  </div>
+
                   <select
-                    className="px-7 py-2 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                     value={pageSize}
                     onChange={(e) => {
                       setPageSize(Number(e.target.value));
                       setPage(1);
                     }}
                   >
-                    {[10, 20, 50, 100].map((n) => (
+                    {[5, 10, 20, 50, 100].map((n) => (
                       <option key={n} value={n}>
                         {n}/page
                       </option>
                     ))}
                   </select>
-                  <div className="text-xs opacity-80 font-semibold">
-                    Page {page} of {totalPages}
-                  </div>
+                  
                   <button
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="px-7 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                   >
                     Prev
                   </button>
                   <button
                     disabled={page >= totalPages}
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="px-7 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                   >
                     Next
                   </button>
+                  
                 </div>
               </div>
             </div>
