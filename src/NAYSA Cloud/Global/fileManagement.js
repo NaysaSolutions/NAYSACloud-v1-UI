@@ -1,13 +1,13 @@
 import { fetchData, postRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
 
 
-export const usehandleFileUpload = async (files,documentID) => {
+export const usehandleFileUpload = async (files, documentID) => {
   try {
     const formData = new FormData();
 
-    files.forEach((f, idx) => {
-
+    files.forEach((f) => {
       const fileObj = f.file ? f.file : f;
       const modifiedDate = f.modifiedDate ? new Date(f.modifiedDate) : new Date();
       const uploadedDate = f.uploadedDate ? new Date(f.uploadedDate) : new Date();
@@ -15,20 +15,15 @@ export const usehandleFileUpload = async (files,documentID) => {
       formData.append("files[]", fileObj);
       formData.append("modifiedDate[]", modifiedDate.toISOString());
       formData.append("uploadedDate[]", uploadedDate.toISOString());
-      formData.append("documentID", documentID);
     });
 
-    const response = await fetch("http://127.0.0.1:8000/api/attachFile", {
-      method: "POST",
-      body: formData,
+    formData.append("documentID", documentID);
+
+    const { data: result } = await apiClient.post("/attachFile", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
-    if (!response.ok) {
-      throw new Error("Upload failed");
-    }
-
-    const result = await response.json();
-    return result; 
+    return result;
   } catch (error) {
     console.error("❌ Upload failed:", error);
     throw error;
@@ -38,55 +33,39 @@ export const usehandleFileUpload = async (files,documentID) => {
 
 
 
-
-
 export const useHandleFileDelete = async (id) => {
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/deleteFile/${id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    const result = await response.json();
-;    return result; 
+    const { data: result } = await apiClient.delete(`/deleteFile/${id}`);
+    return result;
   } catch (err) {
-    console.error("Delete failed", err);
+    console.error("Delete failed:", err);
     throw err;
   }
 };
 
 
 
-
-
 export const useHandleFileDownload = async (id) => {
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/downloadFile/${id}`, {
-      method: "GET",
+    const response = await apiClient.get(`/downloadFile/${id}`, {
+      responseType: "blob", // 👈 important for file downloads
     });
 
-    if (!response.ok) {
-      throw new Error(`Download failed with status: ${response.status}`);
-    }
+    const blob = response.data;
+    const contentDisposition = response.headers["content-disposition"];
+    let filename = "download";
 
-
-    const blob = await response.blob();
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'download'; 
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-      if (filenameMatch && filenameMatch.length > 1) {
+      if (filenameMatch?.[1]) {
         filename = filenameMatch[1];
       }
     }
 
-
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = filename; 
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
 
@@ -106,27 +85,21 @@ export const useHandleFileDownload = async (id) => {
 
 export const useHandleFileDownloadAll = async (documentID) => {
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/downloadAll/${documentID}`, {
-      method: "GET",
+    const response = await apiClient.get(`/downloadAll/${documentID}`, {
+      responseType: "blob",
     });
 
-    if (!response.ok) {
-      throw new Error(`Download failed with status: ${response.status}`);
-    }
-
-    // Get zip blob
-    const blob = await response.blob();
+    const blob = response.data;
 
     // Default filename
     let filename = `attachments_${documentID}.zip`;
 
-    // Try to read from response headers
-    const contentDisposition = response.headers.get("Content-Disposition");
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch && filenameMatch.length > 1) {
-        filename = filenameMatch[1];
-      }
+    // Try to read from response headers (handles both filename and filename*)
+    const cd = response.headers["content-disposition"];
+    if (cd) {
+      const matchQuoted = cd.match(/filename\*?=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+      const extracted = decodeURIComponent(matchQuoted?.[1] || matchQuoted?.[2] || "");
+      if (extracted) filename = extracted;
     }
 
     // Trigger download
@@ -146,7 +119,6 @@ export const useHandleFileDownloadAll = async (documentID) => {
     throw err;
   }
 };
-
 
 
 

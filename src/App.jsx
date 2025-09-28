@@ -8,7 +8,9 @@ import {
 } from "react-router-dom";
 
 import { pageRegistry } from "./pageRegistry";
-import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
+
+// ⬇️ Use the tenant-aware helpers (adjust the path if needed)
+import { fetchData, getTenant } from "./NAYSA Cloud/Configuration/BaseURL.jsx"; // <-- if you keep the old file, change to "@/NAYSA Cloud/Configuration/BaseURL"
 
 import Navbar from "./NAYSA Cloud/Components/Navbar";
 import Sidebar from "./NAYSA Cloud/Components/Sidebar";
@@ -18,8 +20,6 @@ import Login from "./NAYSA Cloud/Authentication/Login.jsx";
 import Register from "./NAYSA Cloud/Authentication/Register.jsx";
 import Dashboard1 from "./NAYSA Cloud/Components/Dashboard1.jsx";
 import { AuthProvider, useAuth } from "./NAYSA Cloud/Authentication/AuthContext.jsx";
-
-
 
 const ModalHost = ({ modalKey, onClose }) => {
   const { user } = useAuth();
@@ -45,14 +45,14 @@ const ModalHost = ({ modalKey, onClose }) => {
   );
 };
 
-
-
-
 const AppContent = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const {user, setUser } = useAuth();
+  const { user, setUser } = useAuth();
+
   const [menuItems, setMenuItems] = useState([]);
   const [routeRows, setRouteRows] = useState([]);
+  const [loadingMenu, setLoadingMenu] = useState(false);
+
   const [activeModalKey, setActiveModalKey] = useState(null);
   const navigate = useNavigate();
 
@@ -65,43 +65,64 @@ const AppContent = () => {
 
   const handleLogout = () => {
     setUser?.(null);
-    localStorage.removeItem("naysa_user"); // if you persist (see #3)
+    localStorage.removeItem("naysa_user"); // if you persist user in context elsewhere
     setIsSidebarVisible(false);
+    // We keep the selected company in localStorage so the user doesn't need to pick again.
     navigate("/", { replace: true });
   };
 
-
-
-  // Load menu + routes
+  // Load menu + routes ONLY when:
+  //   1) user is logged in, and
+  //   2) a company (tenant) has been selected
   useEffect(() => {
     let alive = true;
-    
+    const tenant = getTenant();
+
+    if (!user || !tenant) {
+      // If either is missing, don't call the APIs and clear old data.
+      setMenuItems([]);
+      setRouteRows([]);
+      return;
+    }
+
     (async () => {
       try {
+        setLoadingMenu(true);
+
         const [menuResp, routesResp] = await Promise.all([
-          fetchData("menu-items",{ USER_CODE: user?.USER_CODE}),
-          fetchData("menu-routes",{ USER_CODE: user?.USER_CODE}),
+          // Your backend expects USER_CODE; pass it along
+          fetchData("menu-items", { USER_CODE: user?.USER_CODE }),
+          fetchData("menu-routes", { USER_CODE: user?.USER_CODE }),
         ]);
 
         if (!alive) return;
-        setMenuItems(menuResp?.menuItems ?? []);
-        setRouteRows(routesResp?.routes ?? []);
 
-
+        // Normalize response shapes defensively
+        setMenuItems(
+          menuResp?.menuItems ??
+            menuResp?.data ??
+            (Array.isArray(menuResp) ? menuResp : [])
+        );
+        setRouteRows(
+          routesResp?.routes ??
+            routesResp?.data ??
+            (Array.isArray(routesResp) ? routesResp : [])
+        );
       } catch (e) {
         if (!alive) return;
         console.error("[App] Failed to load menu/routes:", e);
         setMenuItems([]);
         setRouteRows([]);
+      } finally {
+        if (alive) setLoadingMenu(false);
       }
     })();
+
     return () => {
       alive = false;
     };
-  }, []);
-
-
-
+    // Re-run when user changes (login/logout). Tenant is read each run from localStorage.
+  }, [user]);
 
   // Lock body scroll when a modal is open
   useEffect(() => {
@@ -110,8 +131,6 @@ const AppContent = () => {
       document.body.style.overflow = "auto";
     };
   }, [activeModalKey]);
-
-
 
   // ===== Auth pages (no navbar/sidebar). Login is default. =====
   if (!user) {
@@ -134,10 +153,6 @@ const AppContent = () => {
       </Routes>
     );
   }
-
-
-
-
 
   // ===== App pages (with navbar + sidebar) =====
   return (
@@ -168,8 +183,18 @@ const AppContent = () => {
 
       {/* Routed pages */}
       <div className="flex-1 p-4 overflow-y-auto">
+        {/* Optional: lightweight overlay while loading menus */}
+        {loadingMenu && (
+          <div className="fixed inset-0 z-[70] bg-black/10 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl">
+              Loading menu…
+            </div>
+          </div>
+        )}
+
         <Routes>
           <Route path="/" element={<Dashboard1 user={user} />} />
+
           {routeRows
             ?.filter((r) => r.path && r.componentKey && !r.isModal)
             .map(({ code, path, componentKey }) => {
@@ -208,7 +233,6 @@ const App = () => (
 );
 
 export default App;
-
 
 
 

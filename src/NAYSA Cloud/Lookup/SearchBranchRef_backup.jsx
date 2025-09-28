@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
 const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   const [branches, setBranches] = useState([]);
@@ -9,54 +9,40 @@ const BranchLookupModal = ({ isOpen, onClose, customParam }) => {
   const [filters, setFilters] = useState({ branchCode: '', branchName: '' });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-  
-      axios.post("http://127.0.0.1:8000/api/lookupBranch", {
+ useEffect(() => {
+  if (!isOpen) return;
+
+  let alive = true;
+  (async () => {
+    setLoading(true);
+    try {
+      const { data: result } = await apiClient.post("/lookupBranch", {
         PARAMS: JSON.stringify({
-          search: "",
+          search: customParam ?? "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
-        if (result.success) {
-          const branchData = JSON.parse(result.data[0].result);
-          setBranches(branchData);
-          setFiltered(branchData);
-        } else {
-          alert(result.message || "Failed to fetch Branch");
-        }
-
-
-      })
-      .catch((err) => {
-        console.error("Failed to fetch Branch:", err);
-        alert(`Error: ${err.message}`);
-
-        
-        // Fallback sample data
-        const fallbackData = [
-          { id: 1, branchCode: "00000", branchName: "Head Office" },
-          { id: 2, branchCode: "00001", branchName: "Cebu" },
-          { id: 3, branchCode: "00002", branchName: "Davao" }
-        ];
-        setBranches(fallbackData);
-        setFiltered(fallbackData);
-        
-      })
-      .finally(() => {
-        setLoading(false);
+          pageSize: 10,
+        }),
       });
+
+      const branchData =
+        Array.isArray(result?.data) && result.data[0]?.result
+          ? JSON.parse(result.data[0].result)
+          : [];
+
+      if (!alive) return;
+      setBranches(branchData);
+      setFiltered(branchData);
+    } catch (err) {
+      console.error("Failed to fetch Branch:", err);
+    } finally {
+      if (alive) setLoading(false);
     }
-  }, [isOpen]);
+  })();
+
+  return () => {
+    alive = false;
+  };
+}, [isOpen, customParam]);
   
 
   useEffect(() => {

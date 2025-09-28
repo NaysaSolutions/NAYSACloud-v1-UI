@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+
+
 
 const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
   const [atcs, setAtcs] = useState([]);
@@ -33,38 +35,34 @@ const ATCLookupModal = ({ isOpen, onClose, customParam }) => {
     }
   }, [isOpen, customParam, currentPage]);
 
-  const fetchData = (page) => {
+
+ const fetchData = async (page = 1) => {
     setLoading(true);
-
-    axios.post("http://127.0.0.1:8000/api/lookupATC", {
-      params: {
-        PARAMS: JSON.stringify({ search: customParam || "ActiveAll" }),
-        page: page,
-        itemsPerPage: itemsPerPage,
-      },
-    })
-      .then((response) => {
-        const result = response.data;
-        console.log('API Response:', result);
-
-        if (result.success) {
-          const atcData = JSON.parse(result.data[0].result);
-          console.log('Fetched ATC Data:', atcData);
-
-          setAtcs(atcData);
-          setFiltered(atcData);
-        } else {
-          alert(result.message || "Failed to fetch ATC");
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch ATC:", err);
-        alert(`Error: ${err.message}`);
-      })
-      .finally(() => {
-        setLoading(false);
+    try {
+      const { data: result } = await apiClient.post("/lookupATC", {
+        params: {
+          PARAMS: JSON.stringify({ search: customParam ?? "ActiveAll" }),
+          page,
+          itemsPerPage,
+        },
       });
+
+      const atcData =
+        Array.isArray(result?.data) && result.data[0]?.result
+          ? JSON.parse(result.data[0].result)
+          : [];
+
+      setAtcs(atcData);
+      setFiltered(atcData);
+    } catch (err) {
+      console.error("Failed to fetch ATC:", err);
+      setAtcs([]);
+      setFiltered([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   const handleApply = (atc) => {
     onClose(atc); // Pass the selected ATC back to the parent

@@ -23,6 +23,7 @@ import PostPCV from "../../../Module/Main Module/Accounts Payable/PostPCV.jsx";
 // Configuration
 import { postRequest} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 import {
   docTypeNames,
@@ -80,8 +81,8 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const PCV = () => {
-  const { resetFlag } = useReset();
-
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -138,8 +139,9 @@ const PCV = () => {
     refDocNo1: "",
     refDocNo2: "",
     remarks: "",
+    noReprints:"0",
     selectedPCVType : "REG",
-    userCode: 'NSI', 
+    userCode: user.USER_CODE,  
 
     //Detail 1-2
     detailRows  :[],
@@ -232,6 +234,7 @@ const PCV = () => {
   refDocNo1,
   refDocNo2,
   remarks,
+  noReprints,
   selectedPCVType,
 
 
@@ -418,6 +421,7 @@ useEffect(() => {
 
       branchCode: "HO",
       branchName: "Head Office",
+      userCode: user.USER_CODE,
       documentDate:useGetCurrentDay(),
       
       refDocNo1: "",
@@ -566,6 +570,7 @@ const fetchTranData = async (documentNo, branchCode) => {
     updateState({
       documentStatus: data.pcvStatus,
       status: data.docStatus,
+      noReprints:data.noReprints,
       documentID: data.pcvId,
       documentNo: data.pcvNo,
       branchCode: data.branchCode,
@@ -744,10 +749,15 @@ const handleCurrRateNoBlur = (e) => {
           const response = await useTransactionUpsert(docType, glData, updateState, 'pcvId', 'pcvNo');
           if (response) {
 
-            useSwalshowSaveSuccessDialog(
-              handleReset,
-              () => handleSaveAndPrint(response.data[0].pcvId)
-            );
+           const isZero = Number(noReprints) === 0;
+                           const onSaveAndPrint =
+                             isZero
+                               ? () => updateState({ showSignatoryModal: true })                  
+                               : () => handleSaveAndPrint(response.data[0].pcvId); 
+                           useSwalshowSaveSuccessDialog(
+                             handleReset,          
+                             onSaveAndPrint       
+                           );
           }
 
          
@@ -958,7 +968,9 @@ const handleCopy = async () => {
                   documentStatus:"",
                   status:"OPEN",
                   detailRows: updatedRows,
-                  documentDate:useGetCurrentDay()
+                  documentDate:useGetCurrentDay(),
+                  noReprints:"0",
+                  detailRowsGL:[],
                 
      });
 
