@@ -73,7 +73,7 @@ export const pageRegistry = {
  
   //Posting
   PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
-  PostCV,
+  PostCV,PostPCV,
 
 
 
