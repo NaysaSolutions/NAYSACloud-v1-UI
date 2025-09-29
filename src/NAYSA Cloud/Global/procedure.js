@@ -3,7 +3,7 @@ import { formatNumber } from '@/NAYSA Cloud/Global/behavior';
 import { useSwalValidationAlert,} from '@/NAYSA Cloud/Global/behavior';
 import Swal from 'sweetalert2';
 import { parseFormattedNumber } from './behavior';
-
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
 
 
@@ -353,7 +353,84 @@ export async function useHandlePrint(documentID, docCode) {
 
 }
 
+
+
 //use global posting from Post SVI
 export async function useHandlePost(documentID, docCode) {
 
 }
+
+
+
+
+//use global posting from Post Tran
+export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,setLoading,onClose) => {
+
+  setLoading(true);
+
+  try {
+    const payload = {
+      userCode,
+      userPassword: userPw,
+      json_data: {
+        userCode,
+        dt1: selectedData.map((groupId, idx) => ({
+          lnNo: idx + 1, // number (safer for SQL)
+          groupId,
+        })),
+      },
+    };
+
+    const { data: res } = await apiClient.post("/finalize"+docCode, payload);
+
+    if (res?.success) {
+      const postedSummary = res?.data?.[0]?.result ?? "No summary returned.";
+      useSwalValidationAlert({
+        icon: "info",
+        title: "Posting Summary",
+        message: postedSummary,
+      });
+      onClose?.();
+      return;
+    }
+
+    // 200 but success=false
+    Swal.fire("Posting failed", res?.message ?? "Finalize failed.", "error");
+
+  } catch (err) {
+    const status = err?.response?.status;
+    const data   = err?.response?.data || {};
+    const code   = data.error || "";
+    const msg    = data.message || "Something went wrong.";
+
+    if (status === 403 && code === "INVALID_CREDENTIALS") {
+      // setPasswordError("Invalid password. Please try again.");
+      Swal.fire("Invalid password", msg, "warning"); // ⬅️ now shows
+      return;
+    }
+
+    if (status === 403 && code === "USER_INACTIVE") {
+      // setPasswordError("User is inactive.");
+      Swal.fire("Blocked", msg || "User is inactive.", "warning");
+      return;
+    }
+
+    if (status === 403 && code === "USER_MISMATCH") {
+      Swal.fire("Blocked", "Authenticated user does not match userCode.", "warning");
+      return;
+    }
+
+    if (status === 422 && (code === "MISSING_CREDENTIALS" || code === "VALIDATION_ERROR" || !data?.error)) {
+      // setPasswordError("Missing userCode or password.");
+      Swal.fire("Missing credentials", msg, "info"); // ⬅️ now shows
+      return;
+    }
+
+    // Unknown 403 (e.g., tenant required) or other errors
+    Swal.fire("Error", msg, "error");
+    console.error("Error posting SVI:", err);
+
+  } finally {
+    setLoading(false);
+  }
+};

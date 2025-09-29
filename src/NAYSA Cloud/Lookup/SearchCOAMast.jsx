@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSort, faSortUp, faSortDown, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Added faSpinner
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+
 
 const COAMastLookupModal = ({ isOpen, onClose, source, customParam }) => {
     const [accounts, setAccounts] = useState([]);
@@ -10,55 +11,51 @@ const COAMastLookupModal = ({ isOpen, onClose, source, customParam }) => {
     const [loading, setLoading] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
 
+   
     useEffect(() => {
         if (!isOpen) {
             // Reset state when modal closes
             setAccounts([]);
             setFiltered([]);
-            setFilters({ acctCode: '', acctName: '', acctBalance: '', reqSL: '', reqRC: '' });
-            setSortConfig({ key: '', direction: 'asc' });
+            setFilters({ acctCode: "", acctName: "", acctBalance: "", reqSL: "", reqRC: "" });
+            setSortConfig({ key: "", direction: "asc" });
             return; // Exit early if not open
         }
 
-        setLoading(true);
+        const fetchCOA = async () => {
+            setLoading(true);
 
-        let paramToSend = customParam;
-        if (customParam === "apv_hd") {
-            paramToSend = "APGL";
-        }
+            try {
+            let paramToSend = customParam === "apv_hd" ? "APGL" : customParam;
 
-        axios.post("http://127.0.0.1:8000/api/lookupCOA", {
-            PARAMS: JSON.stringify({
-                search: paramToSend || "", // Use paramToSend
-                page: 1, // Assuming these are fixed for now, consider pagination later
-                pageSize: 100 // Increased pageSize to fetch more data initially for filtering
-            })
-        }, {
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        })
-        .then((response) => {
-            const result = response.data;
-            if (result.success && result.data && result.data.length > 0 && result.data[0].result) {
-                const accountData = JSON.parse(result.data[0].result);
-                setAccounts(accountData);
-                setFiltered(accountData); // Initialize filtered with all data
-            } else {
-                console.warn(result.message || "No Chart of Accounts found.");
-                setAccounts([]); // Ensure state is empty if no data
-                setFiltered([]);
-            }
-        })
-        .catch((err) => {
+            const { data: result } = await apiClient.post("/lookupCOA", {
+                PARAMS: JSON.stringify({
+                search: paramToSend || "",
+                page: 1,         // still fixed
+                pageSize: 100,   // fetch more data initially
+                }),
+            });
+
+            const accountData =
+                Array.isArray(result?.data) && result.data[0]?.result
+                ? JSON.parse(result.data[0].result)
+                : [];
+
+            setAccounts(accountData);
+            setFiltered(accountData);
+            } catch (err) {
             console.error("Failed to fetch Chart of Accounts:", err);
-            // Optionally, display a user-friendly error message in the UI
-        })
-        .finally(() => {
+            setAccounts([]);
+            setFiltered([]);
+            } finally {
             setLoading(false);
-        });
-    }, [isOpen, customParam]); // Depend on isOpen and customParam to re-fetch when they change
+            }
+        };
+
+        fetchCOA();
+        }, [isOpen, customParam]);
+
+
 
     useEffect(() => {
         let currentFiltered = [...accounts];

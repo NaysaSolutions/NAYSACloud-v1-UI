@@ -1,38 +1,131 @@
-// src/NAYSA Cloud/Authentication/Login.jsx
-import React, { useState, useRef } from "react";
-import axios from "axios";
-import { FiUser, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import React, { useEffect, useState, useRef } from "react";
+import { FiUser, FiLock, FiEye, FiEyeOff, FiGlobe } from "react-icons/fi";
 import Swal from "sweetalert2";
-import { useAuth } from "./AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "./AuthContext.jsx";
+import { apiClient, setTenant } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
-const API_URL = import.meta?.env?.VITE_API_URL ?? "http://127.0.0.1:8000";
+
+
+function normalizeCompaniesPayload(raw) {
+  const toArray = (x) =>
+    Array.isArray(x) ? x : x && typeof x === "object" ? Object.values(x) : [];
+  let arr = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (Array.isArray(raw?.data)) arr = raw.data;
+  else if (raw?.data && typeof raw.data === "object") arr = Object.values(raw.data);
+  else if (raw && typeof raw === "object") arr = Object.values(raw);
+
+  return arr.map((r) => {
+    const get = (o, ...keys) => keys.reduce((v, k) => (v ?? o?.[k]), undefined);
+    const code =
+      get(r, "code", "CODE", "Code") ??
+      get(r, "database", "DATABASE", "Database") ??
+      "";
+    const company =
+      get(r, "company", "COMPANY", "Company") ??
+      get(r, "database", "DATABASE", "Database") ??
+      get(r, "code", "CODE", "Code") ??
+      "";
+    const database = get(r, "database", "DATABASE", "Database") ?? "";
+
+    return {
+      code: String(code || "").trim(),
+      company: String(company || "").trim(),
+      database: String(database || "").trim(),
+    };
+  });
+}
+
 
 export default function Login({ onSwitchToRegister, onForgot }) {
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ USER_CODE: "", PASSWORD: "" });
+  const [companies, setCompanies] = useState([]);
+  const [companyCode, setCompanyCode] = useState(
+    localStorage.getItem("companyCode") || ""
+  );
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [capsOn, setCapsOn] = useState(false);
   const pwdRef = useRef(null);
 
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoadingCompanies(true);
+        const { data } = await apiClient.get("/companies");
+        const options = normalizeCompaniesPayload(data).filter(
+          (x) => x.code || x.database
+        );
+
+
+        if (!alive) return;
+        setCompanies(options);
+
+
+        if (!companyCode && options.length === 1) {
+          setCompanyCode(options[0].code || options[0].database || "");
+        } else if (
+          companyCode &&
+          !options.some((o) => o.code === companyCode || o.database === companyCode)
+        ) {
+          if (options[0]) {
+            setCompanyCode(options[0].code || options[0].database || "");
+          }
+        }
+      } catch (e) {
+        Swal.fire({
+          icon: "error",
+          title: "Unable to load companies",
+          text:
+            e?.response?.data?.message ||
+            e?.message ||
+            "Please check the /api/companies endpoint.",
+        });
+      } finally {
+        if (alive) setLoadingCompanies(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []); 
+
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((s) => ({ ...s, [name]: value }));
   };
+
+
   const handleCaps = (e) =>
     setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.USER_CODE.trim() || !form.PASSWORD) return;
-    setIsLoading(true);
 
+    if (!companyCode) {
+      Swal.fire({
+        icon: "warning",
+        title: "Select Company",
+        text: "Please choose a company before logging in.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      // no credentials/cookies here – just read JSON response
-      const { data } = await axios.post(`${API_URL}/api/login`, {
+      setTenant(companyCode); 
+
+      const { data } = await apiClient.post("/login", {
         USER_CODE: form.USER_CODE.trim(),
         PASSWORD: form.PASSWORD,
       });
@@ -47,9 +140,7 @@ export default function Login({ onSwitchToRegister, onForgot }) {
         USER_NAME: d.USER_NAME ?? d.username ?? form.USER_CODE.trim(),
       };
 
-      // put user in context
       setUser(normalized);
-
       Swal.fire({
         toast: true,
         position: "top-end",
@@ -60,13 +151,15 @@ export default function Login({ onSwitchToRegister, onForgot }) {
         timerProgressBar: true,
       });
 
-      // go to dashboard
       navigate("/", { replace: true });
     } catch (err) {
       Swal.fire({
         icon: "error",
         title: "Login failed",
-        text: err?.response?.data?.message || err?.message || "Please try again.",
+        text:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Please try again.",
         confirmButtonText: "OK",
       });
     } finally {
@@ -92,6 +185,41 @@ export default function Login({ onSwitchToRegister, onForgot }) {
 
         <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/40 dark:bg-white/10 p-6 shadow-xl backdrop-blur-md">
           <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-3">
+            {/* COMPANY */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Company
+                {!loadingCompanies && (
+                  <span className="ml-2 text-xs text-slate-500">
+                    ({companies.length} found)
+                  </span>
+                )}
+              </span>
+              <div className="relative">
+                <FiGlobe className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={companyCode}
+                  onChange={(e) => setCompanyCode(e.target.value)}
+                  disabled={loadingCompanies}
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-slate-900 shadow-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+                  required
+                >
+                  <option value="" disabled>
+                    {loadingCompanies ? "Loading companies…" : "Select a company"}
+                  </option>
+                  {companies.map((c) => {
+                    const value = c.code || c.database; // middleware accepts code or database
+                    const label = c.company || value || "(unnamed)";
+                   return (
+                      <option key={value || label} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </label>
+
             {/* USER_CODE */}
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">User ID</span>
@@ -150,7 +278,13 @@ export default function Login({ onSwitchToRegister, onForgot }) {
 
             <button
               type="submit"
-              disabled={isLoading || !form.USER_CODE.trim() || !form.PASSWORD}
+              disabled={
+                isLoading ||
+                loadingCompanies ||
+                !companyCode ||
+                !form.USER_CODE.trim() ||
+                !form.PASSWORD
+              }
               className="group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 font-medium text-white shadow-lg shadow-sky-600/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (

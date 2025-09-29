@@ -3,6 +3,8 @@ import { fetchDataJson, postRequest } from '../../../Configuration/BaseURL.jsx';
 import { useSelectedHSColConfig } from '@/NAYSA Cloud/Global/selectedData';
 import  GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import { useSwalValidationAlert } from '@/NAYSA Cloud/Global/behavior';
+import { useHandlePostTran } from '@/NAYSA Cloud/Global/procedure';
+
 
 const PostSOA = ({ isOpen, onClose, userCode }) => {
   const [data, setData] = useState([]);
@@ -10,7 +12,7 @@ const PostSOA = ({ isOpen, onClose, userCode }) => {
   const [loading, setLoading] = useState(false);
   const [modalReady, setModalReady] = useState(false); // controls modal display
   const alertFired = useRef(false);
-
+ const [userPassword, setUserPassword] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,43 +64,17 @@ const PostSOA = ({ isOpen, onClose, userCode }) => {
 
 
 
-  const handlePost = async (selectedData) => {
-    try {
-      const payload = {
-        json_data: {
-          userCode: userCode,
-          dt1: selectedData.map((item, index) => ({
-            lnNo: String(index + 1),
-            groupId: item,
-          })),
-        },
-      };
+const handlePost = async (selectedData, userPw) => {
+  await useHandlePostTran(selectedData,userPw,"SOA",userCode,setLoading,onClose)
+}
 
-      const response = await postRequest("finalizeSOA", payload);
-
-      if (response?.success) {
-        const postedSummary = response.data[0]?.result || "No summary returned.";
-        useSwalValidationAlert({
-          icon: "info",
-          title: "Posting Summary",
-          message: postedSummary,
-        });
-        console.log("Finalize success:", response.data);
-      } else {
-        console.warn("Finalize failed:", response);
-      }
-
-      onClose();
-    } catch (error) {
-      console.error("Error posting SOA:", error);
-    }
-  };
 
   return modalReady ? (
     <GlobalGLPostingModalv1 
       data={data} 
       colConfigData={colConfigData} 
       title="Post Statement of Accounts" 
+      userPassword ={userPassword}
       btnCaption="Ok"
       onClose={onClose}
       onPost={handlePost} 

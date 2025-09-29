@@ -1,16 +1,63 @@
-// src/baseURL.jsx
 import axios from "axios";
+export const API_BASE = (() => {
 
-// Create Axios instance
+  const v = import.meta.env.VITE_API_URL
+  if (v === "/api" || v.endsWith("/api")) return v;
+  return `${String(v).replace(/\/+$/, "")}/api`;
+})();
+
+
+
+export const getTenant = () => localStorage.getItem("companyCode") || null;
+export const setTenant = (code) => {
+  if (code) {
+    localStorage.setItem("companyCode", code);
+    apiClient.defaults.headers.common["X-Company-DB"] = code;
+  } else {
+    localStorage.removeItem("companyCode");
+    delete apiClient.defaults.headers.common["X-Company-DB"];
+  }
+};
+
+
 export const apiClient = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: API_BASE,
+  withCredentials: false,
+  timeout: 20000,
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
 
-// GET request
+
+
+apiClient.interceptors.request.use((config) => {
+  const tenant = getTenant();
+  if (tenant && !config.headers["X-Company-DB"]) {
+    config.headers["X-Company-DB"] = tenant;
+  }
+  return config;
+});
+
+
+
+
+/** Tag missing-tenant errors for easier handling upstream (optional) */
+apiClient.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const msg = err?.response?.data?.message || "";
+    if (err?.response?.status === 400 && /Missing X-Company-DB/i.test(msg)) {
+      err.tenantRequired = true;
+    }
+    return Promise.reject(err);
+  }
+);
+
+
+
+
 export const fetchData = async (endpoint, params = {}) => {
   try {
     const response = await apiClient.get(endpoint, { params });
@@ -20,6 +67,8 @@ export const fetchData = async (endpoint, params = {}) => {
     throw error;
   }
 };
+
+
 
 
 export const fetchDataJson = async (endpoint, jsonPayload = {}, page = 1, itemsPerPage = 50) => {
@@ -40,7 +89,7 @@ export const fetchDataJson = async (endpoint, jsonPayload = {}, page = 1, itemsP
 
 
 
-// POST request
+
 export const postRequest = async (endpoint, data = {}, config = {}) => {
   try {
     const response = await apiClient.post(endpoint, data, config);
@@ -53,15 +102,14 @@ export const postRequest = async (endpoint, data = {}, config = {}) => {
 
 
 
+
 export const postPdfRequest = async (endpoint, data = {}) => {
   try {
     const response = await apiClient.post(endpoint, data, {
-      headers: {
-        Accept: "application/pdf",
-      },
-      responseType: "blob", // important for PDF
+      headers: { Accept: "application/pdf" },
+      responseType: "blob",
     });
-    return response.data; // returns a Blob
+    return response.data; // Blob
   } catch (error) {
     console.error("API POST PDF Error:", error);
     throw error;
@@ -70,5 +118,10 @@ export const postPdfRequest = async (endpoint, data = {}) => {
 
 
 
-// No need for default export unless you want to export `apiClient`
 export default apiClient;
+
+
+const initialTenant = getTenant();
+if (initialTenant) {
+  apiClient.defaults.headers.common["X-Company-DB"] = initialTenant;
+}

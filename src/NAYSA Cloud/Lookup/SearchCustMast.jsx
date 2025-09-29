@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSort, faSortUp, faSortDown, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Added faSpinner
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+
 
 const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
-    const [customers, setCustomers] = useState([]); // Renamed to customers for consistency
+    const [customers, setCustomers] = useState([]);
     const [filtered, setFiltered] = useState([]);
     const [filters, setFilters] = useState({
         custCode: '',
@@ -20,64 +21,56 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
 
+
     useEffect(() => {
         if (!isOpen) {
-            // Reset state when modal closes
             setCustomers([]);
             setFiltered([]);
             setFilters({ custCode: '', custName: '', source: '', custTin: '', atcCode: '', vatCode: '', addr: '' });
             setSortConfig({ key: '', direction: 'asc' });
-            setCurrentPage(1); // Reset page to 1
-            return; // Exit early if not open
+            setCurrentPage(1); 
+            return; 
         }
-
-        // Fetch the data for the current page only
         fetchData(currentPage);
     }, [isOpen, customParam, currentPage]);
 
-    const fetchData = (page) => {
+
+
+
+
+   const fetchData = async (page = 1) => {
         setLoading(true);
-
-        axios.get("http://127.0.0.1:8000/api/lookupCustomer", {
+        try {
+            const { data: result } = await apiClient.get("/lookupCustomer", {
             params: {
-                PARAMS: JSON.stringify({ search: customParam || "ActiveAll" }),
-                page: page,
-                itemsPerPage: itemsPerPage,
+                PARAMS: JSON.stringify({ search: customParam ?? "ActiveAll" }),
+                page,
+                itemsPerPage,
             },
-        })
-            .then((response) => {
-                const result = response.data;
-                console.log('API Response:', result);
-
-                if (result.success && result.data && result.data.length > 0 && result.data[0].result) {
-                    const custData = JSON.parse(result.data[0].result);
-                    console.log('Fetched Customer Data:', custData);
-
-                    setCustomers(custData);
-                    setFiltered(custData); // Initialize filtered with all data
-                } else {
-                    console.warn(result.message || "No customers found.");
-                    setCustomers([]); // Ensure state is empty if no data
-                    setFiltered([]);
-                }
-            })
-            .catch((err) => {
-                console.error("Failed to fetch customers:", err);
-                // Optionally, display a user-friendly error message in the UI
-            })
-            .finally(() => {
-                setLoading(false);
             });
+            const custData =
+            Array.isArray(result?.data) && result.data[0]?.result
+                ? JSON.parse(result.data[0].result)
+                : [];
+            setCustomers(custData);
+            setFiltered(custData);
+        } catch (err) {
+            console.error("Failed to fetch customers:", err);
+            setCustomers([]);
+            setFiltered([]);
+        } finally {
+            setLoading(false);
+        }
+        };
+    const handleApply = (cust) => {
+        onClose(cust); 
     };
 
-    const handleApply = (cust) => {
-        onClose(cust); // Pass the selected cust back to the parent
-    };
+
+
 
     useEffect(() => {
-        let currentFiltered = [...customers]; // Use 'customers' as the base
-
-        // Apply filters
+        let currentFiltered = [...customers]; 
         currentFiltered = currentFiltered.filter(item =>
             (item.custCode || '').toLowerCase().includes((filters.custCode || '').toLowerCase()) &&
             (item.custName || '').toLowerCase().includes((filters.custName || '').toLowerCase()) &&
@@ -88,7 +81,7 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
             (item.addr || '').toLowerCase().includes((filters.addr || '').toLowerCase())
         );
 
-        // Apply sorting
+
         if (sortConfig.key) {
             currentFiltered.sort((a, b) => {
                 const aValue = a[sortConfig.key];
@@ -103,14 +96,16 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
                 return 0;
             });
         }
-
         setFiltered(currentFiltered);
         console.log('Filtered Customer Data:', currentFiltered);
-    }, [filters, customers, sortConfig]); // Depend on 'customers' (original data) for filtering
+    }, [filters, customers, sortConfig]); 
+
 
     const handleFilterChange = (e, key) => {
         setFilters({ ...filters, [key]: e.target.value });
     };
+
+
 
     const handleSort = (key) => {
         let direction = 'asc';
@@ -119,6 +114,8 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
         }
         setSortConfig({ key, direction });
     };
+
+
 
     const renderSortIcon = (column) => {
         if (sortConfig.key === column) {
@@ -135,10 +132,7 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
         setCurrentPage(prevPage => prevPage - 1);
     };
 
-    // The pagination logic here will paginate the *filtered* data that is currently loaded.
-    // If you need server-side pagination that fetches new data for each page,
-    // you would modify fetchData to send `currentPage` and `itemsPerPage` to the API
-    // and the API would return only the data for that specific page, along with total count.
+
     const getPaginatedData = () => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
@@ -146,14 +140,17 @@ const CustomerMastLookupModal = ({ isOpen, onClose, customParam }) => {
     };
 
 
+
     if (!isOpen) return null;
-
     const paginatedData = getPaginatedData();
-
-    // Showing X of Y
     const totalItems = filtered.length;
     const startItem = totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+
+
+
+
 
 
     return (

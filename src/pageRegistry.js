@@ -35,8 +35,7 @@ import JV        from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
 
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
-import BillCodeRef   from "./NAYSA Cloud/Reference File/BillCodeRef.jsx";
-
+import UserAccessRights   from "./NAYSA Cloud/Reference File/UserAccessRights.jsx";
 
 import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
 
@@ -69,12 +68,12 @@ export const pageRegistry = {
   // Global Reference
   BranchRef,
   BankRef,
-  BillCodeRef,
+  UserAccessRights,
 
  
   //Posting
   PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
-  PostCV,
+  PostCV,PostPCV,
 
 
 

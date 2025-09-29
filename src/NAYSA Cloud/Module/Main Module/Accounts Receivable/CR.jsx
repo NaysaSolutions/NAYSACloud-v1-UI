@@ -24,6 +24,8 @@ import PostCR from "../../../Module/Main Module/Accounts Receivable/PostCR.jsx";
 // Configuration
 import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
+
 
 import {
   docTypeNames,
@@ -90,8 +92,8 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const CR = () => {
-  const { resetFlag } = useReset();
-
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -168,7 +170,7 @@ const CR = () => {
     selectedPayType : "CR01",
     selectedCheckType:"CR21",
 
-    userCode: 'NSI', // Default value
+    userCode: user.USER_CODE, 
 
     //Detail 1-2
     detailRows  :[],
@@ -476,6 +478,7 @@ useEffect(() => {
 
       branchCode: "HO",
       branchName: "Head Office",
+      userCode: user.USER_CODE, 
       documentDate:useGetCurrentDay(),
       noReprints:"0",
       
@@ -806,7 +809,7 @@ const handleCurrRateNoBlur = (e) => {
       currCode: currCode || "PHP",
       currRate: parseFormattedNumber(currRate),
       remarks: remarks|| "",
-      userCode: "NSI",
+      userCode: userCode,
       dt1: detailRows.map((row, index) => ({
         lnNo: String(index + 1),
         siNo: row.siNo || "",
@@ -879,10 +882,15 @@ const handleCurrRateNoBlur = (e) => {
           const response = await useTransactionUpsert(docType, glData, updateState, 'crId', 'crNo');
           if (response) {
 
-            useSwalshowSaveSuccessDialog(
-              handleReset,
-              () => handleSaveAndPrint(response.data[0].crId)
-            );
+                const isZero = Number(noReprints) === 0;
+                const onSaveAndPrint =
+                  isZero
+                    ? () => updateState({ showSignatoryModal: true })                  
+                    : () => handleSaveAndPrint(response.data[0].crId); 
+                useSwalshowSaveSuccessDialog(
+                  handleReset,          
+                  onSaveAndPrint       
+                );
           }
 
          
@@ -1094,6 +1102,7 @@ const handleCopy = async () => {
                   documentStatus:"",
                   status:"OPEN",
                   documentDate:useGetCurrentDay(), 
+                  noReprints:"0",
      });
   }
 };

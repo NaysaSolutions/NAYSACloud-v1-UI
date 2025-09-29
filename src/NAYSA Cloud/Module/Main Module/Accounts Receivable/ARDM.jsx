@@ -24,6 +24,8 @@ import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
 // Configuration
 import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
+
 
 import {
   docTypeNames,
@@ -91,8 +93,8 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const ARDM = () => {
-  const { resetFlag } = useReset();
-
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -163,7 +165,7 @@ const ARDM = () => {
     remarks: "",
 
     selectedARDMType : "ARDM01",
-    userCode: 'NSI', // Default value
+    userCode: user.USER_CODE, 
 
     //Detail 1-2
     detailRows  :[],
@@ -438,6 +440,7 @@ useEffect(() => {
 
       branchCode: "HO",
       branchName: "Head Office",
+      userCode: user.USER_CODE, 
       documentDate:useGetCurrentDay(),
       selectedARDMType : "ARDM01",
       noReprints:"0",
@@ -794,10 +797,15 @@ const handleCurrRateNoBlur = (e) => {
           const response = await useTransactionUpsert(docType, glData, updateState, 'ardmId', 'ardmNo');
           if (response) {
 
-            useSwalshowSaveSuccessDialog(
-              handleReset,
-              () => handleSaveAndPrint(response.data[0].crId)
-            );
+            const isZero = Number(noReprints) === 0;
+                            const onSaveAndPrint =
+                              isZero
+                                ? () => updateState({ showSignatoryModal: true })                  
+                                : () => handleSaveAndPrint(response.data[0].ardmId); 
+                            useSwalshowSaveSuccessDialog(
+                              handleReset,          
+                              onSaveAndPrint       
+                            );
           }
 
          
@@ -1024,7 +1032,8 @@ if (selectedARDMType !== "ARDM02" || !detailRows?.length) {
                   documentID:"",
                   documentStatus:"",
                   status:"OPEN",
-                  documentDate:useGetCurrentDay(),    
+                  documentDate:useGetCurrentDay(),   
+                  noReprints:"0", 
      });
   }
 };

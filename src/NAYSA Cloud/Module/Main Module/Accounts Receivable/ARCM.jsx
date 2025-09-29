@@ -24,6 +24,7 @@ import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
 // Configuration
 import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 import {
   docTypeNames,
@@ -91,8 +92,8 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const ARCM = () => {
-  const { resetFlag } = useReset();
-
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -163,7 +164,8 @@ const ARCM = () => {
     remarks: "",
 
     selectedARCMType : "ARCM01",
-    userCode: 'NSI', // Default value
+    userCode: user.USER_CODE, 
+
 
     //Detail 1-2
     detailRows  :[],
@@ -794,10 +796,15 @@ const handleCurrRateNoBlur = (e) => {
           const response = await useTransactionUpsert(docType, glData, updateState, 'arcmId', 'arcmNo');
           if (response) {
 
-            useSwalshowSaveSuccessDialog(
-              handleReset,
-              () => handleSaveAndPrint(response.data[0].crId)
-            );
+            const isZero = Number(noReprints) === 0;
+                  const onSaveAndPrint =
+                    isZero
+                     ? () => updateState({ showSignatoryModal: true })                  
+                     : () => handleSaveAndPrint(response.data[0].arcmId); 
+             useSwalshowSaveSuccessDialog(
+                 handleReset,          
+                 onSaveAndPrint       
+                 );
           }
 
          
@@ -1024,7 +1031,8 @@ if (selectedARCMType !== "ARCM07" || !detailRows?.length) {
                   documentID:"",
                   documentStatus:"",
                   status:"OPEN",
-                  documentDate:useGetCurrentDay(),    
+                  documentDate:useGetCurrentDay(),  
+                  noReprints:"0",  
      });
   }
 };
