@@ -130,7 +130,7 @@ const JV = () => {
     remarks: "",
     billtermCode: "",
     billtermName: "",
-    selectedJVType: "REG",
+    selectedJVType: "JV01",
 
     userCode: 'NSI', // Default value
 
@@ -446,7 +446,7 @@ const [refDocType, setRefDocType] = useState('');
     if (data) {
       updateState({
         jvTypes: data,
-        selectedJVType: "REG",
+        selectedJVType: "JV01",
       });
     }    
   };
@@ -1425,9 +1425,9 @@ return (
   value={jvType}
   onChange={(e) => setJvType(e.target.value)}
 >
-  <option value="regular">Regular Adjustment</option>
-  <option value="transaction-reversal">Transaction Reversal</option>
-  <option value="ar-settlement">AR Settlement Application</option>
+  <option value="JV01">Regular Adjustment</option>
+  <option value="JV02">Transaction Reversal</option>
+  {/* <option value="ar-settlement">AR Settlement Application</option> */}
 </select>
   <label
     htmlFor="jvType"
@@ -1463,22 +1463,22 @@ return (
   value={refDocType}
   onChange={(e) => setRefDocType(e.target.value)}
 >
-  {jvType === 'regular' && (
-    <option value="journal-voucher">Journal Voucher</option>
+  {jvType === 'JV01' && (
+    <option value="JV01">Journal Voucher</option>
   )}
 
-  {jvType === 'transaction-reversal' && (
+  {jvType === 'JV02' && (
     <>
       <option value="accounts-payable">Accounts Payable</option>
       <option value="collection-receipt">Collection Receipt</option>
       <option value="check-voucher">Check Voucher</option>
-      <option value="acknowledgment-receipt">Acknowledgment Receipt</option>
-      <option value="journal-voucher">Journal Voucher</option>
-      <option value="petty-cash-voucher">Petty Cash Voucher</option>
+      <option value="acknowledgment-receipt">Acknowledgment Receipt</option> 
+      <option value="JV01">Journal Voucher</option>
+       <option value="petty-cash-voucher">Petty Cash Voucher</option> */
     </>
   )}
 
-  {jvType === 'ar-settlement' && (
+  {jvType === 'JV03' && (
     <>
       <option value="ar-credit-memo">AR Credit Memo</option>
       <option value="collection-receipt">Collection Receipt</option>
