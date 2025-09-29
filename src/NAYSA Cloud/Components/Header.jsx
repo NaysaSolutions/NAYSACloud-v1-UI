@@ -352,8 +352,8 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
     };
 
     return (
-        <div className="fixed top-[55px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">
-            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-2 gap-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed top-[50px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">
+            <div className="flex flex-col md:flex-row items-center justify-between px-4 py-1 gap-2 border-b border-gray-200 dark:border-gray-700">
                 {/* Header Tabs */}
                 <div className="flex flex-wrap justify-center md:justify-start gap-1 lg:gap-2 w-full md:w-auto">
                     <button
