@@ -5,11 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { apiClient, setTenant } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
-
-
 function normalizeCompaniesPayload(raw) {
-  const toArray = (x) =>
-    Array.isArray(x) ? x : x && typeof x === "object" ? Object.values(x) : [];
   let arr = [];
   if (Array.isArray(raw)) arr = raw;
   else if (Array.isArray(raw?.data)) arr = raw.data;
@@ -37,7 +33,6 @@ function normalizeCompaniesPayload(raw) {
   });
 }
 
-
 export default function Login({ onSwitchToRegister, onForgot }) {
   const { setUser } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +49,15 @@ export default function Login({ onSwitchToRegister, onForgot }) {
   const [capsOn, setCapsOn] = useState(false);
   const pwdRef = useRef(null);
 
+  // Keep tenant header + localStorage in sync with companyCode
+  useEffect(() => {
+    if (companyCode) {
+      setTenant(companyCode);
+      localStorage.setItem("companyCode", companyCode);
+    }
+  }, [companyCode]);
+
+  // Load companies
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -63,21 +67,25 @@ export default function Login({ onSwitchToRegister, onForgot }) {
         const options = normalizeCompaniesPayload(data).filter(
           (x) => x.code || x.database
         );
-
-
         if (!alive) return;
+
         setCompanies(options);
 
-
-        if (!companyCode && options.length === 1) {
+        // Initialize or correct selected company
+        const persisted = localStorage.getItem("companyCode") || "";
+        if (!persisted && options.length === 1) {
           setCompanyCode(options[0].code || options[0].database || "");
         } else if (
-          companyCode &&
-          !options.some((o) => o.code === companyCode || o.database === companyCode)
+          persisted &&
+          !options.some((o) => o.code === persisted || o.database === persisted)
         ) {
           if (options[0]) {
             setCompanyCode(options[0].code || options[0].database || "");
+          } else {
+            setCompanyCode("");
           }
+        } else if (persisted) {
+          setCompanyCode(persisted);
         }
       } catch (e) {
         Swal.fire({
@@ -95,15 +103,12 @@ export default function Login({ onSwitchToRegister, onForgot }) {
     return () => {
       alive = false;
     };
-  }, []); 
-
-
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((s) => ({ ...s, [name]: value }));
   };
-
 
   const handleCaps = (e) =>
     setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
@@ -123,24 +128,42 @@ export default function Login({ onSwitchToRegister, onForgot }) {
 
     setIsLoading(true);
     try {
-      setTenant(companyCode); 
+      // Ensure tenant header set
+      setTenant(companyCode);
 
-      const { data } = await apiClient.post("/login", {
+      const payload = {
         USER_CODE: form.USER_CODE.trim(),
         PASSWORD: form.PASSWORD,
-      });
+      };
 
-      if (data?.status !== "success") {
+      const { data } = await apiClient.post("/login", payload);
+
+      if (data?.status !== "success" || !data?.token) {
         throw new Error(data?.message || "Login failed.");
       }
 
+      // Save token for protected routes
+      localStorage.setItem("token", data.token);
+
+      // Optional: persist basic user info
       const d = data?.data || {};
       const normalized = {
         USER_CODE: d.USER_CODE ?? form.USER_CODE.trim(),
         USER_NAME: d.USER_NAME ?? d.username ?? form.USER_CODE.trim(),
+        EMAIL_ADD: d.EMAIL_ADD ?? "",
       };
-
       setUser(normalized);
+
+      // Optional: persist tenant info from API (if returned)
+      if (data?.tenant?.code || data?.tenant?.database) {
+        const tcode = data.tenant.code || data.tenant.database;
+        if (tcode) {
+          localStorage.setItem("companyCode", tcode);
+          setTenant(tcode);
+          setCompanyCode(tcode);
+        }
+      }
+
       Swal.fire({
         toast: true,
         position: "top-end",
@@ -153,15 +176,36 @@ export default function Login({ onSwitchToRegister, onForgot }) {
 
       navigate("/", { replace: true });
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Login failed",
-        text:
-          err?.response?.data?.message ||
-          err?.message ||
-          "Please try again.",
-        confirmButtonText: "OK",
-      });
+      const status = err?.response?.status;
+      const code = err?.response?.data?.code;
+
+      // STRICT LOCK handling
+      if (status === 409 && code === "ALREADY_LOGGED_IN") {
+        const s = err?.response?.data?.session || {};
+        Swal.fire({
+          icon: "info",
+          title: "Already signed in",
+          html: `
+            Your account is already signed in on another device.<br/>
+            <small>
+              Device: ${s.user_agent ?? "Unknown"}<br/>
+              IP: ${s.ip ?? "Unknown"}<br/>
+              Since: ${s.since ?? "-"}
+            </small>
+          `,
+          confirmButtonText: "OK",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Login failed",
+          text:
+            err?.response?.data?.message ||
+            err?.message ||
+            "Please try again.",
+          confirmButtonText: "OK",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -210,7 +254,7 @@ export default function Login({ onSwitchToRegister, onForgot }) {
                   {companies.map((c) => {
                     const value = c.code || c.database; // middleware accepts code or database
                     const label = c.company || value || "(unnamed)";
-                   return (
+                    return (
                       <option key={value || label} value={value}>
                         {label}
                       </option>
@@ -242,7 +286,11 @@ export default function Login({ onSwitchToRegister, onForgot }) {
             <label className="block">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">Password</span>
-                {capsOn && <span className="text-xs font-semibold text-white">Caps Lock is ON</span>}
+                {capsOn && (
+                  <span className="text-xs font-semibold text-white">
+                    Caps Lock is ON
+                  </span>
+                )}
               </div>
               <div className="relative">
                 <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -271,7 +319,11 @@ export default function Login({ onSwitchToRegister, onForgot }) {
             </label>
 
             <div className="flex justify-end pt-1">
-              <button type="button" onClick={onForgot} className="text-sm font-medium text-sky-700 hover:text-sky-600">
+              <button
+                type="button"
+                onClick={onForgot}
+                className="text-sm font-medium text-sky-700 hover:text-sky-600"
+              >
                 Forgot password?
               </button>
             </div>
@@ -302,10 +354,13 @@ export default function Login({ onSwitchToRegister, onForgot }) {
             <button onClick={onSwitchToRegister} className="text-sm text-slate-700 hover:underline">
               Don’t have an account? <span className="text-sky-700">Register</span>
             </button>
-            <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} NAYSA. All rights reserved.</p>
+            <p className="mt-3 text-xs text-slate-500">
+              © {new Date().getFullYear()} NAYSA. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

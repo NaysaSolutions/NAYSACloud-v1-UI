@@ -380,6 +380,7 @@ export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,se
         })),
       },
     };
+    console.log(JSON.stringify(payload))
 
     const { data: res } = await apiClient.post("/finalize"+docCode, payload);
 

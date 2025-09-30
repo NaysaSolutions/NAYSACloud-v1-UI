@@ -31,7 +31,7 @@ import PostCV    from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostCV.
 import CVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CVHistory.jsx";
 
 import JV        from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
-
+import PostJV    from "./NAYSA Cloud/Module/Main Module/General Ledger/PostJV.jsx";
 
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
@@ -73,7 +73,7 @@ export const pageRegistry = {
  
   //Posting
   PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
-  PostCV,PostPCV,
+  PostCV,PostPCV,PostJV,
 
 
 
