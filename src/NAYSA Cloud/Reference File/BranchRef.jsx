@@ -601,7 +601,7 @@ const BranchRef = () => {
             </div>
 
             {/* Address — spans 2 columns on md+ */}
-            <div className="relative md:col-span-2">
+            <div className="relative md:col-span-1">
               <input
                 type="text"
                 id="address"

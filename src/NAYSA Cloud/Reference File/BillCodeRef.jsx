@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
+
+//UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
@@ -18,22 +20,40 @@ import {
   faUndo,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+
+
+// Global
+import { reftables, reftablesPDFGuide, reftablesVideoGuide } from "@/NAYSA Cloud/Global/reftable";
+
+// import * as XLSX from "xlsx";
+// import jsPDF from "jspdf";
+// import autoTable from "jspdf-autotable";
 
 // ------- Config / helpers ----------------------------------------------------
 const API = axios.create({ baseURL: "http://localhost:8000/api" });
-const req = (v) => String(v ?? "").trim().length > 0;
+
+
+
+/** Simple validators */
+const isTinValid = (v) => /^[0-9-]{9,20}$/.test(String(v || ""));
+const req = (v) => String(v || "").trim().length > 0;
+
+/** Case-insensitive "includes" that tolerates nulls */
 const includesCI = (hay, needle) =>
   String(hay ?? "").toLowerCase().includes(String(needle ?? "").toLowerCase());
 
+
+
+// const req = (v) => String(v ?? "").trim().length > 0;
+// const includesCI = (hay, needle) =>
+//   String(hay ?? "").toLowerCase().includes(String(needle ?? "").toLowerCase());
+
 // Props: reftables maps and guides are assumed to exist in your project
-import {
-  reftables,
-  reftablesPDFGuide,
-  reftablesVideoGuide,
-} from "@/NAYSA Cloud/Global/reftable";
+// import {
+//   reftables,
+//   reftablesPDFGuide,
+//   reftablesVideoGuide,
+// } from "@/NAYSA Cloud/Global/reftable";
 
 // ------- Component -----------------------------------------------------------
 const BillCodeRef = () => {
@@ -44,9 +64,9 @@ const BillCodeRef = () => {
   const videoLink = reftablesVideoGuide[docType];
 
   // Data state
-  const [billCode, setBillcodes] = useState([]);
+  const [billCode, setBillCodes] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [editing, setEditing] = useState(null);
+  const [editingBillCode, setEditingBillCode] = useState(null);
 
   // UX state
   const [loading, setLoading] = useState(false);
@@ -78,30 +98,28 @@ const BillCodeRef = () => {
   const guideRef = useRef(null);
 
   // -------- Fetch ------------------------------------------------------------
-  const fetchBillcodes = async () => {
-    setLoading(true);
-    try {
-      const { data } = await API.get("/billCode");
-      const resultString = data?.data?.[0]?.result;
-      setBillcodes(resultString ? JSON.parse(resultString) : []);
-    } catch (error) {
-      console.error("Error fetching bill codes:", error);
-      Swal.fire("Error", "Failed to load bill codes.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    fetchBillcodes();
-  }, []);
+ const fetchBillcodes = async () => {
+  setLoading(true);
+  try {
+    const { data } = await API.get("/billCode");
+    const resultString = data?.data?.[0]?.result;
+    const list = resultString ? JSON.parse(resultString) : [];
+    setBillCodes(list);           // <-- populate table
+    setEditingBillCode(null);     // optional: clear the form
+  } catch (error) {
+    console.error("Error fetching bill codes:", error);
+    Swal.fire("Error", "Failed to load bill codes.", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+  useEffect(() => {  fetchBillcodes();   }, []);
 
   // Close menus on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const clickedOutsideExport =
-        exportRef.current && !exportRef.current.contains(event.target);
-      const clickedOutsideGuide =
-        guideRef.current && !guideRef.current.contains(event.target);
+      const clickedOutsideExport = exportRef.current && !exportRef.current.contains(event.target);
+      const clickedOutsideGuide = guideRef.current && !guideRef.current.contains(event.target);
       if (clickedOutsideExport) setOpenExport(false);
       if (clickedOutsideGuide) setOpenGuide(false);
     };
@@ -114,12 +132,12 @@ const BillCodeRef = () => {
     const onKey = (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (!saving && isEditing) handleSave();
+        if (!saving && isEditing) handleSaveBillCode();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saving, isEditing, editing]);
+  }, [saving, isEditing, editingBillCode]);
 
   // -------- Derivations: search + filters + sort + pagination ---------------
   const filtered = useMemo(() => {
@@ -152,6 +170,11 @@ const BillCodeRef = () => {
       if (f.sdiscAcct && !includesCI(b.sdiscAcct, f.sdiscAcct)) return false;
       if (f.rcCode && !includesCI(b.rcCode, f.rcCode)) return false;
       if (f.active && String(b.active ?? "") !== String(f.active)) return false;
+
+      // select filters: exact match when a value is chosen
+      if (f.main && String(b.main ?? "") !== String(f.main)) return false;
+      if (f.active && String(b.active ?? "") !== String(f.active)) return false;
+
       return true;
     });
 
@@ -170,9 +193,9 @@ const BillCodeRef = () => {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // -------- CRUD -------------------------------------------------------------
+  // -------- NEW  /  EDIT   RESET FLOWS  -------------------------------------------------------------
   const startNew = () => {
-    setEditing({
+    setEditingBillCode({
       __existing: false,
       billCode: "",
       billName: "",
@@ -188,23 +211,23 @@ const BillCodeRef = () => {
 
   const handleEditRow = (index) => {
     const item = filtered[index + (page - 1) * pageSize]; // map visible index to original
-    setEditing({ ...item, __existing: true });
+    setEditingBillCode({ ...item, __existing: true });
     setIsEditing(true);
   };
 
   const resetForm = () => {
-    setEditing(null);
+    setEditingBillCode(null);
     setIsEditing(false);
     setOpenExport(false);
     setOpenGuide(false);
     setPage(1);
   };
 
-  const handleSave = async () => {
-    if (!editing) return;
+  const handleSaveBillCode = async () => {
+    if (!editingBillCode) return;
 
     const { billCode, billName, uom, arAcct, salesAcct, sdiscAcct, rcCode } =
-      editing;
+      editingBillCode;
 
     // Validate requireds
     if (
@@ -226,14 +249,14 @@ const BillCodeRef = () => {
 
     const payload = {
       json_data: {
-        billCode: editing.billCode,
-        billName: editing.billName,
-        uom: editing.uom,
-        arAcct: editing.arAcct || "",
-        salesAcct: editing.salesAcct || "",
-        sdiscAcct: editing.sdiscAcct || "",
-        rcCode: editing.rcCode,
-        active: editing.active ?? "Y",
+        billCode: editingBillCode.billCode,
+        billName: editingBillCode.billName,
+        uom: editingBillCode.uom,
+        arAcct: editingBillCode.arAcct || "",
+        salesAcct: editingBillCode.salesAcct || "",
+        sdiscAcct: editingBillCode.sdiscAcct || "",
+        rcCode: editingBillCode.rcCode,
+        active: editingBillCode.active ?? "Y",
         userCode: "NSI",
       },
     };
@@ -271,10 +294,9 @@ const BillCodeRef = () => {
     }
   };
 
-  const handleDelete = async (index) => {
-    const b = filtered[index + (page - 1) * pageSize];
+  const handleDeleteBillCode = async (index) => {
+    const b = filtered[index];
     if (!b?.billCode) return;
-
     const confirm = await Swal.fire({
       title: "Delete this Bill Code?",
       text: `Bill Code: ${b.billCode} | ${b.billName}`,
@@ -286,22 +308,16 @@ const BillCodeRef = () => {
     if (!confirm.isConfirmed) return;
 
     try {
-      const { data } = await API.post("/deleteBillCodes", {
-        json_data: { billCode: b.billCode },
-      });
+      const { data } = await API.post("/deleteBillCodes", {json_data: { billCode: b.billCode },});
       if (data?.status === "success") {
-        setBillcodes((prev) => prev.filter((x) => x.billCode !== b.billCode));
+        setBillCodes((prev) => prev.filter((x) => x.billCode !== b.billCode));
         Swal.fire("Deleted", "The bill code has been deleted.", "success");
       } else {
         Swal.fire("Error", data?.message || "Deletion failed.", "error");
       }
     } catch (error) {
       console.error("API delete error:", error);
-      Swal.fire(
-        "Error",
-        error?.response?.data?.message || "Failed to delete Bill Code.",
-        "error"
-      );
+      Swal.fire("Error", error?.response?.data?.message || "Failed to delete Bill Code.","error" );
     }
   };
 
@@ -372,94 +388,71 @@ const BillCodeRef = () => {
 
   // -------- UI ---------------------------------------------------------------
   return (
-    <div className="mt-24 px-4 sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Sticky header / toolbar */}
-        <div className="fixed top-14 left-4 right-4 z-30">
-          <div className="backdrop-blur bg-white/70 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <h1 className="text-xl font-bold tracking-tight">{documentTitle}</h1>
-                <div className="relative ml-auto sm:ml-2 w-full sm:w-72">
+    <div className="global-ref-main-div-ui mt-20">
+      <div className="mx-auto">
+        {/*  header */}
+        <div className="fixed top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
+            <div className="relative ml-auto sm:ml-4 w-full sm:w-64">
                   <input
-                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="global-ref-filterbox-ui global-ref-filterbox-enabled pl-8"
                     placeholder="Search bill codes…"
                     value={query}
                     onChange={(e) => {
-                      setQuery(e.target.value);
-                      setPage(1);
-                    }}
+                      setQuery(e.target.value); setPage(1);}}
                   />
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-                  />
+                  <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>
               </div>
 
               <div className="flex gap-2 justify-center text-xs">
-                <button
-                  onClick={startNew}
-                  className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-2"
-                >
+               <button onClick={startNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
                   <FontAwesomeIcon icon={faPlus} /> Add
-                </button>
+                 </button>
 
                 <button
-                  onClick={handleSave}
+                  onClick={handleSaveBillCode}
+                  className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
                   disabled={!isEditing || saving}
                   title="Ctrl+S to Save"
-                  className={`px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-2 ${
-                    !isEditing || saving ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
                 >
                   <FontAwesomeIcon icon={faSave} /> Save
                 </button>
 
                 <button
-                  onClick={resetForm}
-                  disabled={saving}
-                  className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium flex items-center gap-2"
-                >
+                  onClick={resetForm} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700" disabled={saving}>
                   <FontAwesomeIcon icon={faUndo} /> Reset
                 </button>
+
+
 
                 <div ref={exportRef} className="relative">
                   <button
                     onClick={() => setOpenExport((v) => !v)}
-                    className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2"
+                    className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
                   >
-                    <FontAwesomeIcon icon={faPrint} /> Export{" "}
-                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                    <FontAwesomeIcon icon={faPrint} /> Export <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
                   </button>
                   {isOpenExport && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden">
+                    <div className="bsolute right-0 mt-1 w-40 rounded-lg shadow-lg bg-white ring-1 ring-black/10 z-[60] dark:bg-gray-800">
                       <button
-                        onClick={() => {
-                          handleExport("csv");
-                          setOpenExport(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center gap-2"
+                        onClick={() => { handleExport("csv");setOpenExport(false); }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                       >
-                        <FontAwesomeIcon icon={faFileCsv} className="opacity-70" /> CSV
+                        <FontAwesomeIcon icon={faFileCsv} className="mr-2 text-green-600" /> CSV
                       </button>
                       <button
-                        onClick={() => {
-                          handleExport("excel");
-                          setOpenExport(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center gap-2"
+                        onClick={() => { handleExport("excel");setOpenExport(false);}}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                       >
-                        <FontAwesomeIcon icon={faFileExcel} className="opacity-70" /> Excel
+                        <FontAwesomeIcon icon={faFileExcel} className="mr-2 text-green-600" /> Excel
                       </button>
                       <button
-                        onClick={() => {
-                          handleExport("pdf");
-                          setOpenExport(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center gap-2"
+                        onClick={() => { handleExport("pdf");setOpenExport(false); }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                       >
-                        <FontAwesomeIcon icon={faFilePdf} className="opacity-70" /> PDF
+                        <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" /> PDF
                       </button>
                     </div>
                   )}
@@ -468,28 +461,21 @@ const BillCodeRef = () => {
                 <div ref={guideRef} className="relative">
                   <button
                     onClick={() => setOpenGuide((v) => !v)}
-                    className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-2"
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
                   >
-                    <FontAwesomeIcon icon={faInfoCircle} /> Info{" "}
-                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                    <FontAwesomeIcon icon={faInfoCircle} /> Info <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
                   </button>
                   {isOpenGuide && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden">
+                    <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black/10 z-[60] dark:bg-gray-800">
                       <button
-                        onClick={() => {
-                          handlePDFGuide();
-                          setOpenGuide(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center gap-2"
+                        onClick={() => { handlePDFGuide();setOpenGuide(false);}}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                       >
                         <FontAwesomeIcon icon={faFilePdf} /> User Guide
                       </button>
                       <button
-                        onClick={() => {
-                          handleVideoGuide();
-                          setOpenGuide(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center gap-2"
+                        onClick={() => {handleVideoGuide();setOpenGuide(false);}}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                       >
                         <FontAwesomeIcon icon={faVideo} /> Video Guide
                       </button>
@@ -499,240 +485,207 @@ const BillCodeRef = () => {
               </div>
             </div>
 
-            {saving || loading ? (
-              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">
-                {saving ? "Saving…" : "Loading…"}
+            {/* Form */}
+        <div className="global-tran-tab-div-ui">
+          {(loading || saving) && (
+            <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm flex items-center justify-center">
+              <div
+                className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl flex items-center gap-3"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                {/* Spinner */}
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-white" />
+                {/* Text */}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {saving ? "Saving…" : "Loading…"}
+                </span>
               </div>
-            ) : null}
-          </div>
+            </div>
+          )}
 
+          {/* Form grid (flattened) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           
-        </div>
-        {/* Form Card */}
-        <div className="mt-40">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md p-5 hower:shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Col 1 */}
-              <div className="space-y-10">
                 {/* Bill Code */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="billCode"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[Calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.billCode || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.billCode || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), billCode: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), billCode: e.target.value }))
                     }
-                    disabled={!!editing?.__existing || !isEditing}
-                    maxLength={30}
+                    disabled={!!editingBillCode?.__existing}
+                    readOnly={!isEditing}
+                    maxLength={10}
                   />
                   <label
-                    htmlFor="billCode"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    htmlFor="billCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`} >
                     <span className="text-red-500">*</span> Bill Code
                   </label>
                 </div>
 
                 {/* Bill Name */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="billName"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[Calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.billName || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.billName || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), billName: e.target.value }))
+                      setEditingBillName((prev) => ({ ...(prev || {}), billName: e.target.value }))
                     }
                     disabled={!isEditing}
                   />
                   <label
-                    htmlFor="billName"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    htmlFor="arAcct" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> Bill Name
                   </label>
                 </div>
 
+
+
+
+                
+
                 {/* UOM */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="uom"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[Calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.uom || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.uom || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), uom: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), uom: e.target.value }))
                     }
                     disabled={!isEditing}
-                    maxLength={10}
                   />
                   <label
-                    htmlFor="uom"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    htmlFor="uom" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> UOM
                   </label>
                 </div>
-              </div>
-
-              {/* Col 2 */}
-              <div className="space-y-4">
+             
+           
                 {/* AR Account */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="arAcct"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.arAcct || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.arAcct || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), arAcct: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), arAcct: e.target.value }))
                     }
                     disabled={!isEditing}
                   />
                   <label
-                    htmlFor="arAcct"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-semibold opacity-90"
-                  >
+                    htmlFor="arAcct" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> AR Account
                   </label>
                 </div>
 
                 {/* Sales Account */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="salesAcct"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font -[calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.salesAcct || ""}
+                    className={ `peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.salesAcct || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), salesAcct: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), salesAcct: e.target.value }))
                     }
                     disabled={!isEditing}
                   />
                   <label
-                    htmlFor="salesAcct"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    htmlFor="salesAcct" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> Sales Account
                   </label>
                 </div>
 
                 {/* Sales Discount Account */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="sdiscAcct"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font[calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.sdiscAcct || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.sdiscAcct || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), sdiscAcct: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), sdiscAcct: e.target.value }))
                     }
                     disabled={!isEditing}
                   />
                   <label
-                    htmlFor="sdiscAcct"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    htmlFor="sdiscAcct" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> Sales Discount Account
                   </label>
                 </div>
-              </div>
+             
 
               {/* Col 3 */}
               <div className="space-y-4">
                 {/* Responsibility Center */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <input
                     type="text"
                     id="rcCode"
                     placeholder=" "
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.rcCode || ""}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.rcCode || ""}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), rcCode: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), rcCode: e.target.value }))
                     }
                     disabled={!isEditing}
                   />
                   <label
                     htmlFor="rcCode"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
+                    className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
                     <span className="text-red-500">*</span> Responsibility Center
                   </label>
                 </div>
 
                 {/* Active */}
-                <div className="relative">
+                <div className="relative md:col-span-1">
                   <select
                     id="active"
-                    className={`peer w-full rounded-lg border px-3 py-2 bg-white dark:bg-gray-800 font-[calibri] ${
-                      isEditing
-                        ? "border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                        : "border-gray-200 dark:border-gray-800 opacity-70"
-                    }`}
-                    value={editing?.active ?? "Y"}
+                    className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
+                    value={editingBillCode?.active ?? "Active"}
                     onChange={(e) =>
-                      setEditing((prev) => ({ ...(prev || {}), active: e.target.value }))
+                      setEditingBillCode((prev) => ({ ...(prev || {}), active: e.target.value }))
                     }
                     disabled={!isEditing}
                   >
                     <option value="Y">Yes</option>
                     <option value="N">No</option>
                   </select>
-                  <label
-                    htmlFor="active"
-                    className="absolute -top-2 left-2 bg-white dark:bg-gray-900 px-1 text-sm font-normal opacity-90"
-                  >
-                    <span className="text-red-500">*</span> Active
-                  </label>
+                  <label htmlFor="active"className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
+                     <span className="global-ref-asterisk-ui">*</span> Active
+                     </label>
+                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                      <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
+             </div> 
         </div>
 
-        {/* Table */}
-        <div className="mt-4">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-red dark:bg -gray-900 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">*
-              <table className="min-w-full text-s">
-                <thead className="bg-gray-50 dark:bg-gray-800/60 sticky top-[116px] z-5">
+       {/* Table */}
+        <div className="global-ref-table-main-div-ui">
+          <div className="global-ref-table-main-sub-div-ui">
+            <div className="global-ref-table-main-sub-div-ui">
+              <table className="global-ref-table-main-sub-div-ui">
+                <thead className="global-ref-table-main-sub-div-ui">
                   {/* Sortable header row */}
                   <tr className="text-left">
                     {[
@@ -749,60 +702,101 @@ const BillCodeRef = () => {
                     ].map(([key, label]) => (
                       <th
                         key={key}
-                        className={`px-3 py-1 font-normal border-b border-gray-200 dark:border-gray-800 ${
-                          key.startsWith("_") ? "" : "cursor-pointer select-none"
-                        }`}
+                        className={`global-ref-th-ui ${key.startsWith("_") ? "" : "cursor-pointer select-none"}`}
                         onClick={() => {
                           if (key.startsWith("_")) return;
                           setSortBy(key);
-                          setSortDir((prev) =>
-                            sortBy === key && prev === "asc" ? "desc" : "asc"
-                          );
+                          setSortDir((prev) => (sortBy === key && prev === "asc" ? "desc" : "asc"));
                         }}
                         title={!key.startsWith("_") ? "Click to sort" : undefined}
                       >
-                        <div className="flex items-center gap-1">
-                          <span>{label}</span>
-                          {!key.startsWith("_") && sortBy === key && (
-                            <span className="opacity-60">{sortDir === "asc" ? "▲" : "▼"}</span>
-                          )}
-                        </div>
+                        {label} {sortBy === key ? (sortDir === "asc" ? "▲" : "▼") : ""}
                       </th>
                     ))}
                   </tr>
 
+
+
                   {/* Filter row */}
-                  <tr className="bg-white/70 dark:bg-gray-900/70">
-                    {[
-                      "billCode",
-                      "billName",
-                      "uom",
-                      "arAcct",
-                      "salesAcct",
-                      "sdiscAcct",
-                      "rcCode",
-                    ].map((k) => (
-                      <th key={k} className="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
-                        <input
-                          className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  <tr>
+                    {/* BillCode Code */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
                           placeholder="Filter…"
-                          value={columnFilters[k]}
-                          onChange={(e) => {
-                            setColumnFilters((s) => ({ ...s, [k]: e.target.value }));
-                            setPage(1);
-                          }}
+                          value={columnFilters.billCode}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, billCode: e.target.value })); setPage(1); }}
                         />
                       </th>
-                    ))}
+
+                      {/* BillCode Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.billName}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, billName: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+
+                        {/* UOM Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.uom}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, uom: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+
+                        {/* AR Acct Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.arAcct}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, arAcct: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+
+
+                    {/* Sales Acct Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.salesAcct}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, salesAcct: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+
+                    {/* discout Acct Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.sdiscAcct}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, sdiscAcct: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+                    
+                       {/* RC Acct Name */}
+                    <th className="global-ref-th-ui">
+                      <input
+                          className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                          placeholder="Filter…"
+                          value={columnFilters.rcCode}
+                          onChange={(e) => { setColumnFilters(s => ({ ...s, rcCode: e.target.value })); setPage(1); }}
+                        />
+                      </th>
+
+
                     {/* Active select */}
-                    <th className="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+                    <th className="global-ref-th-ui">
                       <select
-                        className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
                         value={columnFilters.active}
-                        onChange={(e) => {
-                          setColumnFilters((s) => ({ ...s, active: e.target.value }));
-                          setPage(1);
-                        }}
+                        onChange={(e) => {setColumnFilters((s) => ({ ...s, active: e.target.value }));setPage(1); }}
                       >
                         <option value="">All</option>
                         <option value="Y">Yes</option>
@@ -810,38 +804,35 @@ const BillCodeRef = () => {
                       </select>
                     </th>
                     {/* Edit/Delete spacers */}
-                    <th className="px-3 py-2 border-b border-gray-200 dark:border-gray-800"></th>
-                    <th className="px-3 py-2 border-b border-gray-200 dark:border-gray-800"></th>
+                    <th className="global-ref-th-ui"></th>
+                    <th className="global-ref-th-ui"></th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {pageRows.length ? (
                     pageRows.map((row, idx) => (
-                      <tr
-                        key={`${row.billCode}-${idx}`}
-                        className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/20"
-                      >
-                        <td className="px-3 py-2">{row.billCode}</td>
-                        <td className="px-3 py-2">{row.billName}</td>
-                        <td className="px-3 py-2">{row.uom || "-"}</td>
-                        <td className="px-3 py-2">{row.arAcct || "-"}</td>
-                        <td className="px-3 py-2">{row.salesAcct || "-"}</td>
-                        <td className="px-3 py-2">{row.sdiscAcct || "-"}</td>
-                        <td className="px-3 py-2">{row.rcCode || "-"}</td>
-                        <td className="px-3 py-2">{row.active}</td>
-                        <td className="px-3 py-2 text-center">
+                      <tr key={`${billCode.billCode}-${idx}`} className="global-tran-tr-ui">
+                        <td className="global-ref-td-ui">{row.billCode}</td>
+                        <td className="global-ref-td-ui">{row.billName}</td>
+                        <td className="global-ref-td-ui">{row.uom || "-"}</td>
+                        <td className="global-ref-td-ui">{row.arAcct || "-"}</td>
+                        <td className="global-ref-td-ui">{row.salesAcct || "-"}</td>
+                        <td className="global-ref-td-ui">{row.sdiscAcct || "-"}</td>
+                        <td className="global-ref-td-ui">{row.rcCode || "-"}</td>
+                        <td className="global-ref-td-ui">{row.active}</td>
+                        <td className="global-ref-td-ui text-center sticky right-10">
                           <button
-                            className="px-2 py-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white"
-                            onClick={() => handleEditRow(idx)}
+                            className="global-ref-td-button-edit-ui"
+                            onClick={() => handleEditRow((page - 1) * pageSize + idx)}
                           >
                             <FontAwesomeIcon icon={faEdit} />
                           </button>
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="global-ref-td-ui text-center sticky right-0">
                           <button
-                            className="px-2 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white"
-                            onClick={() => handleDelete(idx)}
+                            className="global-ref-td-button-delete-ui"
+                            onClick={() => handleDeleteBillCode((page - 1) * pageSize + idx)}
                           >
                             <FontAwesomeIcon icon={faTrashAlt} />
                           </button>
@@ -850,25 +841,32 @@ const BillCodeRef = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={10} className="px-5 py-10 text-center">
-                        <div className="text-sm opacity-70">No bill codes found</div>
+                      <td colSpan={10} className="global-ref-norecords-ui">
+                         No bill codes found
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </div>
+            
 
             {/* Pager */}
             <div className="flex items-center justify-between p-3">
-              <div className="text-xs opacity-80 font-normal">
+              <div className="text-xs opacity-80 font-semibold">
                 Total Records: {filtered.length}
               </div>
-              <div className="flex items-center gap-2">
-                <select
-                  className="px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={pageSize}
-                  onChange={(e) => {
+              <div className="flex items-center gap-3">
+
+                  <div className="text-xs opacity-80 font-semibold">
+                    Page {page} of {totalPages}
+                  </div>
+
+
+                
+                  <select
+                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                    value={pageSize}
+                    onChange={(e) => {
                     setPageSize(Number(e.target.value));
                     setPage(1);
                   }}
@@ -879,29 +877,29 @@ const BillCodeRef = () => {
                     </option>
                   ))}
                 </select>
-                <div className="text-xs opacity-80 font-semibold">
-                  Page {page} of {totalPages}
-                </div>
+                
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   Prev
                 </button>
                 <button
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-2 text-xs font-medium text-white bg-blue-800 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   Next
                 </button>
+                
               </div>
             </div>
           </div>
         </div>
         {/* end Table */}
       </div>
+    </div>
     </div>
   );
 };

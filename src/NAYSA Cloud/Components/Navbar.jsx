@@ -2,12 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Bell, BookOpen, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FiSun, FiMoon } from 'react-icons/fi';
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
+
 
 const Navbar = ({ onMenuClick }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const navigate = useNavigate();
-
     const [isDark, setIsDark] = useState(false);
+    const { user } = useAuth();
+
 
     useEffect(() => {
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

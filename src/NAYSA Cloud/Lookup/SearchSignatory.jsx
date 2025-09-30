@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef} from "react";
 import { postRequest } from "@/NAYSA Cloud/Configuration/BaseURL";
 import { useTopDocSign } from "@/NAYSA Cloud/Global/top1RefTable";
 
 const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
   const { documentID, noReprints, docType } = params;
+
   const [form, setForm] = useState({
     preparedBy: "NSI",
     checkedBy: "",
@@ -11,27 +12,39 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
     approvedBy: "",
     documentID,
   });
+
+  const canPickMode = useMemo(() => Number(noReprints) === 0, [noReprints]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const cancelRef = useRef(null);
+
+
+  useEffect(() => {
+    if (isOpen) {
+      setDropdownOpen(false);
+      cancelRef.current?.focus();
+    }
+  }, [isOpen]);
+
 
   useEffect(() => {
     const fetchSignatories = async () => {
       try {
         const response = await useTopDocSign(documentID);
         if (response) {
-          setForm({
-            preparedBy: "NSI",
+          setForm((prev) => ({
+            ...prev,
             checkedBy: response.checkedBy || "",
             notedBy: response.notedBy || "",
             approvedBy: response.approvedBy || "",
             documentID,
-          });
+          }));
         }
       } catch (error) {
         console.error("❌ Error fetching signatories:", error);
       }
     };
     fetchSignatories();
-  }, [documentID, params]);
+  }, [documentID]); // avoid depending on the whole params object
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,16 +70,11 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
 
   if (!isOpen) return null;
 
-  // Shared widths so both buttons match
-  const buttonWidth = "w-40"; // ~160px; tweak as needed
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
       <div className="bg-white dark:bg-gray-900 w-[500px] rounded-lg shadow-lg p-6">
-        {/* Header */}
         <h2 className="text-lg font-semibold mb-4">Document Signatories</h2>
 
-        {/* Inputs */}
         <div className="space-y-3">
           {["preparedBy", "checkedBy", "notedBy", "approvedBy"].map((field) => (
             <div className="flex items-center" key={field}>
@@ -87,11 +95,8 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
           ))}
         </div>
 
-        {/* Footer */}
-          
         <div className="flex justify-end mt-6 space-x-3 relative">
-          {noReprints === 0 ? (
-            // Dropdown button
+          {canPickMode ? (
             <div className="relative inline-block text-left">
               <button
                 onClick={() => setDropdownOpen((prev) => !prev)}
@@ -100,47 +105,31 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
                 aria-expanded={dropdownOpen}
               >
                 Print Preview
-                <svg
-                  className="w-4 h-4 ml-2"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="w-4 h-4 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {dropdownOpen && (
-                <div
-                  className="absolute right-0 mt-2 min-w-[10rem] rounded-lg overflow-hidden shadow-lg z-50"
-                  role="menu"
-                >
+                <div className="absolute right-0 mt-2 min-w-[10rem] rounded-lg overflow-hidden shadow-lg z-50" role="menu">
                   <button
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      handlePreviewAndClose("Draft");
-                    }}
-                    className="block w-full text-center w-40 h-10 bg-blue-400 text-white hover:bg-blue-500"
+                    onClick={() => { setDropdownOpen(false); handlePreviewAndClose("Draft"); }}
+                    className="block w-40 h-10 bg-blue-400 text-white hover:bg-blue-500"
                     role="menuitem"
                   >
-                      Draft
+                    Draft
                   </button>
                   <button
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      handlePreviewAndClose("Final");
-                    }}
-                    className="block w-full text-center w-40 h-10 bg-blue-300 text-white hover:bg-blue-400"
+                    onClick={() => { setDropdownOpen(false); handlePreviewAndClose("Final"); }}
+                    className="block w-40 h-10 bg-blue-300 text-white hover:bg-blue-400"
                     role="menuitem"
                   >
-                      Final
+                    Final
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            // Normal Print Preview button
             <button
               onClick={() => handlePreviewAndClose()}
               className="w-40 h-10 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -149,16 +138,15 @@ const DocumentSignatories = ({ isOpen, onClose, onCancel, params }) => {
             </button>
           )}
 
-          {/* Cancel button */}
+
           <button
+            ref={cancelRef}
             onClick={onCancel}
             className="w-40 h-10 bg-gray-400 text-white rounded hover:bg-gray-500"
           >
             Cancel
           </button>
         </div>
-
-
       </div>
     </div>
   );

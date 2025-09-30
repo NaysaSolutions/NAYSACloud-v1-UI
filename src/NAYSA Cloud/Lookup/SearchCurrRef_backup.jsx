@@ -1,7 +1,8 @@
 import React, { useState, useEffect, customParam } from 'react';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+
 
 const CurrLookupModal = ({ isOpen, onClose }) => {
   const [currency, setCurr] = useState([]);
@@ -10,50 +11,39 @@ const CurrLookupModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-  
-      axios.post("http://127.0.0.1:8000/api/lookupCurr", {
+  if (!isOpen) return;
+
+  const fetchCurr = async () => {
+    setLoading(true);
+    try {
+      const { data: result } = await apiClient.post("/lookupCurr", {
         PARAMS: JSON.stringify({
           search: "",
           page: 1,
-          pageSize: 10
-        })
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        }
-      })
-      .then((response) => {
-        const result = response.data;
-        if (result.success) {
-          const currData = JSON.parse(result.data[0].result);
-          setCurr(currData);
-          setFiltered(currData);
-        } else {
-          alert(result.message || "Failed to fetch Currency");
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch currency:", err);
-        alert(`Error: ${err.message}`);
-
-        // Fallback sample data
-        const fallbackData = [
-          { id: 1, currCode: "USD", currName: "US Dollar", currRate: 58.8974651 },
-          { id: 2, currCode: "EUR", currName: "Euro", currRate: 60.3245689 },
-          { id: 3, currCode: "JPY", currName: "Japanese Yen", currRate: 0.123456789 }
-        ];
-        setCurr(fallbackData);
-        setFiltered(fallbackData);
-
-      })
-      .finally(() => {
-        setLoading(false);
+          pageSize: 10,
+        }),
       });
+
+      const currData =
+        Array.isArray(result?.data) && result.data[0]?.result
+          ? JSON.parse(result.data[0].result)
+          : [];
+
+      setCurr(currData);
+      setFiltered(currData);
+    } catch (err) {
+      console.error("Failed to fetch currency:", err);
+      alert(`Error: ${err.message}`);
+      setCurr([]);
+      setFiltered([]);
+    } finally {
+      setLoading(false);
     }
-  }, [isOpen]);
+  };
+
+  fetchCurr();
+}, [isOpen]);
+
   
 
   useEffect(() => {

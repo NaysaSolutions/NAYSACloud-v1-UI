@@ -3,6 +3,7 @@ export const reftables = {
     // General Ledger Module
     Branch: "Branch Codes",
     BankType: "Bank Type Codes",
+    UserAccRight: "User Access Rights",
 
     // Accounts Payable Module
     APV: "Accounts Payable Voucher Transaction",

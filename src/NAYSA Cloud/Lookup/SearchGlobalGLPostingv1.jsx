@@ -28,7 +28,7 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
   const [showFilters, setShowFilters] = useState(true);
   const [globalQuery, setGlobalQuery] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
+  const [userPassword, setUserPassword] = useState(null);
   const itemsPerPage = 50;
   const firstFocusableRef = useRef(null);
 
@@ -154,7 +154,7 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
 
   const handleGetSelected = () => {
     const payload = selected.map((item) => item.groupId);
-    onPost?.(payload);
+    onPost?.(payload,userPassword);
   };
 
   const handleSort = (key) => {
@@ -493,6 +493,8 @@ const GlobalGLPostingModalv1 = ({ data, colConfigData, title, btnCaption, onClos
                   <input
                     // value="password" 
                     type={showPassword ? 'text' : 'password'}
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
                     className="border border-gray-300 rounded px-2 py-1 text-xs w-44 pr-8"
                   />
                   <button
