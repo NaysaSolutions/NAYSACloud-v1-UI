@@ -96,6 +96,7 @@ const CV = () => {
     documentNo: "",
     documentStatus:"",
     status: "OPEN",
+    noReprints:"0",
 
 
     // UI state
@@ -156,6 +157,7 @@ const CV = () => {
 
 
     userCode: 'NSI', // Default value
+    noReprints: "0",
 
     //Detail 1-2
     detailRows  :[],
@@ -212,6 +214,7 @@ const CV = () => {
   documentStatus,
   documentNo,
   status,
+  noReprints,
 
   // Tabs & loading
   activeTab,
@@ -449,13 +452,10 @@ const CV = () => {
   }, [state.documentID]);
   
 
-
   useEffect(() => {
+    loadCompanyData();
     handleReset();
   }, []);
-
-
-  
 
 
   const LoadingSpinner = () => (
@@ -468,59 +468,7 @@ const CV = () => {
   );
 
   
-  // const handleReset = () => {
-
-  //     loadDocControl();
-  //     loadCompanyData();
-  //     updateState({
-        
-  //     header:{cv_date:new Date().toISOString().split("T")[0]},
-  //     header:{ck_date:new Date().toISOString().split("T")[0]},
-
-  //     branchCode: "HO",
-  //     branchName: "Head Office",
-      
-  //     withAPV: "Y",
-  //     bankCode: "",
-  //     bankAcctNo: "",
-  //     checkNo: "",
-  //     paymentType: "Y",
-  //     cvType: "APV01",
-
-  //     refDocNo1: "",
-  //     refDocNo2:"",
-  //     fromDate:null,
-  //     toDate:null,
-  //     remarks:"",
-
-  //     vendName:"",
-  //     vendCode:"",
-  //     documentNo: "",
-  //     documentID: "",
-  //     detailRows: [],
-  //     detailRowsGL:[],
-  //     documentStatus:"",
-      
-      
-  //     // UI state
-  //     activeTab: "basic",
-  //     GLactiveTab: "invoice",
-  //     isLoading: false,
-  //     showSpinner: false,
-  //     isDocNoDisabled: false,
-  //     isSaveDisabled: false,
-  //     isResetDisabled: false,
-  //     isFetchDisabled: false,
-  //     status:"Open"
-
-  //   });
-  //     updateTotalsDisplay (0, 0, 0, 0, 0, 0, 0, 0)
-  // };
-
   const handleReset = () => {
-    // These functions should still be called
-    loadDocControl();
-    loadCompanyData();
     
     // Correct way to update the state with a single header object
     updateState({
@@ -552,8 +500,6 @@ const CV = () => {
         // UI state
         activeTab: "basic",
         GLactiveTab: "invoice",
-        isLoading: false,
-        showSpinner: false,
         isDocNoDisabled: false,
         isSaveDisabled: false,
         isResetDisabled: false,
@@ -765,6 +711,7 @@ const fetchTranData = async (documentNo, branchCode) => {
     updateState({
       documentStatus: data.cvStatus,
       status: data.docStatus,
+      noReprints: data.noReprints,
       documentID: data.cvId,
       documentNo: data.cvNo,
       branchCode: data.branchCode,
@@ -1041,13 +988,20 @@ const handleCurrRateNoBlur = (e) => {
         balance: "0.00",
         currCode: currCode,
         currRate: currRate,
-        vatCode: item.vatCode || "",
-        vatName: item.vatName || "",
-        vatAmount: "0.00",
-        atcCode: item.atcCode || "",
-        atcName: item.atcName || "",
-        atcAmount: "0.00",
+        vatCode: selectedCvType === "APV02" ? "" : (item.vatCode || ""),
+        vatName: selectedCvType === "APV02" ? "" : (item.vatName || ""),
+        vatAmount: selectedCvType === "APV02"
+          ? "0.00"
+          : (formatNumber(parseFormattedNumber(item.vatAmount)) || "0.00"),
+
+        atcCode: selectedCvType === "APV02" ? "" : (item.atcCode || ""),
+        atcName: selectedCvType === "APV02" ? "" :  (item.atcName || ""),
+        atcAmount: selectedCvType === "APV02"
+          ? "0.00"
+          : (formatNumber(parseFormattedNumber(item.atcAmount)) || "0.00"),
+
         sviAmount: "0.00",
+        amountDue: "0.00",
         apAcct: "",
         debitAcct: "",       
         vatAcct: item.vatAcct || "",
@@ -1471,10 +1425,32 @@ const isVisible_Dtl1 = (field, cvType, withAPV) => {
     atcAmount: !["Y", "special-case"].includes(withAPV),
     amountDue: !["Y", "special-case"].includes(withAPV),
     vatAcct: !["Y", "special-case"].includes(withAPV),
+
+    // // These fields are hidden when cvType is "Non Purchases"
+    rrNo: !["APV02", "special-case"].includes(cvType),
+    poNo: !["APV02", "special-case"].includes(cvType),
+    appliedAmount: !["APV02", "special-case"].includes(cvType),
+    unappliedAmount: !["APV02", "special-case"].includes(cvType),
+    balance: !["APV02", "special-case"].includes(cvType),
+    apAcct: !["APV02", "special-case"].includes(cvType),
+    apType: !["APV02", "special-case"].includes(cvType), // Add the missing 'apType' rule here
+    
+    siNo: !["APV02", "special-case"].includes(cvType),
+    siDate: !["APV02", "special-case"].includes(cvType),
+
+    // // These fields are visible when withAPV is "N"
+    vatCode: !["APV02", "special-case"].includes(cvType),
+    vatName: !["APV02", "special-case"].includes(cvType),
+    vatAmount: !["APV02", "special-case"].includes(cvType),
+    atcCode: !["APV02", "special-case"].includes(cvType),
+    atcName: !["APV02", "special-case"].includes(cvType),
+    atcAmount: !["APV02", "special-case"].includes(cvType),
+    // amountDue: !["APV02", "special-case"].includes(cvType),
+    vatAcct: !["APV02", "special-case"].includes(cvType),
     
     // These are always visible
-    siNo: true,
-    siDate: true,
+    // siNo: true,
+    // siDate: true,
   };
 
   return rules[field] ?? true;
@@ -1689,15 +1665,18 @@ const handleClosePost = async (confirmation) => {
 
 
 
-const handleCloseSignatory = async () => {
-
-    updateState({ showSpinner: true });
-    await useHandlePrint(documentID, docType);
+const handleCloseSignatory = async (mode) => {
+  
+    updateState({ 
+        showSpinner: true,
+        showSignatoryModal: false,
+        noReprints: mode === "Final" ? 1 : 0, });
+    await useHandlePrint(documentID, docType, mode );
 
     updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+      showSpinner: false 
     });
+
 };
 
 
@@ -2375,7 +2354,8 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
       {/* APV Detail Section */}
       {/* <div id="cv_dtl" className="global-tran-tab-div-ui" > */}
-      <div id="cv_dtl" className="global-tran-tab-div-ui" style={{ display: (selectedWithAPV === 'Y' && selectedCvType === 'APV02') || selectedWithAPV === 'N' && selectedCvType === 'APV02' ? 'none' : 'block' }}>
+      {/* <div id="cv_dtl" className="global-tran-tab-div-ui" style={{ display: (selectedWithAPV === 'Y' && selectedCvType === 'APV02') || selectedWithAPV === 'N' && selectedCvType === 'APV02' ? 'none' : 'block' }}> */}
+      <div id="cv_dtl" className="global-tran-tab-div-ui" >
 
 
       {/* Tab Navigation */}
@@ -2418,40 +2398,40 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
         <tr>
 
           <th className="global-tran-th-ui">LN</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apType", cvType, selectedWithAPV)}>AP Type</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rrNo", cvType, selectedWithAPV)}>RR No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("poNo", cvType, selectedWithAPV)}>PO/JO No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siNo", cvType, selectedWithAPV)}>Invoice No.</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siDate", cvType, selectedWithAPV)}>Invoice Date</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("origAmount", cvType, selectedWithAPV)}>Original Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currCode", cvType, selectedWithAPV)}>Currency</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currRate", cvType, selectedWithAPV)}>Currency Rate</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siAmount", cvType, selectedWithAPV)}>Invoice Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, selectedWithAPV)}>Applied</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, selectedWithAPV)}>Unapplied</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("balance", cvType, selectedWithAPV)}>Balance</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("debitAcct", cvType, selectedWithAPV)}>DR Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apAcct", cvType, selectedWithAPV)}>AP Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAcct", cvType, selectedWithAPV)}>VAT Account</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcCode", cvType, selectedWithAPV)}>RC Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcName", cvType, selectedWithAPV)}>RC Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("slCode", cvType, selectedWithAPV)}>SL Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatCode", cvType, selectedWithAPV)}>VAT Code</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatName", cvType, selectedWithAPV)}>VAT Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, selectedWithAPV)}>VAT Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcCode", cvType, selectedWithAPV)}>ATC</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcName", cvType, selectedWithAPV)}>ATC Name</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, selectedWithAPV)}>ATC Amount</th>
-            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("amountDue", cvType, selectedWithAPV)}>Amount Due</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apType", selectedCvType, selectedWithAPV)}>AP Type</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rrNo", selectedCvType, selectedWithAPV)}>RR No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("poNo", selectedCvType, selectedWithAPV)}>PO/JO No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siNo", selectedCvType, selectedWithAPV)}>Invoice No.</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siDate", selectedCvType, selectedWithAPV)}>Invoice Date</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("origAmount", selectedCvType, selectedWithAPV)}>Original Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currCode", selectedCvType, selectedWithAPV)}>Currency</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("currRate", selectedCvType, selectedWithAPV)}>Currency Rate</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siAmount", selectedCvType, selectedWithAPV)}>Invoice Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("appliedAmount", selectedCvType, selectedWithAPV)}>Applied</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("unappliedAmount", selectedCvType, selectedWithAPV)}>Unapplied</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("balance", selectedCvType, selectedWithAPV)}>Balance</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("debitAcct", selectedCvType, selectedWithAPV)}>DR Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apAcct", selectedCvType, selectedWithAPV)}>AP Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAcct", selectedCvType, selectedWithAPV)}>VAT Account</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcCode", selectedCvType, selectedWithAPV)}>RC Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rcName", selectedCvType, selectedWithAPV)}>RC Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("slCode", selectedCvType, selectedWithAPV)}>SL Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatCode", selectedCvType, selectedWithAPV)}>VAT Code</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatName", selectedCvType, selectedWithAPV)}>VAT Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("vatAmount", selectedCvType, selectedWithAPV)}>VAT Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcCode", selectedCvType, selectedWithAPV)}>ATC</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcName", selectedCvType, selectedWithAPV)}>ATC Name</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("atcAmount", selectedCvType, selectedWithAPV)}>ATC Amount</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("amountDue", selectedCvType, selectedWithAPV)}>Amount Due</th>
 
          {!isFormDisabled && (
-          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+          <th className="global-tran-th-ui sticky right-[43px] bg-blue-200 dark:bg-blue-900 z-30">
             Add
           </th>
         )}
 
         {!isFormDisabled && (
-          <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+          <th className="global-tran-th-ui sticky right-0 bg-blue-200 dark:bg-blue-900 z-30">
             Delete
           </th>
         )}
@@ -2467,7 +2447,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
           <td className="global-tran-td-ui text-center">{index + 1}</td>
          
          {/* AP Type */}
-          <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("apType", cvType, selectedWithAPV)}>
+          <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("apType", selectedCvType, selectedWithAPV)}>
             <select
                   className="w-[120px] global-tran-td-inputclass-ui"
                   value={row.apType || ""}
@@ -2487,7 +2467,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
           </td>
 
           {/* RR No */}
-           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("rrNo", cvType, selectedWithAPV)}>
+           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("rrNo", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2497,7 +2477,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
           {/* PO No */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("poNo", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("poNo", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2507,7 +2487,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
           {/* Invoice No */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siNo", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siNo", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2517,7 +2497,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
           {/* Invoice Date */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siDate", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siDate", selectedCvType, selectedWithAPV)}>
               <input
                 type="date"
                 className="w-[100px] global-tran-td-inputclass-ui"
@@ -2528,7 +2508,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
 
           {/* Original Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("origAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("origAmount", selectedCvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2569,7 +2549,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
 
             {/* Currency Code */}
-           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currCode", cvType, selectedWithAPV)}>
+           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currCode", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] text-center global-tran-td-inputclass-ui"
@@ -2579,7 +2559,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* Currency Rate */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currRate", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("currRate", selectedCvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2619,7 +2599,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>          
 
             {/* Invoice Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("siAmount", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0 cursor-pointer"
@@ -2629,7 +2609,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* Applied Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("appliedAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("appliedAmount", selectedCvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2669,7 +2649,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* Unapplied Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("unappliedAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("unappliedAmount", selectedCvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2709,7 +2689,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* Balance */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("balance", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("balance", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2720,7 +2700,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
 
             {/* DR Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("debitAcct", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("debitAcct", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2742,7 +2722,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* AP Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("apAcct", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("apAcct", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2764,7 +2744,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* VAT Account */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatAcct", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatAcct", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2786,7 +2766,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* RC Code */}
-              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcCode", cvType, selectedWithAPV)}>
+              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcCode", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2808,7 +2788,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* RC Name */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcName", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("rcName", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2846,7 +2826,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
               </td> */}
 
               {/* SL Code */}
-              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("slCode", cvType, selectedWithAPV)}>
+              <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("slCode", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2868,7 +2848,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* VAT Code */}
-             <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatCode", cvType, selectedWithAPV)}>
+             <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("vatCode", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2890,7 +2870,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* VAT Name */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatName", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatName", selectedCvType, selectedWithAPV)}>
                 <input
                     type="text"
                     className="w-[250px] global-tran-td-inputclass-ui"
@@ -2900,7 +2880,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* VAT Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("vatAmount", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
@@ -2910,7 +2890,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* ATC Code */}
-            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("atcCode", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui relative" hidden={!isVisible_Dtl1("atcCode", selectedCvType, selectedWithAPV)}>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -2933,7 +2913,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
             
             {/* ATC Name */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcName", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcName", selectedCvType, selectedWithAPV)}>
               <input
                 type="text"
                 className="w-[250px] global-tran-td-inputclass-ui"
@@ -2943,21 +2923,21 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             </td>
 
             {/* ATC Amount */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcAmount", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("atcAmount", selectedCvType, selectedWithAPV)}>
                 <input
                    type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                    value={formatNumber(parseFormattedNumber(row.atcAmount)) || formatNumber(parseFormattedNumber(row.atcAmount)) || ""}
+                   value={formatNumber(parseFormattedNumber(row.atcAmount)) || formatNumber(parseFormattedNumber(row.atcAmount)) || ""}
                    onChange={(e) => handleDetailChange(index, 'atcAmount', e.target.value)}
                 />
             </td>
 
             {/* Amount Due */}
-            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("amountDue", cvType, selectedWithAPV)}>
+            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("amountDue", selectedCvType, selectedWithAPV)}>
                 <input
                    type="text"
                    className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                    value={formatNumber(parseFormattedNumber(row.amountDue)) || formatNumber(parseFormattedNumber(row.amountDue)) || ""}
+                    value={formatNumber(parseFormattedNumber(row.amountDue)) || formatNumber(parseFormattedNumber(row.amountDue)) || "0"}
                    onChange={(e) => handleDetailChange(index, 'amountDue', e.target.value)}
                 />
             </td>
@@ -3153,10 +3133,10 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
             
             {!isFormDisabled && (
               <>
-                <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+                <th className="global-tran-th-ui sticky right-[43px] bg-blue-200 dark:bg-blue-900 z-30">
                   Add
                 </th>
-                <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+                <th className="global-tran-th-ui sticky right-0 bg-blue-200 dark:bg-blue-900 z-30">
                   Delete
                 </th>
               </>
@@ -3764,7 +3744,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={documentID}
+    params={{noReprints,documentID,docType}}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />

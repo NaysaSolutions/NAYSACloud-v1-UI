@@ -265,7 +265,6 @@ import { faList, faPen, faSave, faUndo, faPrint, faTimesCircle, faCopy, faInfoCi
 import { useLocation, useNavigate } from "react-router-dom";
 import { useReset } from "./ResetContext"; // Assuming ResetContext is correctly implemented and used
 
-
 const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSave, onPost, onCancel, onCopy, onAttach }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -370,11 +369,11 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
 
                     <button
                         className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group
-                            ${location.pathname === "/CVhistory"
+                            ${location.pathname === "/CVHistory"
                                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                                 : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
                             }`}
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate("/CVHistory")}
                     >
                         <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
                         <span className="group-hover:block">Transaction History</span>
@@ -427,13 +426,13 @@ const Header = ({ docType, pdfLink, videoLink, onPrint, printData, onReset, onSa
                         <span className="hidden lg:block group-hover:block ml-2">Print</span>
                     </button>
 
-                    <button
+                    {/* <button
                         onClick={handlePrint}
                         className="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 dark:bg-blue-800 dark:hover:bg-blue-700 group"
                     >
                         <FontAwesomeIcon icon={faPrint} className="" />
                         <span className="hidden lg:block group-hover:block ml-2">BIR Form</span>
-                    </button>
+                    </button> */}
 
                     <button
                         onClick={handleAttach}

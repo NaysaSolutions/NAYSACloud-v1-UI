@@ -39,6 +39,9 @@ import BillCodeRef   from "./NAYSA Cloud/Reference File/BillCodeRef.jsx";
 
 
 import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
+import APReportModal from "./NAYSA Cloud/Printing/APReport.jsx";
+import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
+import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
 
 
 
@@ -80,4 +83,7 @@ export const pageRegistry = {
 
   //Printing
   ARReportModal,
+  APReportModal,
+  VIReportModal,
+  EWTReportModal,
 };

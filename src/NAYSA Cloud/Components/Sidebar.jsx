@@ -53,6 +53,7 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
   const hasSubMenu = Array.isArray(item?.subMenu) && item.subMenu.length > 0;
   const Icon = level === 0 ? iconMap[item?.name] : null;
   const ChevronIcon = hasSubMenu ? (isOpen ? FiChevronDown : FiChevronRight) : null;
+  const isPost = /post/i.test(item?.name ?? "");
 
   useEffect(() => {
     const lc = (searchTerm || "").toLowerCase();
@@ -97,7 +98,8 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
       )}
       <span
         className={`truncate transition-colors duration-200 ${
-          level === 0 ? "font-semibold text-sm" : level === 1 ? "text-sm" : "text-xs"
+          level === 0 ? "font-semibold text-sm" : level === 1 ? "text-sm" : "text-xs" +
+          (isPost ? " text-blue-600 dark:text-blue-400" : "")
         }`}
       >
         {highlightText(item?.name || "", searchTerm)}

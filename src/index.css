@@ -42,7 +42,12 @@ body {
 
   /* bg-gradient-to-r from-blue-400 to-purple-300 */
   .global-tran-header-ui {
-    @apply fixed mt-24 top-12 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
+    /* @apply fixed mt-24 top-12 left-6 right-6 z-30 bg-blue-300 p-1 rounded-lg text-blue-900 shadow-lg 
+            lg:p-1 mb-4 flex flex-col 
+            sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4
+            md:mt-14
+            dark:bg-blue-900 dark:text-white; */
+      @apply fixed mt-24 top-12 left-6 right-6 z-30 bg-gradient-to-r from-blue-200 to-blue-200 p-1 rounded-lg text-blue-900 shadow-xl 
             lg:p-1 mb-4 flex flex-col 
             sm:flex-row sm:justify-between sm:items-center gap-y-1 sm:gap-y-0 sm:gap-x-4
             md:mt-14
@@ -221,8 +226,9 @@ body {
   }
 
   .global-tran-thead-div-ui {
-    @apply sticky top-0 bg-blue-300 z-10
-    /* dark:bg-gradient-to-r dark:from-blue-900 dark:to-purple-900 dark:text-white; */   
+    /* @apply sticky top-0 bg-blue-300 z-10 
+    dark:bg-blue-900 dark:text-white; */
+    @apply sticky top-0 bg-blue-200 z-10 
     dark:bg-blue-900 dark:text-white;
   }
 
@@ -314,8 +320,8 @@ body {
 
     .global-ref-header-ui {
       /* @apply bg-gradient-to-r from-blue-400 to-purple-300 p-4 rounded-lg text-blue-900 shadow-lg */
-      @apply bg-blue-300 to-purple-300 p-2 rounded-lg text-blue-900 shadow-lg
-      dark:from-blue-900 dark:to-purple-900 dark:text-white;
+      @apply bg-gradient-to-r from-blue-200 to-blue-200 p-2 rounded-lg text-blue-900 shadow-lg
+      dark:from-blue-900 dark:bg-blue-900 dark:text-white;
     }
   
     .global-ref-headertext-ui {
@@ -343,7 +349,7 @@ body {
   .global-ref-thead-div-ui {
     /* @apply sticky top-0 bg-blue-300 z-10
     dark:bg-blue-900 dark:text-white; */
-    @apply sticky top-0 bg-blue-100
+    @apply sticky top-0 bg-blue-50
     dark:bg-blue-900 dark:text-white;
   }
 
@@ -355,7 +361,7 @@ body {
   .global-ref-tr-ui {
     /* @apply hover:bg-blue-200 border
     dark:text-black dark:hover:bg-blue-700; */
-    @apply sticky top-0 bg-blue-300 z-10
+    @apply sticky top-0 bg-blue-200 z-10
     dark:bg-blue-900 dark:text-white;
   }
 
