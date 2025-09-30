@@ -83,7 +83,7 @@ export async function useHandlePrint(documentID, docCode, printMode) {
 
     const payload = { tranId: documentID, formName, docCode, printMode };
 
-
+    console.log(payload)
 
     const pdfBlob = await postPdfRequest("/printForm", payload);
 

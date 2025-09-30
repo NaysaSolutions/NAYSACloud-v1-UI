@@ -33,7 +33,6 @@ import CVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CVHisto
 import JV        from "./NAYSA Cloud/Module/Main Module/General Ledger/JV.jsx";
 import PostJV    from "./NAYSA Cloud/Module/Main Module/General Ledger/PostJV.jsx";
 
-
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
 import UserAccessRights   from "./NAYSA Cloud/Reference File/UserAccessRights.jsx";
@@ -65,8 +64,6 @@ export const pageRegistry = {
 
   // General Ledger
   JV,
-  
-  
 
   // Global Reference
   BranchRef,

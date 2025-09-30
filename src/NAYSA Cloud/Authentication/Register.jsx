@@ -124,7 +124,7 @@ export default function Register({ onRegister, onSwitchToLogin }) {
       const ok = await validate();
       if (!ok) return;
 
-
+      
       setTenant(companyCode);
       const { data, status } = await apiClient.post("/register", {
         USER_CODE: form.USER_CODE.trim(),
