@@ -168,19 +168,31 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     setBranchModalOpen(false);
   };
 
-  const handleClosePayeeModal = ({ payeeCode, payeeName }) => {
-    if (sPayeeMode === "S") {
-      updateState({
-        sPayeeCode: payeeCode,
-        sPayeeName: payeeName,
-        ePayeeCode: payeeCode,
-        ePayeeName: payeeName,
-      });
-    } else {
-      updateState({ ePayeeCode: payeeCode, ePayeeName: payeeName });
-    }
+const handleClosePayeeModal = (payload) => {
+  // Closed without picking
+  if (!payload) {
     setPayeeModalOpen(false);
-  };
+    return;
+  }
+
+  // Normalize keys from the modal
+  const payeeCode = payload.payeeCode ?? payload.vendCode ?? "";
+  const payeeName = payload.payeeName ?? payload.vendName ?? "";
+
+  if (sPayeeMode === "S") {
+    updateState({
+      sPayeeCode: payeeCode,
+      sPayeeName: payeeName,
+      ePayeeCode: payeeCode,
+      ePayeeName: payeeName,
+    });
+  } else {
+    updateState({ ePayeeCode: payeeCode, ePayeeName: payeeName });
+  }
+
+  setPayeeModalOpen(false);
+};
+
 
   const clearSPayee = () => updateState({ sPayeeCode: "", sPayeeName: "" });
   const clearEPayee = () => updateState({ ePayeeCode: "", ePayeeName: "" });
@@ -254,7 +266,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
       <div
         ref={dialogRef}
         className="relative w-full max-w-[1000px] md:rounded-2xl bg-white shadow-2xl md:my-8
-                   h-[100svh] md:h-auto md:max-h-[85vh] flex flex-col overflow-hidden"
+                   h-[100svh] md:h-auto md:max-h-[75vh] flex flex-col overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()} // prevent backdrop close when clicking inside
       >
         {/* Header */}
@@ -276,14 +288,14 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-2 p-2 md:p-4 overflow-hidden">
           {/* Left: Report list */}
           <div className="md:col-span-1 border rounded-xl overflow-hidden flex flex-col">
-            <div className="px-3 py-2 border-b bg-white/60 sticky top-0 z-10">
+            <div className="p-1 border-b bg-white/60 sticky top-0 z-10">
               <div className="relative">
                 <input
                   type="text"
                   value={reportQuery}
                   onChange={(e) => setReportQuery(e.target.value)}
                   placeholder="Search report…"
-                  className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                  className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs md:text-xs focus:ring-2 focus:ring-blue-300 outline-none"
                   aria-label="Search report"
                 />
                 <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -313,7 +325,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                       aria-selected={active}
                       onClick={() => setSelected({ id: r.reportId, name: r.reportName })}
                       className={`w-full text-left px-3 py-2 text-xs md:text-[12px] border-b last:border-b-0
-                        ${active ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-gray-50"}`}
+                        ${active ? "bg-blue-50 text-blue-700 font-semibold" : "hover:bg-gray-50"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate">{r.reportName}</span>
@@ -338,14 +350,14 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
           {/* Right: Options */}
           <div className="md:col-span-2 border rounded-xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-2 md:px-4 py-2 border-b bg-white/60">
-              <span className="text-xs md:text-[15px] font-semibold text-blue-700 truncate">
+              <span className="text-xs md:text-[16px] font-semibold text-blue-700 truncate">
                 {selected.name || "Report Options"}
               </span>
             </div>
 
-            <div className="p-3 md:p-5 space-y-2 md:space-y-5 overflow-y-auto">
+            <div className="p-3 md:p-5 space-y-2 md:space-y-3 overflow-y-auto">
               {/* Branch */}
-              <div className="grid grid-cols-1 md:grid-cols-[8rem_1fr] items-center gap-2 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
                 <label className="text-xs md:text-sm font-medium">Branch</label>
                 <div className="relative">
                   <input
@@ -366,7 +378,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
               </div>
 
               {/* Start Date */}
-              <div className="grid grid-cols-1 md:grid-cols-[8rem_1fr] items-center gap-2 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
                 <label className="text-xs md:text-sm font-medium">Start Date</label>
                 <input
                   type="date"
@@ -377,7 +389,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
               </div>
 
               {/* End Date */}
-              <div className="grid grid-cols-1 md:grid-cols-[8rem_1fr] items-center gap-2 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
                 <label className="text-xs md:text-sm font-medium">End Date</label>
                 <input
                   type="date"
@@ -388,7 +400,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
               </div>
 
               {/* Starting Payee */}
-              <div className="grid grid-cols-1 md:grid-cols-[8rem_1fr] items-center gap-2 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
                 <label className="text-xs md:text-sm font-medium">Starting Payee</label>
                 <div className="relative">
                   <input
@@ -420,7 +432,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
               </div>
 
               {/* Ending Payee */}
-              <div className="grid grid-cols-1 md:grid-cols-[8rem_1fr] items-center gap-2 md:gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
                 <label className="text-xs md:text-sm font-medium">Ending Payee</label>
                 <div className="relative">
                   <input
@@ -453,15 +465,15 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
               {/* Actions */}
               <div className="pt-2 md:pt-4">
-                <div className="grid grid-cols-3 md:flex md:justify-end gap-2 md:gap-3">
+                <div className="grid grid-cols-3 md:flex md:justify-center gap-2 md:gap-3">
                   <button
                     onClick={handleReset}
-                    className="inline-flex items-center justify-center gap-2 w-full md:w-32 py-2 border rounded-lg bg-gray-50 hover:bg-gray-100 text-xs md:text-sm"
+                    className="inline-flex items-center justify-center gap-2 w-full md:w-40 py-2 border rounded-lg text-white bg-blue-600 hover:bg-gray-700 text-xs md:text-sm"
                   >
-                    <FontAwesomeIcon icon={faBroom} />
+                    {/* <FontAwesomeIcon icon={faRotateLeft} /> */}
                     Reset
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => {
                       // quick convenience: reset dates to current month
                       const d = new Date(today);
@@ -473,7 +485,7 @@ const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                   >
                     <FontAwesomeIcon icon={faRotateLeft} />
                     This Month
-                  </button>
+                  </button> */}
                   <button
                     onClick={handlePreview}
                     disabled={loading || !selected.id}

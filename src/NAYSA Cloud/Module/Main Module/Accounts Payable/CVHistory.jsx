@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import {
   faList,
   faPen,
@@ -27,6 +28,16 @@ import {
 } from '@/NAYSA Cloud/Global/procedure';
 
 Modal.setAppElement("#root");
+
+// ✅ Use your centralized API
+import apiClient, {
+  fetchData,
+  fetchDataJson,
+  fetchDataJsonLookup,
+  postRequest,
+  postPdfRequest,
+} from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+
 
 // Centralized Status Styles
 const statusStyles = {
@@ -61,37 +72,52 @@ const CVHistory = () => {
     }
   }, [dateRangeType]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (!dates[0] || !dates[1]) {
-        setError("Start and end dates must be selected.");
-        return;
-      }
-      const [startDate, endDate] = dates;
-      const formattedStartDate = format(startDate, "yyyy-MM-dd");
-      const formattedEndDate = format(endDate, "yyyy-MM-dd");
+  
+const fetchData = async () => {
+  setLoading(true);
+  setError(null);
 
-      const payload = {
-        json_data: {
-          startDate: formattedStartDate,
-          endDate: formattedEndDate,
-          branchCode: branchCode,
-          // Add status to payload if backend supports it
-          status: status
-        },
-      };
-
-      const response = await axios.post("http://127.0.0.1:8000/api/load-CVhistory", payload);
-      setData(response.data.data);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Failed to fetch data. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    if (!dates?.[0] || !dates?.[1]) {
+      setError("Start and end dates must be selected.");
+      return; // finally will still run
     }
-  };
+
+    const [startDate, endDate] = dates;
+    const formattedStartDate = format(startDate, "yyyy-MM-dd");
+    const formattedEndDate = format(endDate, "yyyy-MM-dd");
+
+    const payload = {
+      json_data: {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        branchCode,
+        status, // include only if your backend expects/uses it
+      },
+    };
+
+    // ✅ centralized POST (BaseUrl.jsx)
+    const res = await postRequest("/load-CVhistory", payload);
+
+    // normalize common shapes: { data: [...] } or plain array
+    const rows =
+      Array.isArray(res) ? res :
+      Array.isArray(res?.data) ? res.data :
+      res?.data?.data ?? [];
+
+    setData(rows);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+    // Optional: detect missing-tenant flagged by interceptor
+    if (err?.tenantRequired) {
+      setError("Please select a company (tenant) first.");
+    } else {
+      setError(err?.response?.data?.message || "Failed to fetch data. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRowClick = async (row) => {
     // ... same as your existing function

@@ -262,6 +262,24 @@ export const fetchDataJson = async (
   }
 };
 
+export const fetchDataJsonLookup = async (
+  endpoint,
+  jsonPayload = {}
+) => {
+  try {
+    const { data } = await apiClient.get(endpoint, {
+      params: {
+        PARAMS: JSON.stringify({ json_data: jsonPayload }),
+      },
+    });
+    console.log("fetchDataJsonLookup data:", data);
+    return data;
+  } catch (error) {
+    console.error("API GET with JSON Error:", error);
+    throw error;
+  }
+};
+
 export const postRequest = async (endpoint, body = {}, config = {}) => {
   try {
     const { data } = await apiClient.post(endpoint, body, config);

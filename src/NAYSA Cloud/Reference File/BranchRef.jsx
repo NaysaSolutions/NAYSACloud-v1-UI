@@ -29,7 +29,16 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /** Centralized API instance */
-const API = axios.create({ baseURL: "http://localhost:8000/api" });
+// const API = axios.create({ baseURL: "http://localhost:8000/api" });
+
+// ✅ Use your centralized API
+import apiClient, {
+  fetchData,
+  fetchDataJson,
+  fetchDataJsonLookup,
+  postRequest,
+  postPdfRequest,
+} from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
 /** Simple validators */
 const isTinValid = (v) => /^[0-9-]{9,20}$/.test(String(v || ""));
@@ -81,21 +90,38 @@ const BranchRef = () => {
   const exportRef = useRef(null);
   const guideRef = useRef(null);
 
+  // // Fetch
+  // const fetchBranches = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const { data } = await API.get("/branch");
+  //     const resultString = data?.data?.[0]?.result;
+  //     setBranches(resultString ? JSON.parse(resultString) : []);
+  //   } catch (error) {
+  //     console.error("Error fetching branches:", error);
+  //     Swal.fire("Error", "Failed to load branches.", "error");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  // useEffect(() => { fetchBranches(); }, []);
+
+
   // Fetch
-  const fetchBranches = async () => {
-    setLoading(true);
-    try {
-      const { data } = await API.get("/branch");
-      const resultString = data?.data?.[0]?.result;
-      setBranches(resultString ? JSON.parse(resultString) : []);
-    } catch (error) {
-      console.error("Error fetching branches:", error);
-      Swal.fire("Error", "Failed to load branches.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => { fetchBranches(); }, []);
+const fetchBranches = async () => {
+  setLoading(true);
+  try {
+    const res = await fetchData("/branch"); // ✅ centralized helper
+    const resultString = res?.data?.[0]?.result;
+    setBranches(resultString ? JSON.parse(resultString) : []);
+  } catch (error) {
+    console.error("Error fetching branches:", error);
+    Swal.fire("Error", "Failed to load branches.", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Close menus on outside click
   useEffect(() => {
@@ -202,96 +228,118 @@ const BranchRef = () => {
   };
 
   // Save
-  const handleSaveBranch = async () => {
-    if (!editingBranch) return;
+  // Save
+const handleSaveBranch = async () => {
+  if (!editingBranch) return;
 
-    const { branchCode, branchName, branchAddr1, branchTin } = editingBranch;
+  const { branchCode, branchName, branchAddr1, branchTin } = editingBranch;
 
-    // Validate requireds
-    if (!req(branchCode) || !req(branchName) || !req(branchAddr1) || !req(branchTin)) {
-      Swal.fire("Missing data", "Please fill: Branch Code, Name, Address, and TIN.", "warning");
-      return;
-    }
-    if (!isTinValid(branchTin)) {
-      Swal.fire("Invalid TIN", "TIN should contain only digits and dashes.", "warning");
-      return;
-    }
+  // Validate requireds
+  if (!req(branchCode) || !req(branchName) || !req(branchAddr1) || !req(branchTin)) {
+    Swal.fire("Missing data", "Please fill: Branch Code, Name, Address, and TIN.", "warning");
+    return;
+  }
+  if (!isTinValid(branchTin)) {
+    Swal.fire("Invalid TIN", "TIN should contain only digits and dashes.", "warning");
+    return;
+  }
 
-    const payload = {
-      json_data: {
-        branchCode: editingBranch.branchCode,
-        branchName: editingBranch.branchName,
-        branchType: editingBranch.main,
-        branchAddr1: editingBranch.branchAddr1,
-        branchAddr2: editingBranch.branchAddr2 || "",
-        branchAddr3: editingBranch.branchAddr3 || "",
-        country: editingBranch.country || "",
-        branchTin: editingBranch.branchTin,
-        telNo: editingBranch.telNo || "",
-        faxNo: editingBranch.faxNo || "",
-        zipCode: editingBranch.zipCode || "",
-        main: editingBranch.main,
-        active: editingBranch.active ?? "Y",
-        userCode: "NSI",
-      },
-    };
-
-    const confirm = await Swal.fire({
-      title: "Save Branch?",
-      text: "Make sure details are correct.",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Save",
-    });
-    if (!confirm.isConfirmed) return;
-
-    setSaving(true);
-    setLoading(true);
-    try {
-      const { data } = await API.post("/upsertBranch", payload);
-      if (data?.status === "success") {
-        await Swal.fire("Saved", "Branch saved successfully.", "success");
-        await fetchBranches();
-        resetForm();
-      } else {
-        Swal.fire("Error", data?.message || "Something went wrong.", "error");
-      }
-    } catch (error) {
-      console.error("Error saving branch:", error);
-      Swal.fire("Error", error?.response?.data?.message || "Error saving branch.", "error");
-    } finally {
-      setSaving(false);
-      setLoading(false);
-    }
+  // If you have AuthContext, prefer: const userCode = user?.USER_CODE || "SYSTEM";
+  const payload = {
+    json_data: {
+      branchCode: editingBranch.branchCode,
+      branchName: editingBranch.branchName,
+      branchType: editingBranch.main,
+      branchAddr1: editingBranch.branchAddr1,
+      branchAddr2: editingBranch.branchAddr2 || "",
+      branchAddr3: editingBranch.branchAddr3 || "",
+      country: editingBranch.country || "",
+      branchTin: editingBranch.branchTin,
+      telNo: editingBranch.telNo || "",
+      faxNo: editingBranch.faxNo || "",
+      zipCode: editingBranch.zipCode || "",
+      main: editingBranch.main,
+      active: editingBranch.active ?? "Y",
+      userCode: "NSI",
+    },
   };
+
+  const confirm = await Swal.fire({
+    title: "Save Branch?",
+    text: "Make sure details are correct.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Save",
+  });
+  if (!confirm.isConfirmed) return;
+
+  setSaving(true);
+  setLoading(true);
+  try {
+    // ✅ centralized POST helper (attaches token + tenant)
+    const res = await postRequest("/upsertBranch", payload);
+
+    // handle common response shapes
+    const status = res?.status ?? res?.data?.status;
+    const message = res?.message ?? res?.data?.message;
+
+    if (status === "success") {
+      await Swal.fire("Saved", "Branch saved successfully.", "success");
+      await fetchBranches();
+      resetForm();
+    } else {
+      Swal.fire("Error", message || "Something went wrong.", "error");
+    }
+  } catch (error) {
+    console.error("Error saving branch:", error);
+    const msg = error?.response?.data?.message || "Error saving branch.";
+    Swal.fire("Error", msg, "error");
+  } finally {
+    setSaving(false);
+    setLoading(false);
+  }
+};
+
 
   // Delete
-  const handleDeleteBranch = async (index) => {
-    const b = branches[index];
-    if (!b?.branchCode) return;
-    const confirm = await Swal.fire({
-      title: "Delete this branch?",
-      text: `Branchcode : ${b.branchCode} | Branchname : ${b.branchName}`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it",
-    });
-    if (!confirm.isConfirmed) return;
+  // Delete
+const handleDeleteBranch = async (index) => {
+  const b = branches[index];
+  if (!b?.branchCode) return;
 
-    try {
-      const { data } = await API.post("/deleteBranch", { json_data: { branchCode: b.branchCode } });
-      if (data?.status === "success") {
-        setBranches((prev) => prev.filter((_, i) => i !== index));
-        Swal.fire("Deleted", "The branch has been deleted.", "success");
-      } else {
-        Swal.fire("Error", data?.message || "Deletion failed.", "error");
-      }
-    } catch (error) {
-      console.error("API delete error:", error);
-      Swal.fire("Error", error?.response?.data?.message || "Failed to delete branch.", "error");
+  const confirm = await Swal.fire({
+    title: "Delete this branch?",
+    text: `Branchcode : ${b.branchCode} | Branchname : ${b.branchName}`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it",
+  });
+  if (!confirm.isConfirmed) return;
+
+  try {
+    // ✅ centralized POST helper
+    const res = await postRequest("/deleteBranch", {
+      json_data: { branchCode: b.branchCode },
+    });
+
+    const status = res?.status ?? res?.data?.status;
+    const message = res?.message ?? res?.data?.message;
+
+    if (status === "success") {
+      // optimistic update
+      setBranches((prev) => prev.filter((_, i) => i !== index));
+      Swal.fire("Deleted", "The branch has been deleted.", "success");
+    } else {
+      Swal.fire("Error", message || "Deletion failed.", "error");
     }
-  };
+  } catch (error) {
+    console.error("API delete error:", error);
+    const msg = error?.response?.data?.message || "Failed to delete branch.";
+    Swal.fire("Error", msg, "error");
+  }
+};
+
 
   // Exports
   const handleExport = (type) => {
