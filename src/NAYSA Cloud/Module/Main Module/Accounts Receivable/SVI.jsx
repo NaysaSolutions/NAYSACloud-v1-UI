@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Swal from 'sweetalert2';
-
+import { useLocation, useNavigate } from "react-router-dom";
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
@@ -87,9 +87,11 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const SVI = () => {
+  const navigate = useNavigate();
+  const location = useLocation(); 
   const { user } = useAuth();
   const { resetFlag } = useReset();
-   const [state, setState] = useState({
+  const [state, setState] = useState({
 
     // HS Option
     glCurrMode:"M",
@@ -1006,7 +1008,6 @@ const handleCopy = async () => {
       return;
       }
 
-
   if (documentID ) {
     updateState({ documentNo:"",
                   documentID:"",
@@ -1016,6 +1017,30 @@ const handleCopy = async () => {
                   noReprints:"0",
      });
   }
+};
+
+
+const handleHistory = () => {
+  const mapStatusToHistory = (s) =>
+    s === "FINALIZED" ? "F" :
+    s === "CANCELLED" ? "C" :
+    s === "POSTED"    ? "P" :
+    s === "OPEN"      ? ""  : "All";
+  
+  const backToPath = `${location.pathname}${location.search}${location.hash}`;
+
+  navigate("/page/AllTranHistory", {
+    state: {
+      branchCode: state.branchCode,
+      startDate: state.fromDate,
+      endDate:   state.toDate,
+      status:    mapStatusToHistory(state.status),
+      prefillSearchFields: { cust_code: state.custCode || "" },
+      endpoint: "/getSVIHistory",
+      activeTabKey: "summary_svi_header",
+      backToPath      
+    },
+  });
 };
 
 
@@ -1629,8 +1654,10 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
+  onHistory={handleHistory}
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
+  detailsRoute="/page/SVI"
 />
       </div>
 
@@ -2001,7 +2028,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 </div>
       
       {/* APV Detail Section */}
-      <div id="apv_dtl" className="global-tran-tab-div-ui" >
+      <div id="apv_dtl" className="global-tran-tab-div-ui">
 
       {/* Tab Navigation */}
       <div className="global-tran-tab-nav-ui">

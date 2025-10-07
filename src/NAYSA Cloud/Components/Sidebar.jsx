@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink  } from "react-router-dom";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
-import { AuthProvider, useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 import {
   FiChevronDown,
   FiChevronRight,

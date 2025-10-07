@@ -3,6 +3,8 @@
 
 import SVI       from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SVI.jsx";
 import PostSVI   from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostSVI.jsx";
+import AllTranHistory from "./NAYSA Cloud/Lookup/SearchGlobalTranHistory.jsx";
+
 import SOA       from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/SOA.jsx";
 import PostSOA   from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/PostSOA.jsx";
 import ARCM      from "./NAYSA Cloud/Module/Main Module/Accounts Receivable/ARCM.jsx";
@@ -64,6 +66,10 @@ export const pageRegistry = {
 
   // General Ledger
   JV,
+
+
+  //Global
+  AllTranHistory,
 
   // Global Reference
   BranchRef,
