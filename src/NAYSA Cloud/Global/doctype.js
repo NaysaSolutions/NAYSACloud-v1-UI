@@ -7,6 +7,8 @@ export const docTypes = {
   SOA:"SOA",
   ARCM:"ARCM",
   ARDM:"ARDM",
+  APCM:"APCM",
+  APDM:"APDM",
   CR:"CR",
   AR:"AR"
 

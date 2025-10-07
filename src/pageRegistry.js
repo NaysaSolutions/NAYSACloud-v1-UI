@@ -40,6 +40,9 @@ import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
 import UserAccessRights   from "./NAYSA Cloud/Reference File/UserAccessRights.jsx";
 
 import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
+import APReportModal from "./NAYSA Cloud/Printing/APReport.jsx";
+import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
+import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
 
 
 
@@ -79,10 +82,13 @@ export const pageRegistry = {
  
   //Posting
   PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
-  PostCV,PostPCV,PostJV,
+  PostCV,PostPCV,PostJV,PostAPV,
 
 
 
   //Printing
   ARReportModal,
+  APReportModal,
+  VIReportModal,
+  EWTReportModal,
 };

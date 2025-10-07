@@ -66,7 +66,7 @@ const PostJV = ({ isOpen, onClose, userCode }) => {
 
 
 const handlePost = async (selectedData, userPw) => {
-  console.log("JV Posting Data",JSON.stringify(selectedData))
+  console.log("JV POsting Data",JSON.stringify(selectedData))
   await useHandlePostTran(selectedData,userPw,"JV",userCode,setLoading,onClose)
 }
 
