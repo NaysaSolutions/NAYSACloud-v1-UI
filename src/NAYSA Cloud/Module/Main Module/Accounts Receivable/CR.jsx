@@ -777,7 +777,7 @@ const handleCurrRateNoBlur = (e) => {
         currName,
         currRate,
         remarks,
-        // userCode, // Assuming userCode is also part of your state
+        userCode, // Assuming userCode is also part of your state
         detailRows,
         detailRowsGL
     } = state;

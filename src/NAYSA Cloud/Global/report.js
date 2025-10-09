@@ -149,68 +149,6 @@ export async function useHandlePrintARReport(params) {
 
 
 
-// export async function useHandleDownloadExcelARReport(params) {
- 
-//    try {
-//     const responseDocRpt = await useTopHSRptRow(params.reportId);
-
-//     const payload = {
-//       branchCode: params.branchCode,
-//       startDate: params.startDate,
-//       endDate: params.endDate,
-//       sCustCode: params.sCustCode,
-//       eCustCode: params.eCustCode,
-//       formName: responseDocRpt.crptName,
-//       sprocMode: responseDocRpt.sprocMode,
-//       sprocName: responseDocRpt.sprocName,
-//       export: responseDocRpt.export,
-//       reportName: responseDocRpt.reportName,
-//       userCode:params.userCode
-//     };
-
-
-//     console.log(JSON.stringify(payload))
-
-//     // ⬇️ override only for this request
-//     const response = await apiClient.post("/printARReport", payload, {
-//       responseType: "blob",
-//     });
-
-//     if (!response || !response.data) {
-//       return false; // ❌ return failure if no data
-//     }
-
-    
-//     // Extract filename from headers if available
-//     let filename =  responseDocRpt.reportName + ".xlsx";
-//     const disposition = response.headers["content-disposition"];
-//     if (disposition && disposition.includes("filename=")) {
-//       filename = disposition
-//         .split("filename=")[1]
-//         .replace(/["']/g, "")
-//         .trim();
-//     }
-
-//     // Create blob and trigger download
-//     const blob = new Blob([response.data], {
-//       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-//     });
-
-//     const link = document.createElement("a");
-//     link.href = URL.createObjectURL(blob);
-//     link.download = filename;
-//     document.body.appendChild(link);
-//     link.click();
-//     document.body.removeChild(link);
-
-//     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-//     return true;
-//   } catch (error) {
-//     console.error("Error downloading report:", error);
-//   }
-// }
-
-
 
 
 export async function useHandleDownloadExcelARReport(params) {
@@ -237,6 +175,313 @@ export async function useHandleDownloadExcelARReport(params) {
 
     // ⬇️ override only for this request
     const response = await apiClient.post("/printARReport", payload, {
+      responseType: "blob",
+    });
+
+    if (!response || !response.data) {
+      return false; // no data received
+    }
+
+    // Determine filename from headers or fallback
+    let filename = responseDocRpt.reportName + ".xlsx";
+    const disposition = response.headers["content-disposition"];
+    if (disposition && disposition.includes("filename=")) {
+      filename = disposition
+        .split("filename=")[1]
+        .replace(/["']/g, "")
+        .trim();
+    }
+
+    // Create a blob and trigger download
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Cleanup URL object
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+    return true;
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+export async function useHandlePrintAPReport(params) {
+  try {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      throw new Error("Popup blocked — please allow popups for this site.");
+    }
+
+    injectLoadingSpinner(printWindow);
+
+  
+    const responseDocRpt = await useTopHSRptRow(params.reportId);
+    const formName = responseDocRpt?.reportName;
+    if (!formName) {
+      throw new Error("Report Name not defined");
+    }
+
+    const payload = { 
+              branchCode: params.branchCode,
+              startDate: params.startDate,
+              endDate: params.endDate,
+              sPayee: params.sVendCode,
+              ePayee: params.eVendCode,
+              reportName: formName,
+              sprocMode:"",
+              sprocName : "",
+              export :"" };
+
+        console.log(JSON.stringify(payload))
+
+    const pdfBlob = await postPdfRequest("/printAPReport", payload);
+
+    if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf") {
+      throw new Error("Expected a PDF file but received something else.");
+    }
+
+    const fileURL = URL.createObjectURL(pdfBlob);
+    printWindow.location.href = fileURL;
+
+  } catch (error) {
+    console.error("Error printing report:", error);
+  }
+}
+
+
+
+
+
+export async function useHandleDownloadExcelAPReport(params) {
+ 
+   try {
+    const responseDocRpt = await useTopHSRptRow(params.reportId);
+
+    const payload = {
+      branchCode: params.branchCode,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      sPayee: params.sVendCode,
+      ePayee: params.eVendCode,
+      formName: responseDocRpt.crptName,
+      sprocMode: responseDocRpt.sprocMode,
+      sprocName: responseDocRpt.sprocName,
+      export: responseDocRpt.export,
+      reportName: responseDocRpt.reportName,
+      userCode:params.userCode
+    };
+
+
+    console.log(JSON.stringify(payload))
+
+    // ⬇️ override only for this request
+    const response = await apiClient.post("/printAPReport", payload, {
+      responseType: "blob",
+    });
+
+    if (!response || !response.data) {
+      return false; // no data received
+    }
+
+    // Determine filename from headers or fallback
+    let filename = responseDocRpt.reportName + ".xlsx";
+    const disposition = response.headers["content-disposition"];
+    if (disposition && disposition.includes("filename=")) {
+      filename = disposition
+        .split("filename=")[1]
+        .replace(/["']/g, "")
+        .trim();
+    }
+
+    // Create a blob and trigger download
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Cleanup URL object
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+    return true;
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+export async function useHandlePrintGLReport(params) {
+  try {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      throw new Error("Popup blocked — please allow popups for this site.");
+    }
+
+    injectLoadingSpinner(printWindow);
+
+  
+    const responseDocRpt = await useTopHSRptRow(params.reportId);
+    const formName = responseDocRpt?.reportName;
+    if (!formName) {
+      throw new Error("Report Name not defined");
+    }
+
+    const payload = { 
+              branchCode: params.branchCode,
+              startDate: params.startDate,
+              endDate: params.endDate,
+              sGL: params.sAcctCode,
+              eGL: params.eAcctCode,
+              sSL: params.sSLCode,
+              eSL: params.eSLCode,
+              sRC: params.sRCCode,
+              eRC: params.eRCCode,
+              reportName: formName,
+              sprocMode:"",
+              sprocName : "",
+              export :"" };
+
+        console.log(JSON.stringify(payload))
+
+    const pdfBlob = await postPdfRequest("/printGLReport", payload);
+
+    if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf") {
+      throw new Error("Expected a PDF file but received something else.");
+    }
+
+    const fileURL = URL.createObjectURL(pdfBlob);
+    printWindow.location.href = fileURL;
+
+  } catch (error) {
+    console.error("Error printing report:", error);
+  }
+}
+
+
+
+
+
+export async function useHandleDownloadExcelGLReport(params) {
+ 
+   try {
+    const responseDocRpt = await useTopHSRptRow(params.reportId);
+
+    const payload = {
+      branchCode: params.branchCode,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      sGL: params.sAcctCode,
+      eGL: params.eAcctCode,
+      sSL: params.sSLCode,
+      eSL: params.eSLCode,
+      sRC: params.sRCCode,
+      eRC: params.eRCCode,
+      formName: responseDocRpt.crptName,
+      sprocMode: responseDocRpt.sprocMode,
+      sprocName: responseDocRpt.sprocName,
+      export: responseDocRpt.export,
+      reportName: responseDocRpt.reportName,
+      userCode:params.userCode
+    };
+
+
+    console.log(JSON.stringify(payload))
+
+    // ⬇️ override only for this request
+    const response = await apiClient.post("/printGLReport", payload, {
+      responseType: "blob",
+    });
+
+    if (!response || !response.data) {
+      return false; // no data received
+    }
+
+    // Determine filename from headers or fallback
+    let filename = responseDocRpt.reportName + ".xlsx";
+    const disposition = response.headers["content-disposition"];
+    if (disposition && disposition.includes("filename=")) {
+      filename = disposition
+        .split("filename=")[1]
+        .replace(/["']/g, "")
+        .trim();
+    }
+
+    // Create a blob and trigger download
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Cleanup URL object
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+    return true;
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+export async function useHandleExportExcelHistoryReport(params) {
+ 
+   try {
+    const responseDocRpt = await useTopHSRptRow(params.reportId);
+
+    const payload = {
+      branchCode: params.branchCode,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      jsonSheets: params.jsonSheets,
+      reportName: params.reportName,
+      userCode:params.userCode
+    };
+
+
+     console.log(JSON.stringify(payload))
+
+    // ⬇️ override only for this request
+    const response = await apiClient.post("/exportHistoryReport", payload, {
       responseType: "blob",
     });
 

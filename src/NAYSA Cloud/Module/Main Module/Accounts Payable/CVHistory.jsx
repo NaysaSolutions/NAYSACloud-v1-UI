@@ -33,7 +33,7 @@ Modal.setAppElement("#root");
 import apiClient, {
   fetchData,
   fetchDataJson,
-  fetchDataJsonLookup,
+  // fetchDataJsonLookup,
   postRequest,
   postPdfRequest,
 } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";

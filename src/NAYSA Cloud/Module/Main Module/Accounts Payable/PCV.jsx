@@ -18,7 +18,7 @@ import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import PostPCV from "../../../Module/Main Module/Accounts Payable/PostPCV.jsx";
-
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
 // Configuration
 import { postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -81,6 +81,7 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const PCV = () => {
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
    const { user } = useAuth();
    const { resetFlag } = useReset();
    const [state, setState] = useState({
@@ -978,6 +979,14 @@ const handleCopy = async () => {
   }
 };
 
+  
+  const handleHistoryRowPick = (row) => {
+    const docNo = row?.docNo;
+    const branchCode = row?.branchCode;
+    if (!docNo || !branchCode) return;
+    fetchTranData(docNo, branchCode);
+    setTopTab("details"); // jump back to details after loading
+  };
 
 
 
@@ -1097,6 +1106,8 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
    
         
         const vendResponse = await postRequest("addPayeeDetail",JSON.stringify({ json_data: { vendCode: value.vendCode } }));
+        
+        console.log(vendResponse)
         const [{ vendCode, vendName, atcCode, atcName, vatCode, vatName, address1, address2, address3, tin }] = JSON.parse(vendResponse.data[0].result);
           Object.assign(row, {
             vendCode,
@@ -1503,10 +1514,20 @@ const handleCloseBranchModal = (selectedBranch) => {
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
-  isSaveDisabled={isSaveDisabled} // Pass disabled state
-  isResetDisabled={isResetDisabled} // Pass disabled state
+
+  activeTopTab={topTab} 
+  showActions={topTab === "details"}             
+  onDetails={() => setTopTab("details")}
+  onHistory={() => setTopTab("history")}
+  disableRouteNavigation={true}    
+
+  isSaveDisabled={isSaveDisabled} 
+  isResetDisabled={isResetDisabled} 
+  detailsRoute="/page/PCV"
 />
       </div>
+
+  <div className={topTab === "details" ? "" : "hidden"}>
 
       {/* Page title and subheading */} 
 
@@ -2978,20 +2999,40 @@ const handleCloseBranchModal = (selectedBranch) => {
   />
 )}
 
-{/* {showPostingModal && (
-  <ARReportModal
-    isOpen={showPostingModal}
-    userCode ={userCode}
-    onClose={() => updateState({ showPostingModal: false })}
-  />
-)}  */}
-
-
 
 
 {showSpinner && <LoadingSpinner />}
     </div>
-  );
+
+
+    <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getPCVHistory"
+        cacheKey={`PCV:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="PCV_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+          status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+    />
+  </div>
+
+
+</div>
+);
+// End of Return
+
+
+
 };
 
 export default PCV;

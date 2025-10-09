@@ -19,13 +19,13 @@ import BillCodeLookupModal from "../../../Lookup/SearchBillCodeRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
-// import PostSOA from "../../../Module/Main Module/Accounts Receivable/PostSOA.jsx";
 import ARReportModal from "../../../Printing/ARReport.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
 
 // Configuration
-import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
+import { postRequest} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
@@ -91,6 +91,7 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const SOA = () => {
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
    const { user } = useAuth();
    const { resetFlag } = useReset();
    const [state, setState] = useState({
@@ -1018,6 +1019,15 @@ const handleCopy = async () => {
   }
 };
 
+  
+
+  const handleHistoryRowPick = (row) => {
+    const docNo = row?.docNo;
+    const branchCode = row?.branchCode;
+    if (!docNo || !branchCode) return;
+    fetchTranData(docNo, branchCode);
+    setTopTab("details"); // jump back to details after loading
+  };
 
 
 
@@ -1630,10 +1640,19 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
-  isSaveDisabled={isSaveDisabled} // Pass disabled state
-  isResetDisabled={isResetDisabled} // Pass disabled state
+  activeTopTab={topTab} 
+  showActions={topTab === "details"} 
+  showBIRForm={false}      
+  onDetails={() => setTopTab("details")}
+  onHistory={() => setTopTab("history")}
+  disableRouteNavigation={true}         
+  isSaveDisabled={isSaveDisabled} 
+  isResetDisabled={isResetDisabled} 
+  detailsRoute="/page/SOA"
 />
       </div>
+
+        <div className={topTab === "details" ? "" : "hidden"}>
 
       {/* Page title and subheading */} 
 
@@ -1652,6 +1671,10 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
         </div>
 
       </div>
+
+      
+
+
 
 
 {/* Form Layout with Tabs */}
@@ -3316,10 +3339,39 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
  */}
 
 
-
-{showSpinner && <LoadingSpinner />}
+      {showSpinner && <LoadingSpinner />}
     </div>
-  );
+
+
+    <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getSOAHistory"
+        cacheKey={`SOA:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="SOA_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+        status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+    />
+  </div>
+
+
+</div>
+);
+// End of Return
+
+
+
 };
+
 
 export default SOA;

@@ -586,7 +586,19 @@ export const fetchData = async (endpoint, params = {}) => {
   const { data } = await apiClient.get(endpoint, { params });
   return data;
 };
+
+
+
 export const fetchDataJson = async (endpoint, jsonPayload = {}, page = 1, itemsPerPage = 50) => {
+  const { data } = await apiClient.get(endpoint, {
+    params: { PARAMS: JSON.stringify({ json_data: jsonPayload }), page, itemsPerPage },
+  });
+  return data;
+};
+
+
+
+export const fetchDataJsonLookup = async (endpoint, jsonPayload = {}, page = 1, itemsPerPage = 50) => {
   const { data } = await apiClient.get(endpoint, {
     params: { PARAMS: JSON.stringify({ json_data: jsonPayload }), page, itemsPerPage },
   });
@@ -596,6 +608,8 @@ export const postRequest = async (endpoint, body = {}, config = {}) => {
   const { data } = await apiClient.post(endpoint, body, config);
   return data;
 };
+
+
 export const postPdfRequest = async (endpoint, body = {}) => {
   const { data } = await apiClient.post(endpoint, body, {
     headers: { Accept: "application/pdf" },
