@@ -1,17 +1,18 @@
-import { useState, useEffect,useRef } from 'react';
-import { fetchDataJson, postRequest } from '../../../Configuration/BaseURL.jsx';
+import { useState, useEffect, useRef } from 'react';
+import { fetchDataJson } from '../../../Configuration/BaseURL.jsx';
 import { useSelectedHSColConfig } from '@/NAYSA Cloud/Global/selectedData';
-import  GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
+import GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import { useSwalValidationAlert } from '@/NAYSA Cloud/Global/behavior';
 import { useHandlePostTran } from '@/NAYSA Cloud/Global/procedure';
-
-
+import ReactDOM from 'react-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 const PostSVI = ({ isOpen, onClose, userCode }) => {
   const [data, setData] = useState([]);
   const [colConfigData, setcolConfigData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalReady, setModalReady] = useState(false); // controls modal display
+  const [modalReady, setModalReady] = useState(false);
   const alertFired = useRef(false);
   const [userPassword, setUserPassword] = useState(null);
 
@@ -23,7 +24,7 @@ const PostSVI = ({ isOpen, onClose, userCode }) => {
     const fetchData = async () => {
       if (!isOpen) return;
       setLoading(true);
-      alertFired.current = false; 
+      alertFired.current = false;
 
       try {
         const endpoint = "postingSVI";
@@ -38,8 +39,8 @@ const PostSVI = ({ isOpen, onClose, userCode }) => {
             title: "No Records Found",
             message: "There are no records to display.",
           });
-          alertFired.current = true; 
-          onClose();
+          alertFired.current = true;
+          onClose?.();
         }
 
         const colConfig = await useSelectedHSColConfig(endpoint);
@@ -62,27 +63,75 @@ const PostSVI = ({ isOpen, onClose, userCode }) => {
       isMounted = false;
       setModalReady(false);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
+
+  const handlePost = async (selectedData, userPw) => {
+    await useHandlePostTran(selectedData, userPw, "SVI", userCode, setLoading, onClose);
+  };
+
+  
+
+ 
+const pickDocAndBranch = (row) => {
+  if (!row) return { docNo: null, branchCode: null };
+  const docNo = row.sviNo;
+  const branchCode = row.branchCode;
+  return { docNo, branchCode };
+};
 
 
-const handlePost = async (selectedData, userPw) => {
-  await useHandlePostTran(selectedData,userPw,"SVI",userCode,setLoading,onClose)
-}
+const handleViewDocument = (row) => {
+
+  const { docNo, branchCode } = pickDocAndBranch(row);
+  if (!docNo || !branchCode) {
+    useSwalValidationAlert({
+      icon: "warning",
+      title: "Missing keys",
+      message: "Cannot determine Document No Column Index"
+    });
+    return;
+  }
+
+  const SVI_VIEW_URL = "/tran-ar-svitran";
+  const url =
+    `${window.location.origin}${SVI_VIEW_URL}` +
+    `?sviNo=${encodeURIComponent(docNo)}&branchCode=${encodeURIComponent(branchCode)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+};
 
 
 
-  return modalReady ? (
-    <GlobalGLPostingModalv1 
-      data={data} 
-      colConfigData={colConfigData} 
-      title="Post Service Invoice" 
-      userPassword ={userPassword}
+return (
+  <>
+    {/* Mount the modal only when ready */}
+    {modalReady && (
+      <GlobalGLPostingModalv1
+       data={data}
+      colConfigData={colConfigData}
+      title="Post Service Invoice"
+      userPassword={userPassword}
       btnCaption="Ok"
       onClose={onClose}
-      onPost={handlePost} 
-    />
-  ) : null;
+      onPost={handlePost}
+      onViewDocument={handleViewDocument}
+      remoteLoading={loading}
+      />
+    )}
+
+    {/* Always allow the overlay to render while loading (no modalReady / isOpen gate) */}
+    {ReactDOM.createPortal(
+      loading ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center text-blue-600">
+            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mb-3" />
+            <span className="text-sm font-medium tracking-wide">Please wait…</span>
+          </div>
+        </div>
+      ) : null,
+      document.body
+    )}
+  </>
+);
 };
 
 export default PostSVI;
-

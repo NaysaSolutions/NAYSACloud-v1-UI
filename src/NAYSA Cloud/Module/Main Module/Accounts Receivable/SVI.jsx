@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef,useCallback } from "react";
 import Swal from 'sweetalert2';
-// import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
@@ -83,6 +84,8 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const SVI = () => {
+  const loadedFromUrlRef = useRef(false);
+  const navigate = useNavigate();
   const [topTab, setTopTab] = useState("details"); // "details" | "history"
   const { user } = useAuth();
   const { resetFlag } = useReset();
@@ -420,15 +423,6 @@ useEffect(() => {
   }, [state.documentID]);
   
 
-
-
-  useEffect(() => {
-    const st = location.state;
-    if (st?.docNo && st?.branchCode) {
-      fetchTranData(st.docNo, st.branchCode);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state]);
 
 
 
@@ -1027,14 +1021,33 @@ const handleCopy = async () => {
 
 
 
-  const handleHistoryRowPick = (row) => {
+
+//  ** View Document and Transaction History Retrieval ***
+ const cleanUrl = useCallback(() => {
+    navigate(location.pathname, { replace: true });
+  }, [navigate, location.pathname]);
+
+
+  const handleHistoryRowPick = useCallback((row) => {
     const docNo = row?.docNo;
     const branchCode = row?.branchCode;
     if (!docNo || !branchCode) return;
     fetchTranData(docNo, branchCode);
-    setTopTab("details"); // jump back to details after loading
-  };
+    setTopTab("details");
+  });
 
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const docNo = params.get("sviNo");         
+    const branchCode = params.get("branchCode");    
+    
+    if (!loadedFromUrlRef.current && docNo && branchCode) {
+      loadedFromUrlRef.current = true;
+      handleHistoryRowPick({ docNo, branchCode });
+      cleanUrl();
+    }
+  }, [location.search, handleHistoryRowPick, cleanUrl]);
 
 
 
@@ -1043,6 +1056,7 @@ const handleCopy = async () => {
     branch: branchCode,
     doc_id: docType
   };
+
 
 
   const handleCloseCustModal = async (selectedData) => {
@@ -1448,15 +1462,18 @@ const handleCloseAccountModal = (selectedAccount) => {
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
-      const result = await useHandleCancel(docType,documentID,"NSI",confirmation.reason,updateState);
+      const result = await useHandleCancel(docType,documentID,userCode,confirmation.password,confirmation.reason,updateState);
       if (result.success) 
       {
-        Swal.fire({
+       Swal.fire({
           icon: "success",
           title: "Success",
-          text: result.message,
-        });       
-      } 
+          text: "Cancellation Completed",
+          timer: 5000, 
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });    
+      }    
      await fetchTranData(documentNo,branchCode);
     }
     updateState({showCancelModal: false});
@@ -1897,7 +1914,7 @@ return (
                                     ? "global-tran-textbox-button-search-disabled-ui"
                                     : "global-tran-textbox-button-search-enabled-ui"
                                 } global-tran-textbox-button-search-ui`}
-                                disabled={isFormDisabled} 
+                                disabled={isFormDisabled || custCode} 
                             >
                                 <FontAwesomeIcon icon={faMagnifyingGlass} />
                             </button>
