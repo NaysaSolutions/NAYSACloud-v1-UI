@@ -65,7 +65,7 @@ export function injectLoadingSpinner(printWindow) {
 
 
 
-export async function useHandlePrint(documentID, docCode, printMode) {
+export async function useHandlePrint(documentID, docCode, printMode, userCode) {
   try {
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -73,7 +73,6 @@ export async function useHandlePrint(documentID, docCode, printMode) {
     }
 
     injectLoadingSpinner(printWindow);
-  
     const responseDocControl = await useTopDocControlRow(docCode);
     const formName = responseDocControl?.formName;
 
@@ -81,10 +80,7 @@ export async function useHandlePrint(documentID, docCode, printMode) {
       throw new Error("Report Name not defined");
     }
 
-    const payload = { tranId: documentID, formName, docCode, printMode };
-
-    console.log(payload)
-
+    const payload = { tranId: documentID, formName, docCode, printMode ,userCode};
     const pdfBlob = await postPdfRequest("/printForm", payload);
 
     if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf") {
@@ -358,18 +354,19 @@ export async function useHandlePrintGLReport(params) {
               branchCode: params.branchCode,
               startDate: params.startDate,
               endDate: params.endDate,
-              sGL: params.sAcctCode,
-              eGL: params.eAcctCode,
-              sSL: params.sSLCode,
-              eSL: params.eSLCode,
-              sRC: params.sRCCode,
-              eRC: params.eRCCode,
+              sGL: params.sGL,
+              eGL: params.eGL,
+              sSL: params.sSL,
+              eSL: params.eSL,
+              sRC: params.sRC,
+              eRC: params.eRC,
               reportName: formName,
               sprocMode:"",
               sprocName : "",
-              export :"" };
+              export :"",
+              reportName: "",
+              userCode:params.userCode};
 
-        console.log(JSON.stringify(payload))
 
     const pdfBlob = await postPdfRequest("/printGLReport", payload);
 
@@ -398,12 +395,12 @@ export async function useHandleDownloadExcelGLReport(params) {
       branchCode: params.branchCode,
       startDate: params.startDate,
       endDate: params.endDate,
-      sGL: params.sAcctCode,
-      eGL: params.eAcctCode,
-      sSL: params.sSLCode,
-      eSL: params.eSLCode,
-      sRC: params.sRCCode,
-      eRC: params.eRCCode,
+      sGL: params.sGL,
+      eGL: params.eGL,
+      sSL: params.sSL,
+      eSL: params.eSL,
+      sRC: params.sRC,
+      eRC: params.eRC,
       formName: responseDocRpt.crptName,
       sprocMode: responseDocRpt.sprocMode,
       sprocName: responseDocRpt.sprocName,
@@ -413,7 +410,7 @@ export async function useHandleDownloadExcelGLReport(params) {
     };
 
 
-    console.log(JSON.stringify(payload))
+  
 
     // ⬇️ override only for this request
     const response = await apiClient.post("/printGLReport", payload, {
@@ -463,61 +460,125 @@ export async function useHandleDownloadExcelGLReport(params) {
 
 
 
-export async function useHandleExportExcelHistoryReport(params) {
+// export async function useHandleExportExcelHistoryReport(params) {
  
-   try {
-    const responseDocRpt = await useTopHSRptRow(params.reportId);
+//    try {
+//     const responseDocRpt = await useTopHSRptRow(params.reportId);
 
-    const payload = {
-      branchCode: params.branchCode,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      jsonSheets: params.jsonSheets,
-      reportName: params.reportName,
-      userCode:params.userCode
-    };
+//     const payload = {
+//       branchCode: params.branchCode,
+//       startDate: params.startDate,
+//       endDate: params.endDate,
+//       jsonSheets: params.jsonSheets,
+//       reportName: params.reportName,
+//       userCode:params.userCode
+//     };
 
 
-     console.log(JSON.stringify(payload))
+//      console.log(JSON.stringify(payload))
 
-    // ⬇️ override only for this request
-    const response = await apiClient.post("/exportHistoryReport", payload, {
-      responseType: "blob",
-    });
+//     // ⬇️ override only for this request
+//     const response = await apiClient.post("/exportHistoryReport", payload, {
+//       responseType: "blob",
+//     });
 
-    if (!response || !response.data) {
-      return false; // no data received
-    }
+//     if (!response || !response.data) {
+//       return false; // no data received
+//     }
 
-    // Determine filename from headers or fallback
-    let filename = responseDocRpt.reportName + ".xlsx";
-    const disposition = response.headers["content-disposition"];
-    if (disposition && disposition.includes("filename=")) {
-      filename = disposition
-        .split("filename=")[1]
-        .replace(/["']/g, "")
-        .trim();
-    }
+//     // Determine filename from headers or fallback
+//     let filename = responseDocRpt.reportName + ".xlsx";
+//     const disposition = response.headers["content-disposition"];
+//     if (disposition && disposition.includes("filename=")) {
+//       filename = disposition
+//         .split("filename=")[1]
+//         .replace(/["']/g, "")
+//         .trim();
+//     }
 
-    // Create a blob and trigger download
-    const blob = new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
+//     // Create a blob and trigger download
+//     const blob = new Blob([response.data], {
+//       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//     });
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+//     const link = document.createElement("a");
+//     link.href = URL.createObjectURL(blob);
+//     link.download = filename;
+//     document.body.appendChild(link);
+//     link.click();
+//     document.body.removeChild(link);
 
-    // Cleanup URL object
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+//     // Cleanup URL object
+//     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 
-    return true;
-  } catch (error) {
-    console.error("Error downloading report:", error);
-    return false;
+//     return true;
+//   } catch (error) {
+//     console.error("Error downloading report:", error);
+//     return false;
+//   }
+// }
+
+
+function toTabbedJson(reportName, startDate, endDate, jsonSheets) {
+  const data = {};
+  for (const tab of jsonSheets || []) {
+    const key = tab.sheetName || "Sheet";
+    // .NET will infer headers from keys of first row, so just send rows
+    data[key] = Array.isArray(tab.rows) ? tab.rows : [];
   }
+  return {
+    Meta: {
+      ReportName: reportName || "History Export",
+      StartDate: startDate || null,
+      EndDate: endDate || null,
+    },
+    Data: data,
+  };
 }
+
+/**
+ * Call Laravel to export Excel based on your SVI payload.
+ * @param {{
+ *   branchCode: string,
+ *   startDate: string, // 'YYYY-MM-DD'
+ *   endDate: string,   // 'YYYY-MM-DD'
+ *   jsonSheets: Array<{sheetName:string, headers?:string[], rows:Array<Record<string,any>>}>,
+ *   reportName: string,
+ *   userCode: string
+ * }} params
+ */
+export async function exportHistoryExcel(params) {
+  const { branchCode, startDate, endDate, jsonSheets, reportName, userCode } = params;
+
+  const payload = {
+    branchCode,
+    startDate,
+    endDate,
+    reportName,
+    userCode,
+    // The ONLY structural change: wrap to { Meta, Data }
+    jsonSheets: toTabbedJson(reportName, startDate, endDate, jsonSheets),
+  };
+
+  const res = await apiClient.post("/exportHistoryReport", payload, { responseType: "blob" });
+
+  // Preferred filename from headers; otherwise fallback
+  const cd = res.headers["content-disposition"] || "";
+  const match = cd.match(/filename=("?)([^"]+)\1/i);
+  const filename = match ? match[2] : `${reportName || "Report"}.xlsx`;
+
+  // trigger browser download
+  const blob = new Blob([res.data], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+
 

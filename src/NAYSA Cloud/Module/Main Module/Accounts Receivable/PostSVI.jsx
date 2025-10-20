@@ -121,12 +121,12 @@ return (
     {/* Always allow the overlay to render while loading (no modalReady / isOpen gate) */}
     {ReactDOM.createPortal(
       loading ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center text-blue-600">
-            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mb-3" />
-            <span className="text-sm font-medium tracking-wide">Please wait…</span>
+      <div className="global-tran-spinner-main-div-ui">
+          <div className="global-tran-spinner-sub-div-ui">
+            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
+          <p>Please wait...</p>
           </div>
-        </div>
+      </div>
       ) : null,
       document.body
     )}

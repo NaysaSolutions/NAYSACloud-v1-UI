@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo, useRef,useCallback } from "react";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
-import { useHandlePrintARReport, useHandleDownloadExcelARReport } from "@/NAYSA Cloud/Global/report";
+import { useHandlePrintGLReport, useHandleDownloadExcelGLReport } from "@/NAYSA Cloud/Global/report";
 import { useTopHSRptRow, useTopUserRow } from "@/NAYSA Cloud/Global/top1RefTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faXmark, faCircleNotch, faRotateLeft, faBroom, faDownload, faPrint, faCircleXmark,faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useGetCurrentDay, useFormatToDate } from "@/NAYSA Cloud/Global/dates";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
-import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
+import COAMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCOAMast.jsx";
+import RCLookupModal from "@/NAYSA Cloud/Lookup/SearchRCMast.jsx";
+import SLMastLookupModal from "@/NAYSA Cloud/Lookup/SearchSLMast.jsx";
 import Swal from "sweetalert2";
 
 
-const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) => {
+const GLReportModal = ({ isOpen, onClose, userCode,closeOnBackdrop = true }) => {
 
   const today = useGetCurrentDay();
   const firstDayOfMonth = useMemo(() => {
@@ -21,8 +23,14 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
   const [loading, setLoading] = useState(false);
   const [branchModalOpen, setBranchModalOpen] = useState(false);
-  const [customerModalOpen, setCustomerModalOpen] = useState(false);
-  const [sCustMode, setCustMode] = useState("S"); 
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [slModalOpen, setSLModalOpen] = useState(false);
+  const [rcModalOpen, setRCModalOpen] = useState(false);
+
+
+  const [acctMode, setAcctMode] = useState("S"); 
+  const [rcMode, setRCMode] = useState("S"); 
+  const [slMode, setSlMode] = useState("S"); 
   const [reportList, setReportList] = useState([]);
   const [reportQuery, setReportQuery] = useState("");
   const [selected, setSelected] = useState({ id: 0, name: "" });
@@ -32,10 +40,18 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     branchName: "",
     startDate: firstDayOfMonth,
     endDate: today,
-    sCustCode: "",
-    sCustName: "",
-    eCustCode: "",
-    eCustName: "",
+    sAcctCode: "",
+    eAcctCode: "",
+    sAcctName: "",
+    eAcctName: "",
+    sSLCode: "",
+    eSLCode: "",
+    sSLName: "",
+    eSLName: "",
+    sRCCode: "",
+    eRCCode: "",
+    sRCName: "",
+    eRCName: "",
   });
 
 
@@ -64,7 +80,7 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
  
      (async () => {
        try {
-         const params = { mdl: "AR", userCode };
+         const params = { mdl: "GL", userCode };
          const [rptRes, userRes] = await Promise.all([
            fetchData("hsrpt", params),
            useTopUserRow(userCode),
@@ -170,22 +186,66 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
 
 
-  const handleCloseCustomerModal = ({ custCode, custName }) => {
-    if (sCustMode === "S") {
-      updateState({ sCustCode: custCode, sCustName: custName, eCustCode: custCode, eCustName: custName });
+  const handleCloseAccountModal = ({ acctCode, acctName }) => {
+    if (acctMode === "S") {
+      updateState({ sAcctCode: acctCode, sAcctName: acctName, eAcctCode: acctCode, eAcctName: acctName });
     } else {
-      updateState({ eCustCode: custCode, eCustName: custName });
+      updateState({ eAcctCode: acctCode, eAcctName: acctName });
     }
-    setCustomerModalOpen(false);
+    setAccountModalOpen(false);
+  };
+
+  
+  const handleCloseRCModal = ({ rcCode, rcName }) => {
+    if (rcMode === "S") {
+      updateState({ sRCCode: rcCode, sRCName: rcName, eRCCode: rcCode, eRCName: rcName });
+    } else {
+      updateState({ eRCCode: rcCode, eRCName: rcName });
+    }
+    setRCModalOpen(false);
   };
 
 
   
-  const clearSCustomer = () => updateState({ sCustCode: "", sCustName: "" });
-  const clearECustomer = () => updateState({ eCustCode: "", eCustName: "" });
+  const handleCloseSLModal = ({ slCode, slName }) => {
+    if (slMode === "S") {
+      updateState({ sSLCode: slCode, sSLName: slName, eSLCode: slCode, eSLName: slName });
+    } else {
+      updateState({ eSLCode: slCode, eSLName: slName });
+    }
+    setSLModalOpen(false);
+  };
+
+
+
+
+
+
+
+
+  
+  const clearSAcct= () => updateState({ sAcctCode: "", sAcctName: "" });
+  const clearEAcct = () => updateState({ eAcctCode: "", eAcctName: "" });
+  
+  const clearSSL= () => updateState({ sSLCode: "", sSLName: "" });
+  const clearESL = () => updateState({ eSLCode: "", eSLName: "" });
+
+  const clearSRC= () => updateState({ sRCCode: "", sRCName: "" });
+  const clearERC = () => updateState({ eRCCode: "", eRCName: "" });
 
   const handleReset = () => {
-    updateState({ sCustCode: "", sCustName: "", eCustCode: "", eCustName: "" });
+    updateState({   sAcctCode: "",
+    eAcctCode: "",
+    sAcctName: "",
+    eAcctName: "",
+    sSLCode: "",
+    eSLCode: "",
+    sSLName: "",
+    eSLName: "",
+    sRCCode: "",
+    eRCCode: "",
+    sRCName: "",
+    eRCName: "",});
   };
 
 
@@ -211,10 +271,16 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
         branchCode: filters.branchCode,
         startDate: filters.startDate,
         endDate: filters.endDate,
-        sCustCode: filters.sCustCode,
-        eCustCode: filters.eCustCode,
+        sGL: filters.sAcctCode,
+        eGL: filters.eAcctCode,
+        sRC:filters.sRCCode,
+        eRC:filters.eRCCode,
+        sSL:filters.sSLCode,
+        eSL:filters.eSLCode,
         userCode,
       };
+
+    
 
       const meta = await useTopHSRptRow(params.reportId);
 
@@ -225,8 +291,8 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
       const response =
         meta.export === "Y"
-          ? await useHandleDownloadExcelARReport(params)
-          : await useHandlePrintARReport(params);
+          ? await useHandleDownloadExcelGLReport(params)
+          : await useHandlePrintGLReport(params);
 
       if (!meta.crptName && meta.export !== "Y") {
         console.error("⚠️ Failed to generate report:", response);
@@ -260,7 +326,7 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 md:px-6 py-3 border-b bg-gradient-to-r from-white to-blue-100">
           <h2 id="ap-report-title" className="text-sm md:text-base font-semibold text-blue-700">
-            Accounts Receivable Reports
+            General Ledger Reports
           </h2>
           <button
             onClick={onClose}
@@ -387,23 +453,24 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                 />
               </div>
 
-              {/* Starting Customer */}
+             
+              {/* Starting Account */}
               <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
-                <label className="text-xs md:text-sm font-medium">Starting Customer</label>
+                <label className="text-xs md:text-sm font-medium">Starting Account</label>
                 <div className="relative">
                   <input
                     type="text"
                     readOnly
-                    value={filters.sCustName}
-                    placeholder="Select Customer"
+                    value={filters.sAcctName}
+                    placeholder="Select Account"
                     className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
                   />
-                  {filters.sCustName && (
+                  {filters.sAcctName && (
                     <button
                       type="button"
-                      onClick={clearSCustomer}
+                      onClick={clearSAcct}
                       className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
-                      aria-label="Clear starting Customer"
+                      aria-label="Clear starting Account"
                       title="Clear"
                     >
                       <FontAwesomeIcon icon={faCircleXmark} />
@@ -411,31 +478,31 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                   )}
                   <button
                     className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    onClick={() => { setCustMode("S"); setCustomerModalOpen(true); }}
-                    aria-label="Find starting Customer"
+                    onClick={() => { setAcctMode("S"); setAccountModalOpen(true); }}
+                    aria-label="Find starting Account"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
               </div>
 
-              {/* Ending Customer */}
+              {/* Ending Account */}
               <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
-                <label className="text-xs md:text-sm font-medium">Ending Customer</label>
+                <label className="text-xs md:text-sm font-medium">Ending Account</label>
                 <div className="relative">
                   <input
                     type="text"
                     readOnly
-                    value={filters.eCustName}
-                    placeholder="Select Customer"
+                    value={filters.eAcctName}
+                    placeholder="Select Account"
                     className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
                   />
-                  {filters.eCustName && (
+                  {filters.eAcctName && (
                     <button
                       type="button"
-                      onClick={clearECustomer}
+                      onClick={clearEAcct}
                       className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
-                      aria-label="Clear ending Customer"
+                      aria-label="Clear ending Account"
                       title="Clear"
                     >
                       <FontAwesomeIcon icon={faCircleXmark} />
@@ -443,13 +510,150 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                   )}
                   <button
                     className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    onClick={() => { setCustMode("E"); setCustomerModalOpen(true); }}
-                    aria-label="Find ending Customer"
+                    onClick={() => { setAcctMode("E"); setAccountModalOpen(true); }}
+                    aria-label="Find ending Account"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
               </div>
+
+
+
+
+              {/* Starting SL */}
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm font-medium">Starting SL</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={filters.sSLName}
+                    placeholder="Select SL"
+                    className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                  />
+                  {filters.sAcctName && (
+                    <button
+                      type="button"
+                      onClick={clearSSL}
+                      className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
+                      aria-label="Clear starting SL"
+                      title="Clear"
+                    >
+                      <FontAwesomeIcon icon={faCircleXmark} />
+                    </button>
+                  )}
+                  <button
+                    className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onClick={() => { setSlMode("S"); setSLModalOpen(true); }}
+                    aria-label="Find starting SL"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Ending SL */}
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm font-medium">Ending SL</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={filters.eSLName}
+                    placeholder="Select SL"
+                    className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                  />
+                  {filters.eSLName && (
+                    <button
+                      type="button"
+                      onClick={clearESL}
+                      className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
+                      aria-label="Clear ending SL"
+                      title="Clear"
+                    >
+                      <FontAwesomeIcon icon={faCircleXmark} />
+                    </button>
+                  )}
+                  <button
+                    className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onClick={() => { setSlModeMode("E"); setSLModalOpen(true); }}
+                    aria-label="Find ending SL"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
+
+
+
+              {/* Starting RC */}
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm font-medium">Starting RC</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={filters.sRCName}
+                    placeholder="Select RC"
+                    className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                  />
+                  {filters.sRCName && (
+                    <button
+                      type="button"
+                      onClick={clearSRC}
+                      className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
+                      aria-label="Clear starting RC"
+                      title="Clear"
+                    >
+                      <FontAwesomeIcon icon={faCircleXmark} />
+                    </button>
+                  )}
+                  <button
+                    className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onClick={() => { setRCMode("S"); setRCModalOpen(true); }}
+                    aria-label="Find starting RC"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Ending RC */}
+              <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm font-medium">Ending RC</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={filters.eRCName}
+                    placeholder="Select SL"
+                    className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                  />
+                  {filters.eRCName && (
+                    <button
+                      type="button"
+                      onClick={clearERC}
+                      className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
+                      aria-label="Clear ending RC"
+                      title="Clear"
+                    >
+                      <FontAwesomeIcon icon={faCircleXmark} />
+                    </button>
+                  )}
+                  <button
+                    className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onClick={() => { setRCModeMode("E"); setRCModalOpen(true); }}
+                    aria-label="Find ending RC"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
+
+
+
+
 
               {/* Actions */}
               <div className="pt-2 md:pt-4">
@@ -498,13 +702,23 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
         {branchModalOpen && (
           <BranchLookupModal isOpen={branchModalOpen} onClose={handleCloseBranchModal} />
         )}
-        {customerModalOpen && (
-          <CustomerMastLookupModal isOpen={customerModalOpen} onClose={handleCloseCustomerModal} />
+        {accountModalOpen && (
+          <COAMastLookupModal isOpen={accountModalOpen} onClose={handleCloseAccountModal} />
         )}
+
+        {slModalOpen && (
+          <SLMastLookupModal isOpen={slModalOpen} onClose={handleCloseSLModal} />
+        )}
+
+         {rcModalOpen && (
+          <RCLookupModal isOpen={rcModalOpen} onClose={handleCloseRCModal} />
+        )}
+
+
       </div>
     </div>
   );
 };
 
 
-export default ARReportModal;
+export default GLReportModal;

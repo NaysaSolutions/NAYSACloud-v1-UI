@@ -41,6 +41,7 @@ import UserAccessRights   from "./NAYSA Cloud/Reference File/UserAccessRights.js
 
 import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
 import APReportModal from "./NAYSA Cloud/Printing/APReport.jsx";
+import GLReportModal from "./NAYSA Cloud/Printing/GLReport.jsx";
 import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
 import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
 
@@ -87,6 +88,7 @@ export const pageRegistry = {
 
 
   //Printing
+  GLReportModal,
   ARReportModal,
   APReportModal,
   VIReportModal,
