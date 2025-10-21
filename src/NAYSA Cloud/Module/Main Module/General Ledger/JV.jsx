@@ -56,10 +56,16 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
+  useFetchTranDataReversal,
   useHandleCancel,
   useHandlePost,
 } from '@/NAYSA Cloud/Global/procedure';
+
+
+import {  
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
+
 
 import { 
   formatNumber,
@@ -135,6 +141,7 @@ const JV = () => {
     billtermName: "",
     selectedJVType: "",
     selectedRefDocType: "",
+    noReprints:"0",
 
     userCode: 'NSI', // Default value
 
@@ -225,6 +232,7 @@ const [refDocType, setRefDocType] = useState('');
     billtermName,
     selectedJVType,
     selectedRefDocType,
+    noReprints,
 
     // Transaction details
     detailRows,
@@ -532,6 +540,7 @@ const [refDocType, setRefDocType] = useState('');
         branchCode: data.branchCode,
         header: { jv_date: jvDateForHeader },
         selectedJVType: data.jvtranType,
+        noReprints:noReprints,
         selectedRefDocType: data.refDocType,
         custCode: data.slCode,
         custName: data.slName,
@@ -557,6 +566,74 @@ const [refDocType, setRefDocType] = useState('');
       updateState({ isLoading: false });
     }
   };
+
+  const fetchTranDataReversal = async (documentNo, branchCode) => {
+    const resetState = () => {
+      updateState({ documentNo: '', documentID: '',documentStatus: '',status:'', isDocNoDisabled: false, isFetchDisabled: false });
+      updateTotalsDisplay(0, 0, 0, 0, 0, 0);
+    };
+
+    updateState({ isLoading: true });
+
+    try {
+      const data = await useFetchTranDataReversal(documentNo, branchCode, docType, selectedRefDocType, "refDocNo");
+
+      if (!data?.jvId) {
+        Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
+        return resetState();
+      }
+
+      // Format header date
+      // let jvDateForHeader = '';
+      // if (data.jvDate) {
+      //   const d = new Date(data.jvDate);
+      //   jvDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
+      // } 
+
+      // Format rows
+      const retrievedDetailRows = (data.dt1 || []).map(item => ({
+        ...item,
+        jvAmount: formatNumber(item.jvAmount),
+        vatAmount: formatNumber(item.vatAmount),
+        atcAmount: formatNumber(item.atcAmount),
+      }));   
+
+      const formattedGLRows = (data.dt2 || []).map(glRow => ({
+        ...glRow,
+        debit: formatNumber(glRow.debit),
+        credit: formatNumber(glRow.credit),
+        debitFx1: formatNumber(glRow.debitFx1),
+        creditFx1: formatNumber(glRow.creditFx1),
+        debitFx2: formatNumber(glRow.debitFx2),
+        creditFx2: formatNumber(glRow.creditFx2),
+      }));
+
+      // Update state with fetched data
+      updateState({
+        custCode: data.slCode,
+        custName: data.slName,
+        refDocNo2: data.refDocNo1,
+        currCode: data.currCode,
+        currName: data.currName,
+        currRate: formatNumber(data.currRate, 6),
+        remarks: data.remarks,
+        detailRows: retrievedDetailRows,
+        detailRowsGL: formattedGLRows,
+        isDocNoDisabled: true,
+        isFetchDisabled: true,
+      });    
+
+      updateTotals(retrievedDetailRows);
+
+    } catch (error) {
+      console.error("Error fetching transaction data:", error);
+      Swal.fire({ icon: 'error', title: 'Fetch Error', text: error.message });
+      resetState();
+    } finally {
+      updateState({ isLoading: false });
+    }
+  };
+  
 
   const handleSviNoBlur = () => {
     if (!state.documentID && state.documentNo && state.branchCode) { 
@@ -790,9 +867,9 @@ const [refDocType, setRefDocType] = useState('');
   };
 
   const handlePrint = async () => {
-    // if (!detailRows || detailRows.length === 0) {
-    //   return;
-    // }
+    if (!detailRowsGL) {
+      return;
+    }
     updateState({ showSignatoryModal: true });
   };
 
@@ -1147,22 +1224,26 @@ const handleClosePost = async (confirmation) => {
 };
 
 
-const handleCloseSignatory = async () => {
-  updateState({ showSpinner: true });
-  await useHandlePrint(documentID, docType);
+const handleCloseSignatory = async (mode) => {
+  
+    updateState({ 
+        showSpinner: true,
+        showSignatoryModal: false,
+        noReprints: mode === "Final" ? 1 : 0, });
+    await useHandlePrint(documentID, docType, mode );
+    updateState({
+      showSpinner: false 
+    });
 
-  updateState({
-    showSpinner: false,
-    showSignatoryModal: false,
-  });
 };
 
 const handleSaveAndPrint = async (documentID) => {
   updateState({ showSpinner: true });
   await useHandlePrint(documentID, docType);
-
   updateState({ showSpinner: false });
 };
+
+
 
 const handleCloseBillCodeModal = async (selectedBillCode) => {
   if (selectedBillCode && selectedRowIndex !== null) {
@@ -1555,7 +1636,19 @@ return (
                         value={refDocNo}
                         placeholder=" "
                      onChange={(e) => updateState({ refDocNo: e.target.value })}
+                    //  onClick={() => {
+                    //         if (!state.isDocNoDisabled) {
+                    //             fetchTranData(state.documentNo,state.branchCode);
+                    //         }
+                    //     }}
                      className="peer global-tran-textbox-ui"
+                     onKeyDown ={(e) => {
+                      if (e.key === "Enter"){
+                        e.preventDefault ();
+                        // reversal(refDocNo)
+                        fetchTranDataReversal(state.refDocNo,state.branchCode);
+                      }
+                     }}
                      disabled={isFormDisabled}
                      />
                     <label
@@ -2331,7 +2424,7 @@ return (
 {showSignatoryModal && (
   <DocumentSignatories
     isOpen={showSignatoryModal}
-    params={documentID}
+    params={{noReprints,documentID,docType}}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />

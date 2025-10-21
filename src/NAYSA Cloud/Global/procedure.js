@@ -302,6 +302,23 @@ if (!documentNo || !branchCode) {
 
 };
 
+// global update of GL Entries per record
+export const useFetchTranDataReversal = async (documentNo,branchCode,docType,refDocType,fieldName) => {
+  
+if (!documentNo || !branchCode) {
+    throw new Error("Document No. or Branch Code missing.");
+  }
+
+  const response = await fetchData(`reversal${docType}?${fieldName}=${documentNo}&refDocType=${refDocType}&branchCode=${branchCode}`);
+  if (!response?.success || !response.data?.length) {
+    return null; // no record
+  }
+
+  let data = JSON.parse(response.data[0].result || "{}");
+  return data;
+
+};
+
 
 
 
