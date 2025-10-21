@@ -324,9 +324,12 @@ if (!documentNo || !branchCode) {
 
 
 
-export async function useHandleCancel(docCode, documentID, userCode, reason, updateState) {
+export async function useHandleCancel(docCode, documentID, userCode, password, reason, updateState) {
+ 
   const payload = {
-    json_data: {
+    userPassword: password,
+    userCode,
+    json_data: {      
       docCode,
       documentID,
       userCode,
@@ -337,21 +340,36 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
   updateState({ isLoading: true });
 
   try {
-    const response = await postRequest("cancel" + docCode, JSON.stringify(payload));
 
-      if (response?.status === "success") {
-        return { success: true, message: `${docCode} cancelled successfully!`, data: response };
-      } else {
-        return { success: false, message: response?.message || "Failed to cancel transaction" };
-      }
+    const { data: res } = await apiClient.post("/cancel"+docCode, payload);
+    if (res?.status === "success" || res?.success) {
+      // You can standardize the return here
+      return { success: true, data: res };
+    } else {
+      Swal.fire("Cancellation failed", res?.message ?? "Cancellation failed.", "error");
+      return { success: false, message: res?.message || "Unexpected response" };
+    } 
 
-  } catch (error) {
-    console.error("Error cancelling transaction:", error);
-    Swal.fire({
-      icon: "error",
-      title: "Cancel Failed",
-      text: error.message || "An error occurred while cancelling the transaction",
-    });
+} catch (err) {
+  const status = err?.response?.status;
+  const data   = err?.response?.data || {};
+  const code   = data.error || "";
+  const msg    = data.message || "Something went wrong.";
+
+  // Wrong or missing password only
+  if (status === 422 && code === "INVALID_CREDENTIALS") {
+    Swal.fire("Incorrect password","Please try again.", "warning");
+    return { success: false, code, message: msg };
+  }
+
+  if (status === 422 && code === "MISSING_CREDENTIALS") {
+    Swal.fire("Password required", "Please enter your password.", "info");
+    return { success: false, code, message: msg };
+  }
+
+  // Anything else — generic error
+  Swal.fire("Error", msg, "error");
+  return { success: false, code: code || "UNKNOWN", message: msg };
   } finally {
     updateState({
       isSaveDisabled: false,
@@ -360,7 +378,6 @@ export async function useHandleCancel(docCode, documentID, userCode, reason, upd
     });
   }
 }
-
 
 
 
@@ -421,32 +438,30 @@ export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,se
     const code   = data.error || "";
     const msg    = data.message || "Something went wrong.";
 
-    if (status === 403 && code === "INVALID_CREDENTIALS") {
-      // setPasswordError("Invalid password. Please try again.");
-      Swal.fire("Invalid password", msg, "warning"); // ⬅️ now shows
-      return;
+
+    // --- Soft/business validation (do NOT logout) ---
+    if (status === 422) {
+      if (code === "INVALID_CREDENTIALS") {
+        Swal.fire("Invalid password", msg || "Please try again.", "warning");
+        return { success: false, code, message: msg };
+      }
+      if (code === "MISSING_CREDENTIALS" || code === "VALIDATION_ERROR" || !data?.error) {
+        Swal.fire("Missing credentials", msg, "info");
+        return { success: false, code: code || "MISSING_CREDENTIALS", message: msg };
+      }
     }
 
-    if (status === 403 && code === "USER_INACTIVE") {
-      // setPasswordError("User is inactive.");
-      Swal.fire("Blocked", msg || "User is inactive.", "warning");
-      return;
+    // --- True permission issues (still no auto-logout here; interceptor handles that globally) ---
+    if (status === 403 && (code === "USER_INACTIVE" || code === "USER_MISMATCH")) {
+      const title = code === "USER_INACTIVE" ? "Blocked" : "Blocked";
+      const text  = code === "USER_INACTIVE" ? (msg || "User is inactive.") : "Authenticated user does not match userCode.";
+      Swal.fire(title, text, "warning");
+      return { success: false, code, message: text };
     }
 
-    if (status === 403 && code === "USER_MISMATCH") {
-      Swal.fire("Blocked", "Authenticated user does not match userCode.", "warning");
-      return;
-    }
-
-    if (status === 422 && (code === "MISSING_CREDENTIALS" || code === "VALIDATION_ERROR" || !data?.error)) {
-      // setPasswordError("Missing userCode or password.");
-      Swal.fire("Missing credentials", msg, "info"); // ⬅️ now shows
-      return;
-    }
-
-    // Unknown 403 (e.g., tenant required) or other errors
+    // Unknown errors
     Swal.fire("Error", msg, "error");
-    console.error("Error posting SVI:", err);
+    return { success: false, code: code || "UNKNOWN", message: msg };
 
   } finally {
     setLoading(false);

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef,useCallback } from "react";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,7 +19,7 @@ import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import PostPCV from "../../../Module/Main Module/Accounts Payable/PostPCV.jsx";
-
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
 // Configuration
 import { postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -81,6 +82,9 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const PCV = () => {
+   const loadedFromUrlRef = useRef(false);
+   const navigate = useNavigate();
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
    const { user } = useAuth();
    const { resetFlag } = useReset();
    const [state, setState] = useState({
@@ -978,6 +982,36 @@ const handleCopy = async () => {
   }
 };
 
+  
+  
+    
+    //  ** View Document and Transaction History Retrieval ***
+     const cleanUrl = useCallback(() => {
+        navigate(location.pathname, { replace: true });
+      }, [navigate, location.pathname]);
+    
+    
+      const handleHistoryRowPick = useCallback((row) => {
+        const docNo = row?.docNo;
+        const branchCode = row?.branchCode;
+        if (!docNo || !branchCode) return;
+        fetchTranData(docNo, branchCode);
+        setTopTab("details");
+      });
+    
+    
+      useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const docNo = params.get("pcvNo");         
+        const branchCode = params.get("branchCode");    
+        
+        if (!loadedFromUrlRef.current && docNo && branchCode) {
+          loadedFromUrlRef.current = true;
+          handleHistoryRowPick({ docNo, branchCode });
+          cleanUrl();
+        }
+      }, [location.search, handleHistoryRowPick, cleanUrl]);
+    
 
 
 
@@ -1097,6 +1131,8 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
    
         
         const vendResponse = await postRequest("addPayeeDetail",JSON.stringify({ json_data: { vendCode: value.vendCode } }));
+        
+        console.log(vendResponse)
         const [{ vendCode, vendName, atcCode, atcName, vatCode, vatName, address1, address2, address3, tin }] = JSON.parse(vendResponse.data[0].result);
           Object.assign(row, {
             vendCode,
@@ -1354,19 +1390,23 @@ const handleCloseAccountModal = (selectedAccount) => {
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
-      const result = await useHandleCancel(docType,documentID,userCode,confirmation.reason,updateState);
+      const result = await useHandleCancel(docType,documentID,userCode,confirmation.password,confirmation.reason,updateState);
       if (result.success) 
       {
-        Swal.fire({
+       Swal.fire({
           icon: "success",
           title: "Success",
-          text: result.message,
-        });       
-      } 
+          text: "Cancellation Completed",
+          timer: 5000, 
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });    
+      }    
      await fetchTranData(documentNo,branchCode);
     }
     updateState({showCancelModal: false});
 };
+
 
 
 
@@ -1377,7 +1417,7 @@ const handleCloseSignatory = async (mode) => {
         showSpinner: true,
         showSignatoryModal: false,
         noReprints: mode === "Final" ? 1 : 0, });
-    await useHandlePrint(documentID, docType, mode );
+    await useHandlePrint(documentID, docType, mode,userCode );
 
     updateState({
       showSpinner: false 
@@ -1503,10 +1543,20 @@ const handleCloseBranchModal = (selectedBranch) => {
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
-  isSaveDisabled={isSaveDisabled} // Pass disabled state
-  isResetDisabled={isResetDisabled} // Pass disabled state
+
+  activeTopTab={topTab} 
+  showActions={topTab === "details"}             
+  onDetails={() => setTopTab("details")}
+  onHistory={() => setTopTab("history")}
+  disableRouteNavigation={true}    
+
+  isSaveDisabled={isSaveDisabled} 
+  isResetDisabled={isResetDisabled} 
+  detailsRoute="/page/PCV"
 />
       </div>
+
+  <div className={topTab === "details" ? "" : "hidden"}>
 
       {/* Page title and subheading */} 
 
@@ -1739,7 +1789,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                                 ? "global-tran-textbox-button-search-disabled-ui"
                                 : "global-tran-textbox-button-search-enabled-ui"
                             } global-tran-textbox-button-search-ui`}
-                            disabled={isFormDisabled} 
+                            disabled={isFormDisabled || vendCode} 
                         >
                             <FontAwesomeIcon icon={faMagnifyingGlass} />
                         </button>
@@ -2978,20 +3028,41 @@ const handleCloseBranchModal = (selectedBranch) => {
   />
 )}
 
-{/* {showPostingModal && (
-  <ARReportModal
-    isOpen={showPostingModal}
-    userCode ={userCode}
-    onClose={() => updateState({ showPostingModal: false })}
-  />
-)}  */}
-
-
 
 
 {showSpinner && <LoadingSpinner />}
     </div>
-  );
+
+
+    <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getPCVHistory"
+        cacheKey={`PCV:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="PCV_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+          status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+          historyExportName={`${documentTitle} History`} 
+    />
+  </div>
+
+
+</div>
+);
+// End of Return
+
+
+
 };
 
 export default PCV;

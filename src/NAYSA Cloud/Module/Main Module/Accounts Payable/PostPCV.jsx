@@ -4,6 +4,9 @@ import { useSelectedHSColConfig } from '@/NAYSA Cloud/Global/selectedData';
 import GlobalGLPostingModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import { useSwalValidationAlert } from '@/NAYSA Cloud/Global/behavior';
 import { useHandlePostTran } from '@/NAYSA Cloud/Global/procedure';
+import ReactDOM from 'react-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 
 
@@ -70,18 +73,67 @@ const PostPCV = ({ isOpen, onClose, userCode  }) => {
   }
 
 
-  return modalReady ? (
-    <GlobalGLPostingModalv1 
-      data={data} 
+  
+const pickDocAndBranch = (row) => {
+  if (!row) return { docNo: null, branchCode: null };
+  const docNo = row.pcvNo;
+  const branchCode = row.branchCode;
+  return { docNo, branchCode };
+};
+
+const handleViewDocument = (row) => {
+  const { docNo, branchCode } = pickDocAndBranch(row, colConfigData);
+  if (!docNo || !branchCode) {
+    useSwalValidationAlert({
+      icon: "warning",
+      title: "Missing keys",
+      message: "Cannot determine Document No Column Index"
+    });
+    return;
+  }
+
+  const SVI_VIEW_URL = "/tran-ap-pcvtran";
+  const url =
+    `${window.location.origin}${SVI_VIEW_URL}` +
+    `?pcvNo=${encodeURIComponent(docNo)}&branchCode=${encodeURIComponent(branchCode)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+};
+
+
+
+return (
+  <>
+    {/* Mount the modal only when ready */}
+    {modalReady && (
+      <GlobalGLPostingModalv1
+  data={data} 
       colConfigData={colConfigData} 
       userPassword ={userPassword}
       title="Post Petty Cash Voucher" 
       btnCaption="Ok"
       onClose={onClose}
       onPost={handlePost} 
-    />
-  ) : null;
+      onViewDocument={handleViewDocument}
+      remoteLoading={loading}
+      />
+    )}
+
+    {/* Always allow the overlay to render while loading (no modalReady / isOpen gate) */}
+    {ReactDOM.createPortal(
+      loading ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center text-blue-600">
+            <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mb-3" />
+            <span className="text-sm font-medium tracking-wide">Please wait…</span>
+          </div>
+        </div>
+      ) : null,
+      document.body
+    )}
+  </>
+);
 };
+
 
 export default PostPCV;
 

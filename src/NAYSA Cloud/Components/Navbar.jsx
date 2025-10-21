@@ -10,7 +10,7 @@ const Navbar = ({ onMenuClick }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const navigate = useNavigate();
     const [isDark, setIsDark] = useState(false);
-    const { user } = useAuth();
+    const { user,logout  } = useAuth();
 
 
     useEffect(() => {
@@ -38,6 +38,11 @@ const Navbar = ({ onMenuClick }) => {
 
     const toggleDropdown = () => {
         setIsDropdownOpen(prev => !prev);
+    };
+
+     const handleLogout = async () => {
+        setIsDropdownOpen(false); // Close the dropdown immediately
+        await logout(); 
     };
 
     return (
@@ -113,7 +118,7 @@ const Navbar = ({ onMenuClick }) => {
                             </button>
                             <button
                                 className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left dark:hover:bg-gray-600 transition-colors duration-150"
-                                onClick={() => navigate("/")}
+                                 onClick={handleLogout} 
                             >
                                 Logout
                             </button>

@@ -73,6 +73,15 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
         onClose(vend); // Pass the selected cust back to the parent
     };
 
+    // const handleApply = (vend) => {
+    // onClose({
+    //     payeeCode: vend.vendCode,
+    //     payeeName: vend.vendName,
+    //     raw: vend, // optional: keep the full row if you need extra fields later
+    // });
+    // };
+
+
 
     
     useEffect(() => {

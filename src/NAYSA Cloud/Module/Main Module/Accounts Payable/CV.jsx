@@ -5,6 +5,8 @@ import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
+import { useNavigate } from "react-router-dom";
+
 // Lookup/Modal
 import BranchLookupModal from "../../../Lookup/SearchBranchRef";
 import CurrLookupModal from "../../../Lookup/SearchCurrRef.jsx";
@@ -19,9 +21,13 @@ import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
+import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
+
+// import CVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CVHistory.jsx";
+import CVHistory from "@/NAYSA Cloud/Module/Main Module/Accounts Payable/CVHistory.jsx";
 
 // Configuration
-import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
+import {fetchData , postRequest, fetchDataJsonLookup} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
 
 import {
@@ -55,10 +61,13 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
   useHandleCancel,
   useHandlePost,
 } from '@/NAYSA Cloud/Global/procedure';
+
+import {
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
 
 
 import { 
@@ -68,6 +77,12 @@ import {
 } from '@/NAYSA Cloud/Global/behavior';
 
 
+import {
+  useSelectedOpenAPBalance,
+  useSelectedHSColConfig,
+} from '@/NAYSA Cloud/Global/selectedData';
+
+
 // Header
 import Header from '@/NAYSA Cloud/Components/Header';
 
@@ -75,6 +90,7 @@ import Header from '@/NAYSA Cloud/Components/Header';
 const CV = () => {
   const { resetFlag } = useReset();
 
+   const navigate = useNavigate();
    const [state, setState] = useState({
 
     // HS Option
@@ -163,6 +179,9 @@ const CV = () => {
     detailRows  :[],
     detailRowsGL :[],
     apTypeDd:[],
+    
+    globalLookupRow:[],
+    globalLookupHeader:[],
 
     selectedApType : "APV01",
 
@@ -188,6 +207,7 @@ const CV = () => {
     showBillCodeModal:false,
     showSlModal:false,
     showBilltermModal:false,
+    showAPBalanceModal:false,
 
     currencyModalOpen:false,
     branchModalOpen:false,
@@ -272,6 +292,8 @@ const CV = () => {
   // Transaction details
   detailRows,
   detailRowsGL,
+  globalLookupRow,
+  globalLookupHeader,
   totalDebit,
   totalCredit,
   totalDebitFx1,
@@ -304,6 +326,7 @@ const CV = () => {
   showPostModal,
   showAttachModal,
   showSignatoryModal,
+  showAPBalanceModal,
 
 
 } = state;
@@ -715,13 +738,6 @@ const fetchTranData = async (documentNo, branchCode) => {
       documentID: data.cvId,
       documentNo: data.cvNo,
       branchCode: data.branchCode,
-      // header: { cv_date: cvDateForHeader },
-      // header: { ck_date: checkDateForHeader },
-       // Combine both properties into one header object
-      // header: {
-      //   cv_date: cvDateForHeader,
-      //   ck_date: checkDateForHeader,
-      // },
       header: {
         cvDate: cvDateForHeader,
         checkDate: checkDateForHeader,
@@ -868,8 +884,9 @@ const handleCurrRateNoBlur = (e) => {
       remarks: remarks || "",
       userCode: "NSI",
       dt1: detailRows.map((row, index) => ({
-        lnNo: String(index + 1),
-        // apType: row.selectedApType,
+        lnNo: String(index + 1),       
+        apvNo: row.apvNo,
+        apvDate: row.apvDate,
         rrNo: row.rrNo || "",
         poNo: row.poNo || "",
         siNo: row.siNo || "",
@@ -894,7 +911,8 @@ const handleCurrRateNoBlur = (e) => {
         atcCode: row.atcCode || "",
         atcName: row.atcName || "",
         atcAmount: parseFormattedNumber(row.atcAmount),
-        amountDue: parseFormattedNumber(row.amountDue || 0)
+        amountDue: parseFormattedNumber(row.amountDue || 0),
+        groupId: row.groupId || ""
       })),
        dt2: detailRowsGL.map((entry, index) => ({
           recNo: String(index + 1),
@@ -972,6 +990,12 @@ const handleCurrRateNoBlur = (e) => {
 
 
   const handleAddRow = async () => {
+
+ if(selectedWithAPV ==="Y" ) {
+      await handleOpenAPBalance();
+      return;
+    }
+
   try {
     const items = await handleFetchDetail(vendCode);
     const itemList = Array.isArray(items) ? items : [items];
@@ -1112,13 +1136,10 @@ const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  updateState({ showSignatoryModal: true });
-
-  // updateState({ showSpinner: true });
-  // await useHandlePrint(documentID, docType);
-  // updateState({ showSpinner: false });
+  if (documentID) {
+    updateState({ showSignatoryModal: true });
+  }
 };
-
 
 
 const handleCancel = async () => {
@@ -1172,7 +1193,15 @@ const handleCopy = async () => {
     updateState({ documentNo:"",
                   documentID:"",
                   documentStatus:"",
-                  status:"OPEN"
+                  status:"OPEN",
+      // Reset detailRows fields
+      detailRows: detailRows.map((row) => ({
+        ...row,
+        siNo: "",
+        // siDate: cvDate,
+        poNo: "",
+        // add more fields here if needed
+      })),
      });
   }
 };
@@ -1258,7 +1287,7 @@ const handleCopy = async () => {
     const unappliedAmount = parseFormattedNumber(row.unappliedAmount || 0) || 0;
     const vatAmount = parseFormattedNumber(row.vatAmount || 0) || 0;
     const atcAmount = parseFormattedNumber(row.atcAmount || 0) || 0;
-    const balanceAmount = parseFormattedNumber(row.balance || 0) || 0;
+    const balanceAmount = parseFormattedNumber(row.amountDue || 0) || 0;
 
         // console.log("Row values after parseFormattedNumber:", {
         //     vatAmount, atcAmount, invoiceGross, invoiceNetDisc, invoiceDiscount
@@ -1272,15 +1301,99 @@ const handleCopy = async () => {
     totalATC += atcAmount;
   });
 
-  totalAmtDue = totalBalance - totalATC; // <--- POTENTIAL CORRECTION HERE
-    // console.log("Calculated RAW totals (before formatting):", {
-    //     totalGrossAmt, totalDiscAmt, totalNetDiscount, totalVAT, totalATC, totalAmtDue
-    // });
-    updateTotalsDisplay (totalOriginal, totalInvoice, totalApplied, totalUnpplied, totalBalance, totalVAT, totalATC, totalAmtDue);
-
+  if (selectedWithAPV === "Y") {
+  totalAmtDue = totalBalance; // <--- POTENTIAL CORRECTION HERE
+};
+  if (selectedWithAPV === "N") {
+  totalAmtDue = totalBalance; // <--- POTENTIAL CORRECTION HERE
 };
 
+    updateTotalsDisplay (totalOriginal, totalInvoice, totalApplied, totalUnpplied, totalBalance, totalVAT, totalATC, totalAmtDue);
 
+  };
+
+
+// const handleDetailChange = async (index, field, value, runCalculations = true) => {
+//   const updatedRows = [...detailRows];
+
+//   updatedRows[index] = {
+//     ...updatedRows[index],
+//     [field]: value,
+//   };
+
+//   const row = updatedRows[index];
+
+//   // Map picker payloads → codes/names
+//   if (field === "vatCode") {
+//     row.vatCode = value.vatCode;
+//     row.vatAcct = value.acctCode;
+//     row.vatName = value.vatName;
+//   }
+//   if (field === "atcCode") {
+//     row.atcCode = value.atcCode;
+//     row.atcName = value.atcName;
+//   }
+//   if (["debitAcct", "apAcct", "vatAcct"].includes(field)) {
+//     row[field] = value.acctCode;
+//   }
+//   if (field === "rcCode") {
+//     row.rcCode = value.rcCode;
+//     row.rcName = value.rcName;
+//   }
+//   if (field === "slCode") {
+//     row.slCode = value.slCode;
+//   }
+
+//   // ---- NEW: simple balance rule (applied - unapplied) ----
+//   if (runCalculations) {
+//     // always parse fresh from the row (may be string-formatted)
+//     const invoiceAmount = parseFormattedNumber(row.origAmount) || 0;
+//     const applied = parseFormattedNumber(row.appliedAmount) || 0;
+//     const unapplied = parseFormattedNumber(row.unappliedAmount) || 0;
+
+//     // balance per requirement
+//     const newBalance = +(applied - unapplied).toFixed(2);
+
+//     // keep these two aligned if you display both
+//     row.balance = formatNumber(newBalance);
+//     row.balanceAmount = formatNumber(newBalance);
+//     row.siAmount = formatNumber(invoiceAmount);
+
+//     // (optional) if VAT/ATC depend on balance, recompute here:
+//     // Only if you want VAT/ATC to follow balance. Otherwise delete this block.
+//     if (row.vatCode) {
+//       const vatAmt = await useTopVatAmount(row.vatCode, newBalance);
+//       row.vatAmount = formatNumber(vatAmt);
+//     } else {
+//       row.vatAmount = formatNumber(0);
+//     }
+
+//     const netOfVat = +(newBalance - (parseFormattedNumber(row.vatAmount) || 0)).toFixed(2);
+//     if (row.atcCode) {
+//       const atcAmt = await useTopATCAmount(row.atcCode, netOfVat);
+//       row.atcAmount = formatNumber(atcAmt);
+//     } else {
+//       row.atcAmount = formatNumber(0);
+//     }
+
+//     // If you show amountDue = balance - ATC (or any rule), update here:
+//     const atc = parseFormattedNumber(row.atcAmount) || 0;
+
+//     // row.amountDue = +(newBalance - atc).toFixed(2);
+
+//     if (selectedWithAPV === "Y") {
+//       row.amountDue = +(newBalance).toFixed(2);
+//     }
+//     if (selectedWithAPV === "N") {
+//       row.amountDue = +(newBalance - atc).toFixed(2);
+//     }
+
+//   }
+
+//   updatedRows[index] = row;
+//   updateState({ detailRows: updatedRows });
+//   updateTotals(updatedRows);
+// };
 
 
 const handleDetailChange = async (index, field, value, runCalculations = true) => {
@@ -1292,11 +1405,6 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
     }
    
      const row = updatedRows[index];
-
-    // if (field === 'apType' ){
-    //       row.apType = value.selectedApType   
-          
-    // };
 
       if (field === 'vatCode') {
           row.vatCode = value.vatCode,
@@ -1341,6 +1449,9 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
   const cvType = row.cvType || "APV01"; // Make sure cvType is assigned correctly
   const withAPV = row.withAPV || "Y";
 
+    const applied = parseFormattedNumber(row.appliedAmount) || 0;
+    const unapplied = parseFormattedNumber(row.unappliedAmount) || 0;
+
   // Shared calculation logic
   async function recalcRow(newAppliedAmount, newUnapplied) {
     const newInvoiceAmount = (origAmount * origCurrRate).toFixed(2);
@@ -1354,12 +1465,22 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
     row.balanceAmount = formatNumber(newBalance);
     row.vatAmount = formatNumber(newVatAmount);
     row.atcAmount = formatNumber(newATCAmount);
-    row.appliedAmount = formatNumber(0);
-    row.unappliedAmount = formatNumber(newUnapplied);
-    row.balance = formatNumber(newBalance);
+    row.appliedAmount = formatNumber(applied);
+    row.unappliedAmount = formatNumber(unapplied);
+    // row.balance = formatNumber(newBalance);
+    row.balance = +(applied - unapplied).toFixed(2);
     row.origAmount = formatNumber(parseFormattedNumber(row.origAmount));
     row.currRate = formatNumber(parseFormattedNumber(row.currRate));
-    row.amountDue = +(newInvoiceAmount - newATCAmount).toFixed(2);
+    // row.amountDue = +(newInvoiceAmount - newATCAmount).toFixed(2);
+
+    
+  if (selectedWithAPV === "Y") {
+      row.amountDue = +(applied - unapplied).toFixed(2);
+  };
+  if (selectedWithAPV === "N") {
+      row.amountDue = +(newInvoiceAmount - newATCAmount).toFixed(2);
+  } 
+
   }
 
   if (field === 'origAmount' || field === 'currRate' || field === 'appliedAmount' || field === 'unappliedAmount') {
@@ -1371,7 +1492,14 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
     row.siAmount = newInvoiceAmount.toFixed(2);
     row.balanceAmount = newBalance.toFixed(2);
-    row.amountDue = +(newInvoiceAmount - newATCAmount).toFixed(2);
+
+  if (selectedWithAPV === "Y") {
+      row.amountDue = +(applied - unapplied).toFixed(2);
+  };
+  if (selectedWithAPV === "N") {
+      row.amountDue = +(newBalance - newATCAmount).toFixed(2);
+  } 
+
     await recalcRow(newAppliedAmount, newUnapplied);
   }
 
@@ -1390,7 +1518,17 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
       const newATCAmount = row.atcCode ? await useTopATCAmount(row.atcCode, newNetOfVat) : 0;
 
       row.atcAmount = newATCAmount.toFixed(2);
-      row.amountDue = +(newInvoiceBal - newATCAmount).toFixed(2);
+      // row.amountDue = +(newInvoiceBal - newATCAmount).toFixed(2);
+
+
+      if (selectedWithAPV === "Y") {
+          row.amountDue = +(newInvoiceBal).toFixed(2)
+      }
+
+      if (selectedWithAPV === "N") {
+          row.amountDue = +(newInvoiceBal - newATCAmount).toFixed(2);
+      } 
+
     }
 
     await updateVatAndAtc();
@@ -1405,56 +1543,107 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
 
 };
 
-const isVisible_Dtl1 = (field, cvType, withAPV) => {
-  const rules = {
-    // These fields are visible when withAPV is "Y"
-    rrNo: !["N", "special-case"].includes(withAPV),
-    poNo: !["N", "special-case"].includes(withAPV),
-    appliedAmount: !["N", "special-case"].includes(withAPV),
-    unappliedAmount: !["N", "special-case"].includes(withAPV),
-    balance: !["N", "special-case"].includes(withAPV),
-    apAcct: !["N", "special-case"].includes(withAPV),
-    apType: !["N", "special-case"].includes(withAPV), // Add the missing 'apType' rule here
-    
-    // These fields are visible when withAPV is "N"
-    vatCode: !["Y", "special-case"].includes(withAPV),
-    vatName: !["Y", "special-case"].includes(withAPV),
-    vatAmount: !["Y", "special-case"].includes(withAPV),
-    atcCode: !["Y", "special-case"].includes(withAPV),
-    atcName: !["Y", "special-case"].includes(withAPV),
-    atcAmount: !["Y", "special-case"].includes(withAPV),
-    amountDue: !["Y", "special-case"].includes(withAPV),
-    vatAcct: !["Y", "special-case"].includes(withAPV),
 
-    // // These fields are hidden when cvType is "Non Purchases"
-    rrNo: !["APV02", "special-case"].includes(cvType),
-    poNo: !["APV02", "special-case"].includes(cvType),
-    appliedAmount: !["APV02", "special-case"].includes(cvType),
-    unappliedAmount: !["APV02", "special-case"].includes(cvType),
-    balance: !["APV02", "special-case"].includes(cvType),
-    apAcct: !["APV02", "special-case"].includes(cvType),
-    apType: !["APV02", "special-case"].includes(cvType), // Add the missing 'apType' rule here
-    
-    siNo: !["APV02", "special-case"].includes(cvType),
-    siDate: !["APV02", "special-case"].includes(cvType),
+// Single source of truth per column
+const FIELD_CONFIG = {
+  // Visible only when withAPV === 'Y'; also hide on APV02
+  apType:     { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  apvNo:      { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  rrNo:       { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  poNo:       { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  appliedAmount:   { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  unappliedAmount: { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  balance:         { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
+  apAcct:          { requireWithAPV: "Y", hideOnCvTypes: ["APV02"] },
 
-    // // These fields are visible when withAPV is "N"
-    vatCode: !["APV02", "special-case"].includes(cvType),
-    vatName: !["APV02", "special-case"].includes(cvType),
-    vatAmount: !["APV02", "special-case"].includes(cvType),
-    atcCode: !["APV02", "special-case"].includes(cvType),
-    atcName: !["APV02", "special-case"].includes(cvType),
-    atcAmount: !["APV02", "special-case"].includes(cvType),
-    // amountDue: !["APV02", "special-case"].includes(cvType),
-    vatAcct: !["APV02", "special-case"].includes(cvType),
-    
-    // These are always visible
-    // siNo: true,
-    // siDate: true,
-  };
+  // Always shown unless APV02 (adjust if you want these tied to withAPV)
+  siNo:    { requireWithAPV: "ANY", hideOnCvTypes: ["APV02"] },
+  siDate:  { requireWithAPV: "ANY", hideOnCvTypes: ["APV02"] },
+  origAmount: { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  currCode:   { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  currRate:   { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  siAmount:   { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  debitAcct:  { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  rcCode:     { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  rcName:     { requireWithAPV: "ANY", hideOnCvTypes: [] },
+  slCode:     { requireWithAPV: "ANY", hideOnCvTypes: [] },
 
-  return rules[field] ?? true;
+  // VAT/ATC fields visible only when withAPV === 'N' (per your comment);
+  // remove APV02 in hideOnCvTypes if you want them shown for Non-Purchases too
+  vatCode:   { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  vatName:   { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  vatAmount: { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  atcCode:   { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  atcName:   { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  atcAmount: { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+  vatAcct:   { requireWithAPV: "N", hideOnCvTypes: ["APV02"] },
+
+  amountDue: { requireWithAPV: "ANY", hideOnCvTypes: [] },
 };
+
+const isVisible_Dtl1 = (field, cvType, withAPV) => {
+  const cfg = FIELD_CONFIG[field];
+  if (!cfg) return true;
+
+  // Respect withAPV requirement
+  if (cfg.requireWithAPV === "Y" && withAPV !== "Y") return false;
+  if (cfg.requireWithAPV === "N" && withAPV !== "N") return false;
+
+  // Respect cvType hide list
+  if (cfg.hideOnCvTypes?.includes(cvType)) return false;
+
+  return true;
+};
+
+
+// const isVisible_Dtl1 = (field, cvType, withAPV) => {
+//   const rules = {
+//     // These fields are visible when withAPV is "Y"
+//     apvNo: !["N", "special-case"].includes(withAPV),
+//     rrNo: !["N", "special-case"].includes(withAPV),
+//     poNo: !["N", "special-case"].includes(withAPV),
+//     appliedAmount: !["N", "special-case"].includes(withAPV),
+//     unappliedAmount: !["N", "special-case"].includes(withAPV),
+//     balance: !["N", "special-case"].includes(withAPV),
+//     apAcct: !["N", "special-case"].includes(withAPV),
+//     apType: !["N", "special-case"].includes(withAPV),
+    
+//     // These fields are visible when withAPV is "N"
+//     // vatCode: !["Y", "special-case"].includes(withAPV),
+//     // vatName: !["Y", "special-case"].includes(withAPV),
+//     // vatAmount: !["Y", "special-case"].includes(withAPV),
+//     // atcCode: !["Y", "special-case"].includes(withAPV),
+//     // atcName: !["Y", "special-case"].includes(withAPV),
+//     // atcAmount: !["Y", "special-case"].includes(withAPV),
+//     // amountDue: !["Y", "special-case"].includes(withAPV),
+//     // vatAcct: !["Y", "special-case"].includes(withAPV),
+
+//     // // These fields are hidden when cvType is "Non Purchases"
+//     apvNo: !["APV02", "special-case"].includes(cvType),
+//     rrNo: !["APV02", "special-case"].includes(cvType),
+//     poNo: !["APV02", "special-case"].includes(cvType),
+//     appliedAmount: !["APV02", "special-case"].includes(cvType),
+//     unappliedAmount: !["APV02", "special-case"].includes(cvType),
+//     balance: !["APV02", "special-case"].includes(cvType),
+//     apAcct: !["APV02", "special-case"].includes(cvType),
+//     apType: !["APV02", "special-case"].includes(cvType), // Add the missing 'apType' rule here
+    
+//     siNo: !["APV02", "special-case"].includes(cvType),
+//     siDate: !["APV02", "special-case"].includes(cvType),
+
+//     // // These fields are visible when withAPV is "N"
+//     vatCode: !["APV02", "special-case"].includes(cvType),
+//     vatName: !["APV02", "special-case"].includes(cvType),
+//     vatAmount: !["APV02", "special-case"].includes(cvType),
+//     atcCode: !["APV02", "special-case"].includes(cvType),
+//     atcName: !["APV02", "special-case"].includes(cvType),
+//     atcAmount: !["APV02", "special-case"].includes(cvType),
+//     vatAcct: !["APV02", "special-case"].includes(cvType),
+    
+//   };
+
+//   return rules[field] ?? true;
+// };
 
 
 const handleDetailChangeGL = async (index, field, value) => {
@@ -1671,6 +1860,7 @@ const handleCloseSignatory = async (mode) => {
         showSpinner: true,
         showSignatoryModal: false,
         noReprints: mode === "Final" ? 1 : 0, });
+        console.log("handleCloseSignatory", { documentID, docType, mode });
     await useHandlePrint(documentID, docType, mode );
 
     updateState({
@@ -1679,8 +1869,130 @@ const handleCloseSignatory = async (mode) => {
 
 };
 
+const handleOpenAPBalance = async () => {
+  console.log('[APBAL] handler fired');
+
+  updateState({ isLoading: true });
+
+  const endpoint = 'getOpenAPBalance';
+  console.log('[APBAL] params', { vendCode, branchCode, endpoint });
+
+  try {
+    console.log('[APBAL] before fetchDataJson');
+    const response = await fetchDataJsonLookup(endpoint, { vendCode, branchCode });
+    // Log a safe snapshot so DevTools doesn’t “live mutate” objects
+    console.log('[APBAL] response(raw)', response);
+    try {
+      console.log('[APBAL] response(safe)', JSON.parse(JSON.stringify(response)));
+    } catch {
+      console.log('[APBAL] response not JSON-serializable (circular/BigInt)');
+    }
+
+    const rawResult = response?.data?.[0]?.result;
+    console.log('[APBAL] rawResult', rawResult);
+
+    let payeeData = [];
+    try {
+      payeeData = rawResult ? JSON.parse(rawResult) : [];
+    } catch (e) {
+      console.warn('[APBAL] JSON.parse failed on result:', e);
+      payeeData = [];
+    }
+
+    console.log('[APBAL] parsed payeeData length', payeeData.length);
+
+    console.log('[APBAL] fetching colConfig');
+    const colConfig = await useSelectedHSColConfig(endpoint);
+    console.log('[APBAL] colConfig', colConfig);
+
+    if (!Array.isArray(payeeData) || payeeData.length === 0) {
+      await Swal.fire({
+        icon: 'info',
+        title: 'Open AP Balance',
+        text: 'There are no AP balance records for the selected payee/branch.',
+      });
+      return;
+    }
+
+    updateState({
+      globalLookupRow: payeeData,
+      globalLookupHeader: colConfig ?? [],
+      showAPBalanceModal: true,
+    });
+  } catch (error) {
+    console.error('[APBAL] Failed to fetch Open AP Balance:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to fetch Open AP Balance.',
+    });
+    updateState({
+      globalLookupRow: [],
+      globalLookupHeader: [],
+    });
+  } finally {
+    updateState({ isLoading: false });
+    console.log('[APBAL] done');
+  }
+};
 
 
+
+
+const handleCloseAPBalance = async (payload) => {
+    if (payload && payload !== null) {
+      
+       updateState({ isLoading: true });
+
+      const result = await useSelectedOpenAPBalance(payload);
+      if (result) {   
+      const newRows = result.map((entry, idx) => ({    
+        lnNo: idx + 1,
+        apvNo: entry.apvNo,
+        apvDate: entry.apvDate,
+        siNo: entry.siNo,
+        siDate: entry.siDate,
+        poNo: entry.poNo,
+        rrNo: entry.rrNo,
+        siAmount: formatNumber(entry.balance,2),
+        origAmount: formatNumber(entry.balance,2),
+        appliedAmount: formatNumber(entry.balance,2),
+        appliedFx: formatNumber(entry.balance,2),
+        unappliedAmount: "0.00",
+        balance: formatNumber(entry.balance,2),
+        amountDue: formatNumber(entry.balance,2),
+        vatCode: entry.vatCode,
+        vatName: entry.vatName,
+        vatAmount: formatNumber(entry.vatAmount,2),
+        atcCode: entry.atcCode,
+        atcName: entry.atcName,
+        atcAmount: formatNumber(entry.atcAmount,2),
+        rcCode: entry.rcCode,
+        rcName: entry.rcName,
+        slCode: entry.slCode,
+        debitAcct: entry.drAccount,
+        apAcct: entry.apAccount,
+        vatAcct: entry.vatAccount,
+        currCode: entry.currCode,
+        currRate: formatNumber(entry.currRate,6) ,
+        vendCode: entry.vendCode,
+        vendName: entry.vendName,
+        refBranchcode: branchCode,
+        refDocCode: entry.refDocCode,
+        groupId: entry.groupId,
+      
+      }));
+
+      
+      const updatedRows = [...detailRows, ...newRows];
+      updateState({ detailRows: updatedRows});
+      updateTotals(updatedRows);
+    }  
+  }
+  updateState({ showAPBalanceModal: false,
+                isLoading:false
+  });  
+};
 
 
 
@@ -2011,12 +2323,14 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
-                        disabled={state.isFetchDisabled || state.isDocNoDisabled}
-                        onClick={() => {
-                            if (!state.isDocNoDisabled) {
-                                fetchTranData(state.documentNo,state.branchCode);
-                            }
-                        }}
+                        // disabled={state.isFetchDisabled || state.isDocNoDisabled}
+                        // onClick={() => {
+                        //     if (!state.isDocNoDisabled) {
+                        //         fetchTranData(state.documentNo,state.branchCode);
+                        //     }
+                        // }}
+                        
+                        onClick={() => navigate("/tran-ap-cvtran-history")}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -2378,7 +2692,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
       {selectedWithAPV === 'Y' && (
         <div className="flex justify-end">
           <button
-            onClick={() => handleActivityOption("GenerateGL")}
+            onClick={() => handleOpenAPBalance()}
             className="global-tran-button-generateGL"
             disabled={isLoading}
             style={{ visibility: isFormDisabled ? "hidden" : "visible" }}
@@ -2399,6 +2713,7 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 
           <th className="global-tran-th-ui">LN</th>
             <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apType", selectedCvType, selectedWithAPV)}>AP Type</th>
+            <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("apvNo", selectedCvType, selectedWithAPV)}>APV No.</th>
             <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("rrNo", selectedCvType, selectedWithAPV)}>RR No.</th>
             <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("poNo", selectedCvType, selectedWithAPV)}>PO/JO No.</th>
             <th className="global-tran-th-ui" hidden={!isVisible_Dtl1("siNo", selectedCvType, selectedWithAPV)}>Invoice No.</th>
@@ -2465,6 +2780,16 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
                       ) : (<option value="">Loading...</option>)}
               </select>
           </td>
+
+          {/* APV No */}
+           <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("apvNo", selectedCvType, selectedWithAPV)}>
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.apvNo || ""}
+                onChange={(e) => handleDetailChange(index, 'apvNo', e.target.value)}
+              />
+            </td>
 
           {/* RR No */}
            <td className="global-tran-td-ui" hidden={!isVisible_Dtl1("rrNo", selectedCvType, selectedWithAPV)}>
@@ -3750,7 +4075,17 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
   />
 )}
 
-
+{showAPBalanceModal && (
+  <GlobalLookupModalv1
+    isOpen={showAPBalanceModal}
+    data={globalLookupRow}
+    btnCaption="Get Selected APV"
+    title="Open AP Balance"
+    endpoint={globalLookupHeader}
+    onClose={handleCloseAPBalance}
+    onCancel={() => updateState({ showAPBalanceModal: false })}
+  />
+)}
 
 {showSpinner && <LoadingSpinner />}
     </div>

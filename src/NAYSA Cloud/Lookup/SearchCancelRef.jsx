@@ -61,7 +61,7 @@ const CancelTranModal = ({ isOpen, onClose }) => {
             Cancel
           </button>
           <button
-            onClick={() => handleSubmit({ reason })}
+            onClick={() => handleSubmit({ reason,password })}
             className="px-4 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
           >
             OK
