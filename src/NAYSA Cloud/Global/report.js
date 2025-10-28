@@ -1,8 +1,7 @@
 import { apiClient ,postPdfRequest } from '@/NAYSA Cloud/Configuration/BaseURL';
 import { useTopDocControlRow,useTopHSRptRow } from '@/NAYSA Cloud/Global/top1RefTable';
+import { formatNumber } from "@/NAYSA Cloud/Global/behavior";
 import { stringify } from 'postcss';
-
-
 
 
 
@@ -65,7 +64,7 @@ export function injectLoadingSpinner(printWindow) {
 
 
 
-export async function useHandlePrint(documentID, docCode, printMode) {
+export async function useHandlePrint(documentID, docCode, printMode, userCode) {
   try {
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -73,7 +72,6 @@ export async function useHandlePrint(documentID, docCode, printMode) {
     }
 
     injectLoadingSpinner(printWindow);
-  
     const responseDocControl = await useTopDocControlRow(docCode);
     const formName = responseDocControl?.formName;
 
@@ -81,10 +79,7 @@ export async function useHandlePrint(documentID, docCode, printMode) {
       throw new Error("Report Name not defined");
     }
 
-    const payload = { tranId: documentID, formName, docCode, printMode };
-
-    console.log(payload)
-
+    const payload = { tranId: documentID, formName, docCode, printMode ,userCode};
     const pdfBlob = await postPdfRequest("/printForm", payload);
 
     if (!(pdfBlob instanceof Blob) || pdfBlob.type !== "application/pdf") {
@@ -398,12 +393,12 @@ export async function useHandleDownloadExcelGLReport(params) {
       branchCode: params.branchCode,
       startDate: params.startDate,
       endDate: params.endDate,
-      sGL: params.sAcctCode,
-      eGL: params.eAcctCode,
-      sSL: params.sSLCode,
-      eSL: params.eSLCode,
-      sRC: params.sRCCode,
-      eRC: params.eRCCode,
+      sGL: params.sGL,
+      eGL: params.eGL,
+      sSL: params.sSL,
+      eSL: params.eSL,
+      sRC: params.sRC,
+      eRC: params.eRC,
       formName: responseDocRpt.crptName,
       sprocMode: responseDocRpt.sprocMode,
       sprocName: responseDocRpt.sprocName,
@@ -413,7 +408,7 @@ export async function useHandleDownloadExcelGLReport(params) {
     };
 
 
-    console.log(JSON.stringify(payload))
+  
 
     // ⬇️ override only for this request
     const response = await apiClient.post("/printGLReport", payload, {
@@ -461,63 +456,106 @@ export async function useHandleDownloadExcelGLReport(params) {
 
 
 
+export function exportToTabbedJson(jsonSheets = []) {
+  const data = {};
+  for (const tab of jsonSheets) {
+    const key = tab.sheetName || "Sheet";
+    data[key] = Array.isArray(tab.rows) ? tab.rows : [];
+  }
+  return { Data: data };
+}
 
 
-export async function useHandleExportExcelHistoryReport(params) {
+
+
+export function exportBuildJsonSheets(sheetConfigs = []) {
+  return (sheetConfigs || []).map(cfg => ({
+    sheetName: cfg.sheetName || "Sheet",
+    rows: Array.isArray(cfg.data) ? cfg.data : [],
+  }));
+}
+
+
+
+export function projectRowsByColumnsRaw(rows = [], columns = []) {
+ 
+  const isVisible = (col) => col && col.hidden !== true;
+
+  function formatByColumn(value, col) {
+    if (value === null || value === undefined) return "";
+    if (col.renderType === "number" || col.renderType === "currency") {
+      const digits =
+        typeof col.roundingOff === "number" ? col.roundingOff : 2;
+      return formatNumber(value, digits);
+    }
+    return String(value);
+  }
+
+
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  if (!Array.isArray(columns) || columns.length === 0) return rows;
+
+  const visibleCols = columns.filter(isVisible);
+  if (visibleCols.length === 0) return rows;
+
+  return rows.map((r) => {
+    const out = {};
+    for (const col of visibleCols) {
+      const header = col.label || col.key;
+      const rawValue = r?.[col.key];
+      out[header] = formatByColumn(rawValue, col); 
+    }
+    return out;
+  });
+}
+
+
+
+export function makeSheet(sheetName, rows, columns) {
+  return {
+    sheetName: sheetName || "Sheet",
+    data: projectRowsByColumnsRaw(rows, columns),
+  };
+}
+
+
+
+
+export async function exportHistoryExcel(endPoint,payload,setExporting,reportName) {
  
    try {
-    const responseDocRpt = await useTopHSRptRow(params.reportId);
-
-    const payload = {
-      branchCode: params.branchCode,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      jsonSheets: params.jsonSheets,
-      reportName: params.reportName,
-      userCode:params.userCode
-    };
-
-
-     console.log(JSON.stringify(payload))
-
-    // ⬇️ override only for this request
-    const response = await apiClient.post("/exportHistoryReport", payload, {
-      responseType: "blob",
-    });
-
-    if (!response || !response.data) {
-      return false; // no data received
-    }
-
-    // Determine filename from headers or fallback
-    let filename = responseDocRpt.reportName + ".xlsx";
-    const disposition = response.headers["content-disposition"];
-    if (disposition && disposition.includes("filename=")) {
-      filename = disposition
-        .split("filename=")[1]
-        .replace(/["']/g, "")
-        .trim();
-    }
-
-    // Create a blob and trigger download
-    const blob = new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Cleanup URL object
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-
-    return true;
-  } catch (error) {
-    console.error("Error downloading report:", error);
-    return false;
-  }
+        const res = await apiClient.post(endPoint, payload, { responseType: "blob" });
+        const cd = res.headers["content-disposition"] || "";
+        const match = cd.match(/filename=("?)([^"]+)\1/i);
+        const filename = match ? match[2] : `${reportName}.xlsx`;
+  
+        const blob = new Blob([res.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      } catch (err) {
+        try {
+          const text = await err?.response?.data?.text?.();
+          console.error("Export failed:", text || err);
+          alert("Export failed.\n" + (text || err.message));
+        } catch {
+          console.error("Export failed:", err);
+          alert("Export failed.\n" + err.message);
+        }
+      } finally {
+        setExporting(false);
+      }
 }
+
+
+
+
+
+
 

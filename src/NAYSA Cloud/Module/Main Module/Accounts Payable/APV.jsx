@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from 'axios';
-import Swal from 'sweetalert2';
+import axios from "axios";
+import Swal from "sweetalert2";
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import {
+  faMagnifyingGlass,
+  faPlus,
+  faMinus,
+  faTrashAlt,
+  faFolderOpen,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 
 // Lookup/Modal
 import BranchLookupModal from "../../../Lookup/SearchBranchRef";
@@ -19,10 +26,13 @@ import PaytermLookupModal from "../../../Lookup/SearchPayTermRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
+import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
+import PostAPV from "./PostAPV.jsx";
 
 // Configuration
-import { fetchData, postRequest } from '../../../Configuration/BaseURL.jsx'
+import { fetchData, postRequest } from "../../../Configuration/BaseURL.jsx";
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 // Global
 import {
@@ -31,7 +41,7 @@ import {
   docTypes,
   docTypeVideoGuide,
   docTypePDFGuide,
-} from '@/NAYSA Cloud/Global/doctype';
+} from "@/NAYSA Cloud/Global/doctype";
 
 import {
   useTopVatRow,
@@ -46,7 +56,7 @@ import {
   useTopDocDropDown,
   useTopVatAmount,
   useTopATCAmount,
-} from '@/NAYSA Cloud/Global/top1RefTable';
+} from "@/NAYSA Cloud/Global/top1RefTable";
 
 import {
   useUpdateRowGLEntries,
@@ -54,22 +64,27 @@ import {
   useGenerateGLEntries,
   useUpdateRowEditEntries,
   useFetchTranData,
-  useHandlePrint,
   useHandleCancel,
-} from '@/NAYSA Cloud/Global/procedure';
+} from "@/NAYSA Cloud/Global/procedure";
 
-import { 
+import {
+  useHandlePrint,
+} from '@/NAYSA Cloud/Global/report';
+
+import {
   formatNumber,
   parseFormattedNumber,
   useSwalshowSaveSuccessDialog,
-} from '@/NAYSA Cloud/Global/behavior';
+} from "@/NAYSA Cloud/Global/behavior";
+
 
 // Header
-import Header from '@/NAYSA Cloud/Components/Header';
+import Header from "@/NAYSA Cloud/Components/Header";
+
 
 const APV = () => {
   const { resetFlag } = useReset();
-
+  const { user } = useAuth();
   const [state, setState] = useState({
     // HS Option
     glCurrMode: "M",
@@ -98,14 +113,14 @@ const APV = () => {
     isSaveDisabled: false,
     isResetDisabled: false,
     isFetchDisabled: false,
-    triggerGLEntries:false,
+    triggerGLEntries: false,
 
     // Header information
     header: {
-      apv_date: new Date().toISOString().split('T')[0],
+      apv_date: new Date().toISOString().split("T")[0],
       remarks: "",
       refDocNo1: "",
-      refDocNo2: ""
+      refDocNo2: "",
     },
 
     // Branch information
@@ -127,6 +142,7 @@ const APV = () => {
     selectedApType: "APV01",
     apAccountName: "",
     apAccountCode: "",
+    userCode : user?.USER_CODE,
 
     // Detail rows
     detailRows: [],
@@ -150,8 +166,8 @@ const APV = () => {
     },
 
     // Modal states
-    modalContext: '',
-    selectionContext: '',
+    modalContext: "",
+    selectionContext: "",
     selectedRowIndex: null,
     accountModalSource: null,
     showAccountModal: false,
@@ -166,12 +182,12 @@ const APV = () => {
     showCancelModal: false,
     showAttachModal: false,
     showSignatoryModal: false,
-    showPostModal: false, 
+    showPostingModal: false,
   });
 
   // Helper function to update state
   const updateState = (updates) => {
-    setState(prev => ({ ...prev, ...updates }));
+    setState((prev) => ({ ...prev, ...updates }));
   };
 
   // Destructure state for easier access
@@ -197,7 +213,6 @@ const APV = () => {
     isResetDisabled,
     isFetchDisabled,
     triggerGLEntries,
-    
 
     // Currency
     glCurrMode,
@@ -247,7 +262,7 @@ const APV = () => {
     showCancelModal,
     showAttachModal,
     showSignatoryModal,
-    showPostModal
+    showPostingModal,
   } = state;
 
   const amountRefs = useRef([]);
@@ -257,17 +272,19 @@ const APV = () => {
   const docType = docTypes.APV;
   const pdfLink = docTypePDFGuide[docType];
   const videoLink = docTypeVideoGuide[docType];
-  const documentTitle = docTypeNames[docType] || 'Transaction';
+  const documentTitle = docTypeNames[docType] || "Transaction";
 
   // Status Global Setup
-  const displayStatus = status || 'OPEN';
+  const displayStatus = status || "OPEN";
   const statusMap = {
     FINALIZED: "global-tran-stat-text-finalized-ui",
     CANCELLED: "global-tran-stat-text-closed-ui",
     CLOSED: "global-tran-stat-text-closed-ui",
   };
   const statusColor = statusMap[displayStatus] || "";
-  const isFormDisabled = ["FINALIZED", "CANCELLED", "CLOSED"].includes(displayStatus);
+  const isFormDisabled = ["FINALIZED", "CANCELLED", "CLOSED"].includes(
+    displayStatus
+  );
 
   // Field visibility based on AP type
   useEffect(() => {
@@ -275,8 +292,8 @@ const APV = () => {
     updateState({
       fieldVisibility: {
         ...fieldVisibility,
-        invoiceDetails: !shouldHideInvoiceDetails
-      }
+        invoiceDetails: !shouldHideInvoiceDetails,
+      },
     });
   }, [selectedApType]);
 
@@ -284,7 +301,12 @@ const APV = () => {
   const LoadingSpinner = () => (
     <div className="global-tran-spinner-main-div-ui">
       <div className="global-tran-spinner-sub-div-ui">
-        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
+        <FontAwesomeIcon
+          icon={faSpinner}
+          spin
+          size="2x"
+          className="text-blue-500 mb-2"
+        />
         <p>Please wait...</p>
       </div>
     </div>
@@ -295,14 +317,14 @@ const APV = () => {
     if (resetFlag) {
       handleReset();
     }
-    
+
     let timer;
     if (isLoading) {
       timer = setTimeout(() => updateState({ showSpinner: true }), 200);
     } else {
       updateState({ showSpinner: false });
     }
-  
+
     return () => clearTimeout(timer);
   }, [resetFlag, isLoading]);
 
@@ -317,9 +339,9 @@ const APV = () => {
   // Effect for currency updates in detail rows
   useEffect(() => {
     if (vendName?.currCode && detailRows.length > 0) {
-      const updatedRows = detailRows.map(row => ({
+      const updatedRows = detailRows.map((row) => ({
         ...row,
-        currency: vendName.currCode
+        currency: vendName.currCode,
       }));
       updateState({ detailRows: updatedRows });
     }
@@ -327,11 +349,17 @@ const APV = () => {
 
   // Effect for GL totals calculation
   useEffect(() => {
-    const debitSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.debit) || 0), 0);
-    const creditSum = detailRowsGL.reduce((acc, row) => acc + (parseFormattedNumber(row.credit) || 0), 0);
+    const debitSum = detailRowsGL.reduce(
+      (acc, row) => acc + (parseFormattedNumber(row.debit) || 0),
+      0
+    );
+    const creditSum = detailRowsGL.reduce(
+      (acc, row) => acc + (parseFormattedNumber(row.credit) || 0),
+      0
+    );
     updateState({
       totalDebit: formatNumber(debitSum),
-      totalCredit: formatNumber(creditSum)
+      totalCredit: formatNumber(creditSum),
     });
   }, [detailRowsGL]);
 
@@ -354,15 +382,17 @@ const APV = () => {
 
   // Helper functions
   const updateTotalsDisplay = (invoice, vat, atc, payable) => {
-    const totalInvoiceElement = document.getElementById('totalInvoiceAmount');
-    const totalVATElement = document.getElementById('totalVATAmount');
-    const totalATCElement = document.getElementById('totalATCAmount');
-    const totalPayableElement = document.getElementById('totalPayableAmount');
+    const totalInvoiceElement = document.getElementById("totalInvoiceAmount");
+    const totalVATElement = document.getElementById("totalVATAmount");
+    const totalATCElement = document.getElementById("totalATCAmount");
+    const totalPayableElement = document.getElementById("totalPayableAmount");
 
-    if (totalInvoiceElement) totalInvoiceElement.textContent = formatNumber(invoice);
+    if (totalInvoiceElement)
+      totalInvoiceElement.textContent = formatNumber(invoice);
     if (totalVATElement) totalVATElement.textContent = formatNumber(vat);
     if (totalATCElement) totalATCElement.textContent = formatNumber(atc);
-    if (totalPayableElement) totalPayableElement.textContent = formatNumber(payable);
+    if (totalPayableElement)
+      totalPayableElement.textContent = formatNumber(payable);
   };
 
   const updateTotals = (rows) => {
@@ -371,11 +401,12 @@ const APV = () => {
     let totalATC = 0;
     let totalPayable = 0;
 
-    rows.forEach(row => {
-      const invoiceAmount = parseFormattedNumber(row.siAmount || row.amount || 0) || 0;
+    rows.forEach((row) => {
+      const invoiceAmount =
+        parseFormattedNumber(row.siAmount || row.amount || 0) || 0;
       const vatAmount = parseFormattedNumber(row.vatAmount || 0) || 0;
       const atcAmount = parseFormattedNumber(row.atcAmount || 0) || 0;
-      
+
       totalInvoice += invoiceAmount;
       totalVAT += vatAmount;
       totalATC += atcAmount;
@@ -414,7 +445,7 @@ const APV = () => {
       if (curr) {
         updateState({
           currencyName: curr.currName,
-          currencyRate: formatNumber(1, 6)
+          currencyRate: formatNumber(1, 6),
         });
       }
     }
@@ -426,7 +457,8 @@ const APV = () => {
     curr = currencyCode
   ) => {
     const calcWithCurr3 = mode === "T";
-    const calcWithCurr2 = (mode === "M" && defaultCurr !== curr) || mode === "D" || calcWithCurr3;
+    const calcWithCurr2 =
+      (mode === "M" && defaultCurr !== curr) || mode === "D" || calcWithCurr3;
 
     updateState({
       glCurrMode: mode,
@@ -453,19 +485,19 @@ const APV = () => {
         currencyCode: "",
         currencyName: "Philippine Peso",
         branchName: "",
-        header: { ...header, apv_date: new Date().toISOString().split("T")[0] }
+        header: { ...header, apv_date: new Date().toISOString().split("T")[0] },
       });
       console.log("Fields in APV reset!");
     }
     getDocumentControl();
-    
+
     let timer;
     if (isLoading) {
       timer = setTimeout(() => updateState({ showSpinner: true }), 200);
     } else {
       updateState({ showSpinner: false });
     }
-  
+
     return () => clearTimeout(timer);
   }, [resetFlag, isLoading]);
 
@@ -478,7 +510,7 @@ const APV = () => {
         updateState({
           documentName: result[0]?.docName,
           documentSeries: result[0]?.docName,
-          documentDocLen: result[0]?.docName
+          documentDocLen: result[0]?.docName,
         });
         await fetchApTypes();
       }
@@ -487,27 +519,28 @@ const APV = () => {
     }
   };
 
-  
-
   const fetchApTypes = async () => {
     try {
       const payload = {
         json_data: {
           dropdownColumn: "APVTRAN_TYPE",
-          docCode: "APV"
-        }
+          docCode: "APV",
+        },
       };
-      
-      const response = await postRequest("getHSDropdown", JSON.stringify(payload));
-      
+
+      const response = await postRequest(
+        "getHSDropdown",
+        JSON.stringify(payload)
+      );
+
       if (response.success) {
         const result = JSON.parse(response.data[0].result);
         const updates = { apTypes: result };
-        
+
         if (result.length > 0) {
           updates.selectedApType = result[0].DROPDOWN_CODE;
         }
-        
+
         updateState(updates);
       }
     } catch (error) {
@@ -518,13 +551,13 @@ const APV = () => {
   const handleReset = () => {
     loadDocControl();
     loadCompanyData();
-    
+
     updateState({
       header: {
         apv_date: new Date().toISOString().split("T")[0],
         remarks: "",
         refDocNo1: "",
-        refDocNo2: ""
+        refDocNo2: "",
       },
       branchCode: "HO",
       branchName: "Head Office",
@@ -546,390 +579,463 @@ const APV = () => {
       isResetDisabled: false,
       isFetchDisabled: false,
     });
-    
+
     updateTotalsDisplay(0, 0, 0, 0);
   };
 
   const fetchTranData = async (documentNo, branchCode) => {
-  const resetState = () => {
-    updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
-    updateTotals([]);
-  };
-
-  updateState({ isLoading: true });
-
-  try {
-    const data = await useFetchTranData(documentNo, branchCode, docType, "apvNo");
-
-    if (!data?.apvId) {
-      Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
-      return resetState();
-    }
-
-    // Format header date
-    let apvDateForHeader = '';
-    if (data.apvDate) {
-      const d = new Date(data.apvDate);
-      apvDateForHeader = isNaN(d) ? '' : d.toISOString().split("T")[0];
-    }
-
-    // Format detail rows with proper date handling
-    const retrievedDetailRows = (data.dt1 || []).map(item => {
-      // Format invoice date (siDate)
-      let formattedSiDate = '';
-      if (item.siDate) {
-        const siDate = new Date(item.siDate);
-        formattedSiDate = isNaN(siDate) ? '' : siDate.toISOString().split("T")[0];
-      }
-
-      // Format due date
-      let formattedDueDate = '';
-      if (item.dueDate) {
-        const dueDate = new Date(item.dueDate);
-        formattedDueDate = isNaN(dueDate) ? '' : dueDate.toISOString().split("T")[0];
-      }
-
-      return {
-        ...item,
-        origAmount: formatNumber(item.origAmount),
-        currRate: formatNumber(item.currRate),
-        siAmount: formatNumber(item.siAmount),
-        discRate: formatNumber(item.discRate),
-        unappliedAmount: formatNumber(item.unappliedAmount),
-        netDisc: formatNumber(item.netDisc),
-        vatAmount: formatNumber(item.vatAmount),
-        atcAmount: formatNumber(item.atcAmount),
-        apvAmount: formatNumber(item.apvAmount),
-        siDate: formattedSiDate,
-        dueDate: formattedDueDate,
-        REC_RC: item.REC_RC || 'N', // Ensure default value
-        REC_SL: item.REC_SL || 'N', // Ensure default value
-      };
-    });
-
-    const formattedGLRows = (data.dt2 || []).map(glRow => ({
-      ...glRow,
-      debit: formatNumber(glRow.debit),
-      credit: formatNumber(glRow.credit),
-      debitFx1: formatNumber(glRow.debitFx1),
-      creditFx1: formatNumber(glRow.creditFx1),
-      debitFx2: formatNumber(glRow.debitFx2),
-      creditFx2: formatNumber(glRow.creditFx2),
-    }));
-
-    // Create vendor object with all necessary properties
-    const vendorData = {
-      vendCode: data.vendCode || "",
-      vendName: data.vendName || "",
-      currCode: data.currCode || "",
-      tin: data.tin || "",
+    const resetState = () => {
+      updateState({
+        documentNo: "",
+        documentID: "",
+        isDocNoDisabled: false,
+        isFetchDisabled: false,
+      });
+      updateTotals([]);
     };
 
-    // Extract AP account information - check different possible field names
-    let apAccountCode = "";
-    let apAccountName = "";
-    
-    // Check various possible field names for AP account data
-    if (data.apAcct) {
-      apAccountCode = data.apAcct;
-    } else if (data.acctCode) {
-      apAccountCode = data.acctCode;
-    } else if (data.apAccountCode) {
-      apAccountCode = data.apAccountCode;
-    }
-    
-    // Try to get account name from different possible field names
-    if (data.apAccountName) {
-      apAccountName = data.apAccountName;
-    } else if (data.acctName) {
-      apAccountName = data.acctName;
-    }
+    updateState({ isLoading: true });
 
+    try {
+      console.log("Starting fetchTranData:", {
+        documentNo,
+        branchCode,
+        docType,
+      });
 
-    // If we have account code but no name, try to fetch the account name
-    if (apAccountCode && !apAccountName) {
-      try {
-        const accountResponse = await postRequest("getCOA", { ACCT_CODE: apAccountCode });
-        if (accountResponse?.success) {
-          const accountData = JSON.parse(accountResponse.data[0]?.result || "[]");
-          if (accountData.length > 0) {
-            apAccountName = accountData[0]?.acctName || accountData[0]?.ACCT_NAME || "";
-          }
-        }
-      } catch (error) {
-        console.warn("Could not fetch AP account name:", error);
+      const data = await useFetchTranData(
+        documentNo,
+        branchCode,
+        docType,
+        "apvNo"
+      );
+
+      console.log("Fetched data:", data);
+
+      if (!data?.apvId) {
+        console.warn("No apvId found in data:", data);
+        Swal.fire({
+          icon: "info",
+          title: "No Records Found",
+          text: "Transaction does not exist.",
+        });
+        return resetState();
       }
+
+      // Format header date
+      let apvDateForHeader = "";
+      if (data.apvDate) {
+        const d = new Date(data.apvDate);
+        apvDateForHeader = isNaN(d) ? "" : d.toISOString().split("T")[0];
+      }
+
+      console.log("Formatted APV date:", apvDateForHeader);
+
+      // Format detail rows with proper date handling
+      const retrievedDetailRows = (data.dt1 || []).map((item, index) => {
+        console.log(`Processing detail row ${index}:`, item);
+
+        // Format invoice date (siDate)
+        let formattedSiDate = "";
+        if (item.siDate) {
+          const siDate = new Date(item.siDate);
+          formattedSiDate = isNaN(siDate)
+            ? ""
+            : siDate.toISOString().split("T")[0];
+        }
+
+        // Format due date
+        let formattedDueDate = "";
+        if (item.dueDate) {
+          const dueDate = new Date(item.dueDate);
+          formattedDueDate = isNaN(dueDate)
+            ? ""
+            : dueDate.toISOString().split("T")[0];
+        }
+
+        return {
+          ...item,
+          origAmount: formatNumber(item.origAmount),
+          currRate: formatNumber(item.currRate),
+          siAmount: formatNumber(item.siAmount),
+          discRate: formatNumber(item.discRate),
+          unappliedAmount: formatNumber(item.unappliedAmount),
+          netDisc: formatNumber(item.netDisc),
+          vatAmount: formatNumber(item.vatAmount),
+          atcAmount: formatNumber(item.atcAmount),
+          apvAmount: formatNumber(item.apvAmount),
+          siDate: formattedSiDate,
+          dueDate: formattedDueDate,
+          REC_RC: item.REC_RC || "N",
+          REC_SL: item.REC_SL || "N",
+        };
+      });
+
+      console.log("Processed detail rows:", retrievedDetailRows);
+
+      const formattedGLRows = (data.dt2 || []).map((glRow, index) => {
+        console.log(`Processing GL row ${index}:`, glRow);
+        return {
+          ...glRow,
+          debit: formatNumber(glRow.debit),
+          credit: formatNumber(glRow.credit),
+          debitFx1: formatNumber(glRow.debitFx1),
+          creditFx1: formatNumber(glRow.creditFx1),
+          debitFx2: formatNumber(glRow.debitFx2),
+          creditFx2: formatNumber(glRow.creditFx2),
+        };
+      });
+
+      console.log("Processed GL rows:", formattedGLRows);
+
+      // Create vendor object with all necessary properties
+      const vendorData = {
+        vendCode: data.vendCode || "",
+        vendName: data.vendName || "",
+        currCode: data.currCode || "",
+        tin: data.tin || "",
+      };
+
+      console.log("Vendor data:", vendorData);
+
+      // Extract AP account information
+      let apAccountCode = "";
+      let apAccountName = "";
+
+      // Check various possible field names for AP account data
+      if (data.apAcct) {
+        apAccountCode = data.apAcct;
+      } else if (data.acctCode) {
+        apAccountCode = data.acctCode;
+      } else if (data.apAccountCode) {
+        apAccountCode = data.apAccountCode;
+      }
+
+      // Try to get account name from different possible field names
+      if (data.apAccountName) {
+        apAccountName = data.apAccountName;
+      } else if (data.acctName) {
+        apAccountName = data.acctName;
+      }
+
+      console.log("AP Account info:", { apAccountCode, apAccountName });
+
+      // If we have account code but no name, try to fetch the account name
+      if (apAccountCode && !apAccountName) {
+        try {
+          console.log("Fetching AP account name for code:", apAccountCode);
+          const accountResponse = await postRequest("getCOA", {
+            ACCT_CODE: apAccountCode,
+          });
+          if (accountResponse?.success) {
+            const accountData = JSON.parse(
+              accountResponse.data[0]?.result || "[]"
+            );
+            if (accountData.length > 0) {
+              apAccountName =
+                accountData[0]?.acctName || accountData[0]?.ACCT_NAME || "";
+              console.log("Fetched AP account name:", apAccountName);
+            }
+          }
+        } catch (error) {
+          console.warn("Could not fetch AP account name:", error);
+        }
+      }
+
+      // Update state with fetched data
+      const stateUpdates = {
+        documentStatus: data.docStatus || "OPEN",
+        status: data.docStatus || "OPEN",
+        documentID: data.apvId,
+        documentNo: data.apvNo,
+        branchCode: data.branchCode,
+        header: {
+          ...header,
+          apv_date: apvDateForHeader,
+          remarks: data.remarks || "",
+          refDocNo1: data.refapvNo1 || data.refDocNo1 || "",
+          refDocNo2: data.refapvNo2 || data.refDocNo2 || "",
+        },
+        selectedApType: data.apvtranType || data.apvType || "APV01",
+        vendCode: data.vendCode,
+        vendName: vendorData,
+        currencyCode: data.currCode || "PHP",
+        currencyName: data.currName || "Philippine Peso",
+        currencyRate: formatNumber(data.currRate || 1, 6),
+        apAccountCode: apAccountCode,
+        apAccountName: apAccountName,
+        detailRows: retrievedDetailRows,
+        detailRowsGL: formattedGLRows,
+        isDocNoDisabled: true,
+        isFetchDisabled: true,
+      };
+
+      console.log("Final state updates:", stateUpdates);
+      updateState(stateUpdates);
+
+      updateTotals(retrievedDetailRows);
+    } catch (error) {
+      console.error("Error fetching transaction data:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Fetch Error",
+        text: error.message || "Failed to fetch transaction data",
+      });
+      resetState();
+    } finally {
+      updateState({ isLoading: false });
     }
-
-    // Update state with fetched data
-    updateState({
-      documentStatus: data.docStatus || "OPEN",
-      status: data.docStatus || "OPEN",
-      documentID: data.apvId,
-      documentNo: data.apvNo,
-      branchCode: data.branchCode,
-      header: { 
-        ...header,
-        apv_date: apvDateForHeader,
-        remarks: data.remarks || "",
-        refDocNo1: data.refapvNo1 || data.refDocNo1 || "",
-        refDocNo2: data.refapvNo2 || data.refDocNo2 || ""
-      },
-      selectedApType: data.apvtranType || data.apvType || "APV01",
-      vendCode: data.vendCode,
-      vendName: vendorData,
-      currencyCode: data.currCode || "PHP",
-      currencyName: data.currName || "Philippine Peso",
-      currencyRate: formatNumber(data.currRate || 1, 6),
-      apAccountCode: apAccountCode,
-      apAccountName: apAccountName,
-      detailRows: retrievedDetailRows,
-      detailRowsGL: formattedGLRows,
-      isDocNoDisabled: true,
-      isFetchDisabled: true,
-    });
-
-    updateTotals(retrievedDetailRows);
-
-  } catch (error) {
-    console.error("Error fetching transaction data:", error);
-    Swal.fire({ icon: 'error', title: 'Fetch Error', text: error.message });
-    resetState();
-  } finally {
-    updateState({ isLoading: false });
-  }
-};
+  };
 
   const handleDocumentNoBlur = () => {
-  console.log("Document No blur:", documentNo, "Branch:", branchCode);
-  
-  if (!documentID && documentNo && branchCode) {
-    console.log("Attempting to fetch data...");
-    fetchTranData(documentNo, branchCode);
-  } else {
-    console.log("Skipped fetch because:", {
-      hasDocumentID: !!documentID,
-      hasDocumentNo: !!documentNo,
-      hasBranchCode: !!branchCode
-    });
-  }
-};
+    console.log("Document No blur:", documentNo, "Branch:", branchCode);
+
+    if (!documentID && documentNo && branchCode) {
+      console.log("Attempting to fetch data...");
+      fetchTranData(documentNo, branchCode);
+    } else {
+      console.log("Skipped fetch because:", {
+        hasDocumentID: !!documentID,
+        hasDocumentNo: !!documentNo,
+        hasBranchCode: !!branchCode,
+      });
+    }
+  };
 
   const handleCurrencyRateBlur = (e) => {
     const num = formatNumber(e.target.value, 6);
     updateState({
       currencyRate: isNaN(num) ? "0.000000" : num,
-      withCurr2: ((glCurrMode === "M" && glCurrDefault !== currencyCode) || glCurrMode === "D"),
-      withCurr3: glCurrMode === "T"
+      withCurr2:
+        (glCurrMode === "M" && glCurrDefault !== currencyCode) ||
+        glCurrMode === "D",
+      withCurr3: glCurrMode === "T",
     });
   };
 
   // Add this validation function near the other helper functions
-const validateDebitCreditBalance = () => {
-  const debitTotal = parseFormattedNumber(totalDebit);
-  const creditTotal = parseFormattedNumber(totalCredit);
-  
-  // Check if totals are balanced (allowing for small rounding differences)
-  return Math.abs(debitTotal - creditTotal) < 0.01;
-};
+  const validateDebitCreditBalance = () => {
+    const debitTotal = parseFormattedNumber(totalDebit);
+    const creditTotal = parseFormattedNumber(totalCredit);
 
-// Add this function to show the unbalanced warning
-const showUnbalancedWarning = () => {
-  Swal.fire({
-    icon: 'error',
-    title: 'Cannot Save Transaction',
-    html: `
+    // Check if totals are balanced (allowing for small rounding differences)
+    return Math.abs(debitTotal - creditTotal) < 0.01;
+  };
+
+  // Add this function to show the unbalanced warning
+  const showUnbalancedWarning = () => {
+    Swal.fire({
+      icon: "error",
+      title: "Cannot Save Transaction",
+      html: `
       <div class="text-left">
         <p class="mb-2">Debit and Credit amounts are not balanced.</p>
         <p class="font-semibold">Total Debit: ${totalDebit}</p>
         <p class="font-semibold">Total Credit: ${totalCredit}</p>
       </div>
     `,
-    confirmButtonText: 'OK',
-    confirmButtonColor: '#3085d6',
-  });
-};
+      confirmButtonText: "OK",
+      confirmButtonColor: "#3085d6",
+    });
+  };
 
   const handleActivityOption = async (action) => {
-  // For APV02 (non-purchases), we don't need detailRows, only GL entries
-  if (selectedApType !== "APV02" && (!detailRows || detailRows.length === 0)) {
-    updateState({ triggerGLEntries: true });
-    return;
-  }
-
-  if (documentStatus === '') {
-    updateState({ isLoading: true });
-
-    // Create a clean, serializable version of the data
-    const serializableGlData = {
-      branchCode: branchCode,
-      apvNo: documentNo || "",
-      apvId: documentID || "",
-      apvDate: header.apv_date,
-      apvtranType: selectedApType || "APV02",
-      tranMode: "M",
-      apAcct: apAccountCode,
-      vendCode: vendCode,
-      // Extract only the string properties from vendName to avoid circular references
-      vendName: vendName?.vendName || "",
-      refapvNo1: header.refDocNo1 || "",
-      refapvNo2: header.refDocNo2 || "",
-      acctCode: apAccountCode,
-      currCode: currencyCode || "PHP",
-      currRate: parseFormattedNumber(currencyRate),
-      remarks: header.remarks || "",
-      userCode: "NSI",
-       dt1: selectedApType === "APV02" 
-        ? [] // Empty array for non-purchases
-        : detailRows.map((row, index) => ({
-        lnNo: String(index + 1),
-        invType: row.invType || "FG",
-        poNo: row.poNo || "",
-        rrNo: row.rrNo || "",
-        joNo: "",
-        svoNo: "",
-        siNo: row.siNo || "",
-        siDate: row.siDate || header.apv_date,
-        amount: parseFormattedNumber(row.amount || 0),
-        siAmount: parseFormattedNumber(row.siAmount || row.amount || 0),
-        debitAcct: row.debitAcct,
-        vatAcct: row.vatAcct || "",
-        advAcct: "",
-        sltypeCode: row.sltypeCode || "",
-        slCode: row.slCode || vendCode || "",
-        slName: row.slName || (vendName?.vendName || ""), 
-        address1: "",
-        address2: "",
-        address3: "",
-        tin: vendName?.tin || "", 
-        rcCode: row.rcCode || "",
-        vatCode: row.vatCode || "",
-        vatAmount: parseFormattedNumber(row.vatAmount || 0),
-        atcCode: row.atcCode || "",
-        atcAmount: parseFormattedNumber(row.atcAmount || 0),
-        paytermCode: row.paytermCode || "",
-        dueDate: row.dueDate || "",
-        ctrDate: "",
-        advpoNo: "",
-        advpoAmount: 0,
-        advAtcAmount: 0,
-        remarks: row.remarks || "",
-        lineId: row.line_id || ""
-      })),
-      dt2: detailRowsGL.map((entry, index) => ({
-        recNo: String(index + 1),
-        acctCode: entry.acctCode || "",
-        rcCode: entry.rcCode || "",
-        slCode: entry.slCode || "",
-        particular: entry.particular,
-        vatCode: entry.vatCode || "",
-        vatName: entry.vatName || "",
-        atcCode: entry.atcCode || "",
-        atcName: entry.atcName || "",
-        debit: parseFormattedNumber(entry.debit || 0),
-        credit: parseFormattedNumber(entry.credit || 0),
-        debitFx1: parseFormattedNumber(entry.debitFx1 || 0),
-        creditFx1: parseFormattedNumber(entry.creditFx1 || 0),
-        debitFx2: parseFormattedNumber(entry.debitFx2 || 0),
-        creditFx2: parseFormattedNumber(entry.creditFx2 || 0),
-        slrefNo: entry.slRefNo || "",
-        slrefDate: entry.slrefDate || "",
-        remarks: entry.remarks || header.remarks || "",
-        dt1Lineno: entry.dt1Lineno || ""
-      }))
-    };
-
-    if (action === "GenerateGL") {
-      try {
-        const newGlEntries = await useGenerateGLEntries(docType, serializableGlData);
-        
-        if (newGlEntries) {
-          console.log("Generated GL Entries:", newGlEntries);
-          updateState({ detailRowsGL: newGlEntries });
-        } else {
-          console.warn("GL entries generation failed or returned no data.");
-        }
-      } catch (error) {
-        console.error("Error during GL generation:", error);
-      } finally {
-        updateState({ isLoading: false });
-      }
-    }
-    
-    if (action === "Upsert") {
-
-      // Validate debit-credit balance
-    if (!validateDebitCreditBalance()) {
-      showUnbalancedWarning();
-      updateState({ isLoading: false });
+    // Basic validation - similar to SVI.jsx
+    if (action === "Upsert" && detailRowsGL.length === 0) {
+      updateState({ triggerGLEntries: true });
       return;
     }
 
-      try {
-        const response = await useTransactionUpsert(docType, serializableGlData, updateState, 'apvId', 'apvNo');
-        if (response) {
-          useSwalshowSaveSuccessDialog(
-            handleReset,
-            () => handleSaveAndPrint(response.data[0].apvId)
-          );
-        }
-      } catch (error) {
-        console.error("Error during transaction upsert:", error);
-      } finally {
-        updateState({ isLoading: false});
-      }
-      updateState({isDocNoDisabled: true,isFetchDisabled: true,});
+    if (!vendCode) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Payee",
+        text: "Please select a Payee before saving.",
+      });
+      return;
     }
-  }
-};
+
+    if (action === "Upsert" && !validateDebitCreditBalance()) {
+      showUnbalancedWarning();
+      return;
+    }
+
+    updateState({ isLoading: true });
+
+    try {
+      // Create complete data object - simplified like SVI.jsx
+      const serializableGlData = {
+        branchCode: branchCode,
+        apvNo: documentNo || "",
+        apvId: documentID || "",
+        apvDate: header.apv_date,
+        apvtranType: selectedApType || "APV01",
+        tranMode: "M",
+        apAcct: apAccountCode,
+        vendCode: vendCode,
+        vendName: vendName?.vendName || "",
+        refapvNo1: header.refDocNo1 || "",
+        refapvNo2: header.refDocNo2 || "",
+        acctCode: apAccountCode,
+        currCode: currencyCode || "PHP",
+        currRate: parseFormattedNumber(currencyRate) || 1,
+        remarks: header.remarks || "",
+        userCode: "NSI",
+        dt1: detailRows.map((row, index) => ({
+          lnNo: String(index + 1),
+          invType: row.invType || "FG",
+          poNo: row.poNo || "",
+          rrNo: row.rrNo || "",
+          joNo: "",
+          svoNo: "",
+          siNo: row.siNo || "",
+          siDate: row.siDate || header.apv_date,
+          amount: parseFormattedNumber(row.amount || 0),
+          siAmount: parseFormattedNumber(row.siAmount || row.amount || 0),
+          debitAcct: row.debitAcct || "",
+          vatAcct: row.vatAcct || "",
+          advAcct: "",
+          sltypeCode: row.sltypeCode || "",
+          slCode: row.slCode || vendCode || "",
+          slName: row.slName || vendName?.vendName || "",
+          address1: "",
+          address2: "",
+          address3: "",
+          tin: vendName?.tin || "",
+          rcCode: row.rcCode || "",
+          vatCode: row.vatCode || "",
+          vatAmount: parseFormattedNumber(row.vatAmount || 0),
+          atcCode: row.atcCode || "",
+          atcAmount: parseFormattedNumber(row.atcAmount || 0),
+          paytermCode: row.paytermCode || "",
+          dueDate: row.dueDate || "",
+          ctrDate: "",
+          advpoNo: "",
+          advpoAmount: 0,
+          advAtcAmount: 0,
+          remarks: row.remarks || "",
+          lineId: row.line_id || "",
+          REC_RC: row.REC_RC || "N",
+          REC_SL: row.REC_SL || "N",
+        })),
+        dt2: detailRowsGL.map((entry, index) => ({
+          recNo: String(index + 1),
+          acctCode: entry.acctCode || "",
+          rcCode: entry.rcCode || "",
+          slCode: entry.slCode || "",
+          particular: entry.particular || "",
+          vatCode: entry.vatCode || "",
+          vatName: entry.vatName || "",
+          atcCode: entry.atcCode || "",
+          atcName: entry.atcName || "",
+          debit: parseFormattedNumber(entry.debit || 0),
+          credit: parseFormattedNumber(entry.credit || 0),
+          debitFx1: parseFormattedNumber(entry.debitFx1 || 0),
+          creditFx1: parseFormattedNumber(entry.creditFx1 || 0),
+          debitFx2: parseFormattedNumber(entry.debitFx2 || 0),
+          creditFx2: parseFormattedNumber(entry.creditFx2 || 0),
+          slrefNo: entry.slRefNo || "",
+          slrefDate: entry.slrefDate || "",
+          remarks: entry.remarks || header.remarks || "",
+          dt1Lineno: entry.dt1Lineno || "",
+        })),
+      };
+
+      console.log("Sending data for", action, ":", serializableGlData);
+
+      if (action === "GenerateGL") {
+        const newGlEntries = await useGenerateGLEntries(
+          docType,
+          serializableGlData
+        );
+        if (newGlEntries) {
+          updateState({ detailRowsGL: newGlEntries });
+        }
+      }
+
+      if (action === "Upsert") {
+        const response = await useTransactionUpsert(
+          docType,
+          serializableGlData,
+          updateState,
+          "apvId",
+          "apvNo"
+        );
+        if (response) {
+          useSwalshowSaveSuccessDialog(handleReset, () =>
+            handleSaveAndPrint(response.data[0].apvId)
+          );
+          // Update state with new document ID and number
+          updateState({
+            documentID: response.data[0].apvId,
+            documentNo: response.data[0].apvNo,
+            isDocNoDisabled: true,
+            isFetchDisabled: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error during operation:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Operation Failed",
+        text: error.message || "An error occurred",
+      });
+    } finally {
+      updateState({ isLoading: false });
+    }
+  };
 
   const handleAddRow = async () => {
     try {
       const items = await handleFetchDetail(vendCode);
       const itemList = Array.isArray(items) ? items : [items];
 
-      const newRows = await Promise.all(itemList.map(async (item) => {
-        const amount = parseFormattedNumber(item.origAmount || 0);
-        const vatRate = await getVatRate(item.vatCode);
-        
-        return {
-          lnNo: "",
-          invType: "FG",
-          rrNo: "",
-          poNo: "",
-          siNo: "",
-          siDate: new Date().toISOString().split('T')[0],
-          amount: formatNumber(amount),
-          currency: vendName?.currCode || "",
-          siAmount: formatNumber(amount),
-          debitAcct: "",
-          REC_RC: "N",
-          rcCode: "",
-          rcName: "",
-          sltypeCode: item.sltypeCode || "",
-          slCode: vendCode || "",
-          slName: vendName?.vendName || "",
-          vatCode: item.vatCode || "",
-          vatName: item.vatName || "",
-          vatAmount: formatNumber(amount * vatRate),
-          atcCode: item.atcCode || "",
-          atcName: item.atcName || "",
-          atcAmount: "0.00",
-          paytermCode: item.paytermCode || "",
-          dueDate: new Date().toISOString().split('T')[0],
-          remarks: "",
-          REC_RC: item.REC_RC || 'N', // Default to 'N' if not provided
-          REC_SL: item.REC_SL || 'N', // Default to 'N' if not provided
-        };
-      }));
+      const newRows = await Promise.all(
+        itemList.map(async (item) => {
+          const amount = parseFormattedNumber(item.origAmount || 0);
+          const vatRate = await getVatRate(item.vatCode);
+
+          return {
+            lnNo: "",
+            invType: "FG",
+            rrNo: "",
+            poNo: "",
+            siNo: "",
+            siDate: new Date().toISOString().split("T")[0],
+            amount: formatNumber(amount),
+            currency: vendName?.currCode || "",
+            siAmount: formatNumber(amount),
+            debitAcct: "",
+            REC_RC: "N",
+            rcCode: "",
+            rcName: "",
+            sltypeCode: item.sltypeCode || "",
+            slCode: vendCode || "",
+            slName: vendName?.vendName || "",
+            vatCode: item.vatCode || "",
+            vatName: item.vatName || "",
+            vatAmount: formatNumber(amount * vatRate),
+            atcCode: item.atcCode || "",
+            atcName: item.atcName || "",
+            atcAmount: "0.00",
+            paytermCode: item.paytermCode || "",
+            dueDate: new Date().toISOString().split("T")[0],
+            remarks: "",
+            REC_RC: item.REC_RC || "N", // Default to 'N' if not provided
+            REC_SL: item.REC_SL || "N", // Default to 'N' if not provided
+          };
+        })
+      );
 
       const updatedRows = [...detailRows, ...newRows];
       updateState({ detailRows: updatedRows });
       updateTotals(updatedRows);
 
       setTimeout(() => {
-        const tableContainer = document.querySelector('.max-h-\\[430px\\]');
-        if (tableContainer) tableContainer.scrollTop = tableContainer.scrollHeight;
+        const tableContainer = document.querySelector(".max-h-\\[430px\\]");
+        if (tableContainer)
+          tableContainer.scrollTop = tableContainer.scrollHeight;
       }, 100);
     } catch (error) {
       console.error("Error adding new row:", error);
@@ -961,8 +1067,8 @@ const showUnbalancedWarning = () => {
           slRefNo: "",
           slrefDate: "",
           remarks: header.remarks || "",
-        }
-      ]
+        },
+      ],
     });
   };
 
@@ -971,10 +1077,10 @@ const showUnbalancedWarning = () => {
     updatedRows.splice(index, 1);
 
     updateState({
-        detailRows: updatedRows,
-        triggerGLEntries:true });
+      detailRows: updatedRows,
+      triggerGLEntries: true,
+    });
     updateTotals(updatedRows);
-
   };
 
   const handleDeleteRowGL = (index) => {
@@ -985,17 +1091,20 @@ const showUnbalancedWarning = () => {
 
   const handleFetchDetail = async (vendCode) => {
     if (!vendCode) return [];
-  
+
     try {
       const vendPayload = {
         json_data: {
           vendCode: vendCode,
         },
       };
-  
-      const vendResponse = await postRequest("addPayeeDetail", JSON.stringify(vendPayload));
+
+      const vendResponse = await postRequest(
+        "addPayeeDetail",
+        JSON.stringify(vendPayload)
+      );
       const rawResult = vendResponse.data[0]?.result;
-  
+
       const parsed = JSON.parse(rawResult);
       return parsed;
     } catch (error) {
@@ -1005,15 +1114,16 @@ const showUnbalancedWarning = () => {
   };
 
   const handlePost = async () => {
-//  if (!detailRows || detailRows.length === 0) {
-//       return;
-//       }
-
-
-  if (documentID && (documentStatus === '')) {
-    updateState({ showPostModal: true });
-  }
-};
+    if (documentID) {
+      updateState({ showPostingModal: true });
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "No Document",
+        text: "Please save the document first before posting.",
+      });
+    }
+  };
 
   const handlePrint = async () => {
     if (!detailRows || detailRows.length === 0) {
@@ -1023,12 +1133,30 @@ const showUnbalancedWarning = () => {
   };
 
   const handleCancel = async () => {
-    if (!detailRows || detailRows.length === 0) {
-      return;
-    }
+    console.log(
+      "Cancel button clicked - Document ID:",
+      documentID,
+      "Status:",
+      documentStatus
+    );
 
-    if (documentID && (documentStatus === '')) {
+    if (documentID) {
+      if (documentStatus === "FINALIZED" || documentStatus === "CLOSED") {
+        Swal.fire({
+          icon: "warning",
+          title: "Cannot Cancel",
+          text: "This document is already finalized or closed and cannot be cancelled.",
+        });
+        return;
+      }
+
       updateState({ showCancelModal: true });
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "No Document",
+        text: "Please save the document first before cancelling.",
+      });
     }
   };
 
@@ -1037,138 +1165,144 @@ const showUnbalancedWarning = () => {
   };
 
   const handleCopy = async () => {
-  if (!detailRows || detailRows.length === 0) {
-    return;
-  }
-
-  if (documentID) {
-    // Clear ALL transaction data including invoice details and GL entries
-    const resetDetailRows = detailRows.map(row => ({
-      ...row,
-      siNo: ""
-    }));
-
-    updateState({
-      documentNo: "",
-      documentID: "",
-      documentStatus: "OPEN",
-      APVDate:new Date().toISOString().split('T')[0],
-      status: "OPEN",
-      detailRows: resetDetailRows, // Use the reset rows with cleared invoice numbers
-      detailRowsGL: [], // Clear GL entries
-    });
-    
-
-  }
-};
-
-const handleClosePost = async (confirmation) => {
-    if(documentStatus !== "OPEN" && documentID !== null ) {
-
-      const result = await useHandlePost(docType,documentID,"NSI",updateState);
-      if (result.success) 
-      {
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: result.message,
-        });       
-      } 
-     await fetchTranData(documentNo,branchCode);
+    if (!detailRows || detailRows.length === 0) {
+      return;
     }
-    updateState({showPostModal: false});
-};
+
+    if (documentID) {
+      // Clear ALL transaction data including invoice details and GL entries
+      const resetDetailRows = detailRows.map((row) => ({
+        ...row,
+        siNo: "",
+      }));
+
+      updateState({
+        documentNo: "",
+        documentID: "",
+        documentStatus: "OPEN",
+        APVDate: new Date().toISOString().split("T")[0],
+        status: "OPEN",
+        detailRows: resetDetailRows, // Use the reset rows with cleared invoice numbers
+        detailRowsGL: [], // Clear GL entries
+      });
+    }
+  };
+
+  const handleClosePost = async (confirmation) => {
+    if (confirmation && documentID !== null) {
+      try {
+        // You'll need to implement useHandlePost similar to useHandleCancel
+        const result = await handlePost(
+          docType,
+          documentID,
+          "NSI",
+          updateState
+        );
+        if (result && result.success) {
+          Swal.fire({
+            icon: "success",
+            title: "Success",
+            text: result.message,
+          });
+          await fetchTranData(documentNo, branchCode);
+        }
+      } catch (error) {
+        console.error("Error during posting:", error);
+      }
+    }
+    updateState({ showPostingModal: false });
+  };
 
   const printData = {
     apv_no: documentNo,
     branch: branchCode,
-    doc_id: docType
+    doc_id: docType,
   };
 
   const handleClosePayeeModal = async (selectedData) => {
-  if (!selectedData) {
-    updateState({ payeeModalOpen: false });
-    return;
-  }
-
-  updateState({ payeeModalOpen: false, isLoading: true });
-
-  try {
-    // Set basic payee info
-    const payeeDetails = {
-      vendCode: selectedData?.vendCode || '',
-      vendName: selectedData?.vendName || '',
-      currCode: selectedData?.currCode || '', 
-      acctCode: selectedData?.acctCode || ''   
-    };
-    
-    updateState({
-      vendName: payeeDetails,
-      vendCode: selectedData.vendCode,
-      // ADD THESE LINES to update AP account fields
-      apAccountCode: selectedData.acctCode || '',
-      apAccountName: selectedData.acctName || '' // Make sure acctName is available
-    });
-
-    // Update all existing detail rows with the payee's SL Code
-    const updatedRows = detailRows.map(row => ({
-      ...row,
-      slCode: selectedData.vendCode,
-      slName: selectedData.vendName
-    }));
-    
-    updateState({ detailRows: updatedRows });
-
-    // Rest of your existing code...
-    if (!selectedData.currCode) {
-      const vendPayload = { VEND_CODE: selectedData.vendCode };
-      const vendResponse = await axios.post("http://127.0.0.1:8000/api/getVendMast", vendPayload);
-
-      if (vendResponse.data.success) {
-        const vendData = JSON.parse(vendResponse.data.data[0].result);
-        payeeDetails.currCode = vendData[0]?.currCode;
-        payeeDetails.acctCode = vendData[0]?.acctCode;
-        updateState({ 
-          vendName: payeeDetails,
-          // Also update AP account fields here if needed
-          apAccountCode: vendData[0]?.acctCode || '',
-          apAccountName: vendData[0]?.acctName || ''
-        });
-      }
+    if (!selectedData) {
+      updateState({ payeeModalOpen: false });
+      return;
     }
 
-    await Promise.all([
-      handleSelectCurrency(payeeDetails.currCode),
-      handleSelectAPAccount(payeeDetails.acctCode)
-    ]);
+    updateState({ payeeModalOpen: false, isLoading: true });
 
-  } catch (error) {
-    console.error("Error:", error);
-  } finally {
-    updateState({ isLoading: false });
-  }
-};
+    try {
+      // Set basic payee info
+      const payeeDetails = {
+        vendCode: selectedData?.vendCode || "",
+        vendName: selectedData?.vendName || "",
+        currCode: selectedData?.currCode || "",
+        acctCode: selectedData?.acctCode || "",
+      };
 
-const handleSelectAPAccount = async (accountCode) => {
+      updateState({
+        vendName: payeeDetails,
+        vendCode: selectedData.vendCode,
+        apAccountCode: selectedData.acctCode || "",
+        apAccountName: selectedData.acctName || "",
+      });
+
+      // Update all existing detail rows with the payee's SL Code
+      const updatedRows = detailRows.map((row) => ({
+        ...row,
+        slCode: selectedData.vendCode,
+        slName: selectedData.vendName,
+      }));
+
+      updateState({ detailRows: updatedRows });
+
+      // FIX: Use postRequest with the correct payload structure
+      if (!selectedData.currCode) {
+        // The backend expects VEND_CODE as a field in the request, not wrapped in json_data
+        const vendResponse = await postRequest("getVendMast", {
+          VEND_CODE: selectedData.vendCode,
+        });
+
+        if (vendResponse.success) {
+          const vendData = JSON.parse(vendResponse.data[0].result);
+          payeeDetails.currCode = vendData[0]?.currCode;
+          payeeDetails.acctCode = vendData[0]?.acctCode;
+          updateState({
+            vendName: payeeDetails,
+            apAccountCode: vendData[0]?.acctCode || "",
+            apAccountName: vendData[0]?.acctName || "",
+          });
+        }
+      }
+
+      await Promise.all([
+        handleSelectCurrency(payeeDetails.currCode),
+        handleSelectAPAccount(payeeDetails.acctCode),
+      ]);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      updateState({ isLoading: false });
+    }
+  };
+
+  const handleSelectAPAccount = async (accountCode) => {
     if (accountCode) {
       try {
-        const coaResponse = await axios.post("http://127.0.0.1:8000/api/getCOA", { 
-          ACCT_CODE: accountCode 
+        // FIX: Use fetchData instead of direct axios call
+        const coaResponse = await postRequest("getCOA", {
+          ACCT_CODE: accountCode,
         });
-        
-        if (coaResponse.data.success) {
-          const coaData = JSON.parse(coaResponse.data.data[0].result);
+
+        if (coaResponse.success) {
+          const coaData = JSON.parse(coaResponse.data[0].result);
           updateState({
             apAccountName: coaData[0]?.acctName || coaData[0]?.ACCT_NAME || "",
-            apAccountCode: coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || ""
+            apAccountCode: coaData[0]?.acctCode || coaData[0]?.ACCT_CODE || "",
           });
-          
+
           // Add REC_RC to the row data if available
           const updatedRows = [...detailRows];
           if (selectedRowIndex !== null) {
             updatedRows[selectedRowIndex] = {
               ...updatedRows[selectedRowIndex],
-              REC_RC: coaData[0]?.REC_RC || 'N' // Default to 'N' if not specified
+              REC_RC: coaData[0]?.REC_RC || "N",
             };
             updateState({ detailRows: updatedRows });
           }
@@ -1178,8 +1312,6 @@ const handleSelectAPAccount = async (accountCode) => {
       }
     }
   };
-
-
 
   const getVatRate = async (vatCode) => {
     if (!vatCode) return 0;
@@ -1191,7 +1323,7 @@ const handleSelectAPAccount = async (accountCode) => {
         const vatData = JSON.parse(response.data[0].result);
         const rate = vatData[0]?.vatRate;
 
-        if (typeof rate === 'number') {
+        if (typeof rate === "number") {
           return rate;
         }
 
@@ -1212,138 +1344,152 @@ const handleSelectAPAccount = async (accountCode) => {
     }
   };
 
-  const handleDetailChange = async (index, field, value, runCalculations = true) => {
-  const updatedRows = [...detailRows];
+  const handleDetailChange = async (
+    index,
+    field,
+    value,
+    runCalculations = true
+  ) => {
+    const updatedRows = [...detailRows];
 
-  updatedRows[index] = {
-    ...updatedRows[index],
-    [field]: value,
-  };
+    updatedRows[index] = {
+      ...updatedRows[index],
+      [field]: value,
+    };
 
-  const row = updatedRows[index];
+    const row = updatedRows[index];
 
-  // Handle account selection from modal
-  if (field === 'debitAcct' && typeof value === 'object') {
-    row.debitAcct = value.acctCode;
-    row.REC_RC = value.REC_RC || 'N';
-  }
+    // Handle account selection from modal
+    if (field === "debitAcct" && typeof value === "object") {
+      row.debitAcct = value.acctCode;
+      row.REC_RC = value.REC_RC || "N";
+    }
 
-  // If REC_RC is No, clear RC and SL fields
-    if (value.REC_RC === 'N' || value.REC_RC === 'No') {
+    // If REC_RC is No, clear RC and SL fields
+    if (value.REC_RC === "N" || value.REC_RC === "No") {
       row.rcCode = "";
       row.rcName = "";
       row.slCode = vendCode || "";
       row.slName = vendName?.vendName || "";
     }
-  
 
-  // Handle RC code selection from modal
-  if (field === 'rcCode' ){
-          row.rcCode = value.rcCode   
-          row.rcName = value.rcName  
-          
-    };
-
-
-    if (field === 'slCode' ){
-          row.slCode = value.slCode   
-          
-    };
-
-  // Handle VAT code selection from modal
-  if (field === 'vatCode' && typeof value === 'object') {
-    row.vatCode = value.vatCode;
-    row.vatName = value.vatName;
-    row.vatAcct = value.acctCode; // Add vat account if available
-  }
-
-  // Handle ATC code selection from modal
-  if (field === 'atcCode' && typeof value === 'object') {
-    row.atcCode = value.atcCode;
-    row.atcName = value.atcName;
-  }
-
-  // Always update siAmount when amount changes, even if not calculating yet
-  if (field === 'amount') {
-    row.siAmount = value;
-  }
-
-  if (runCalculations) {
-    const origAmount = parseFormattedNumber(row.amount) || 0;
-    const origVatCode = row.vatCode || "";
-    const origAtcCode = row.atcCode || "";
-
-    // Shared calculation logic similar to SVI.jsx
-    async function recalcRow(newAmount) {
-      const newVatAmount = origVatCode ? await useTopVatAmount(origVatCode, newAmount) : 0;
-      const newNetOfVat = +(newAmount - newVatAmount).toFixed(2);
-      const newATCAmount = origAtcCode ? await useTopATCAmount(origAtcCode, newNetOfVat) : 0;
-      const newPayableAmount = +(newAmount - newATCAmount).toFixed(2);
-
-      row.siAmount = formatNumber(newAmount);
-      row.vatAmount = formatNumber(newVatAmount);
-      row.atcAmount = formatNumber(newATCAmount);
-      row.amount = formatNumber(newAmount);
+    // Handle RC code selection from modal
+    if (field === "rcCode") {
+      row.rcCode = value.rcCode;
+      row.rcName = value.rcName;
     }
 
-    // Handle amount changes (similar to SVI quantity/unitPrice changes)
-    if (field === 'amount') {
-      const newAmount = parseFormattedNumber(row.amount) || 0;
-      await recalcRow(newAmount);
+    if (field === "slCode") {
+      row.slCode = value.slCode;
     }
 
-    // Handle VAT code changes
-    if (field === 'vatCode') {
-      async function updateVat() {
-        const currentAmount = parseFormattedNumber(row.amount) || 0;
-        const newVatAmount = row.vatCode ? await useTopVatAmount(row.vatCode, currentAmount) : 0;
-        const newNetOfVat = +(currentAmount - newVatAmount).toFixed(2);
-        const newATCAmount = row.atcCode ? await useTopATCAmount(row.atcCode, newNetOfVat) : 0;
+    // Handle VAT code selection from modal
+    if (field === "vatCode" && typeof value === "object") {
+      row.vatCode = value.vatCode;
+      row.vatName = value.vatName;
+      row.vatAcct = value.acctCode; // Add vat account if available
+    }
 
+    // Handle ATC code selection from modal
+    if (field === "atcCode" && typeof value === "object") {
+      row.atcCode = value.atcCode;
+      row.atcName = value.atcName;
+    }
+
+    // Always update siAmount when amount changes, even if not calculating yet
+    if (field === "amount") {
+      row.siAmount = value;
+    }
+
+    if (runCalculations) {
+      const origAmount = parseFormattedNumber(row.amount) || 0;
+      const origVatCode = row.vatCode || "";
+      const origAtcCode = row.atcCode || "";
+
+      // Shared calculation logic similar to SVI.jsx
+      async function recalcRow(newAmount) {
+        const newVatAmount = origVatCode
+          ? await useTopVatAmount(origVatCode, newAmount)
+          : 0;
+        const newNetOfVat = +(newAmount - newVatAmount).toFixed(2);
+        const newATCAmount = origAtcCode
+          ? await useTopATCAmount(origAtcCode, newNetOfVat)
+          : 0;
+        const newPayableAmount = +(newAmount - newATCAmount).toFixed(2);
+
+        row.siAmount = formatNumber(newAmount);
         row.vatAmount = formatNumber(newVatAmount);
         row.atcAmount = formatNumber(newATCAmount);
+        row.amount = formatNumber(newAmount);
       }
-      await updateVat();
+
+      // Handle amount changes (similar to SVI quantity/unitPrice changes)
+      if (field === "amount") {
+        const newAmount = parseFormattedNumber(row.amount) || 0;
+        await recalcRow(newAmount);
+      }
+
+      // Handle VAT code changes
+      if (field === "vatCode") {
+        async function updateVat() {
+          const currentAmount = parseFormattedNumber(row.amount) || 0;
+          const newVatAmount = row.vatCode
+            ? await useTopVatAmount(row.vatCode, currentAmount)
+            : 0;
+          const newNetOfVat = +(currentAmount - newVatAmount).toFixed(2);
+          const newATCAmount = row.atcCode
+            ? await useTopATCAmount(row.atcCode, newNetOfVat)
+            : 0;
+
+          row.vatAmount = formatNumber(newVatAmount);
+          row.atcAmount = formatNumber(newATCAmount);
+        }
+        await updateVat();
+      }
+
+      // Handle ATC code changes
+      if (field === "atcCode") {
+        async function updateAtc() {
+          const currentAmount = parseFormattedNumber(row.amount) || 0;
+          const currentVatAmount = parseFormattedNumber(row.vatAmount) || 0;
+          const newNetOfVat = +(currentAmount - currentVatAmount).toFixed(2);
+          const newATCAmount = row.atcCode
+            ? await useTopATCAmount(row.atcCode, newNetOfVat)
+            : 0;
+
+          row.atcAmount = formatNumber(newATCAmount);
+        }
+        await updateAtc();
+      }
+
+      // Due Date recalculation
+      if (field === "paytermCode") {
+        const paytermData = await useTopPayTermRow(value);
+        if (paytermData && paytermData.daysDue && header.apv_date) {
+          const newDueDate = calculateDueDate(
+            header.apv_date,
+            paytermData.daysDue
+          );
+          row.dueDate = newDueDate;
+        } else {
+          row.dueDate = "";
+        }
+      }
+
+      // Format amount and siAmount with 2 decimal places when calculations are run
+      if (field === "amount") {
+        const num = parseFormattedNumber(value);
+        if (!isNaN(num)) {
+          row.amount = formatNumber(num);
+          row.siAmount = formatNumber(num);
+        }
+      }
     }
 
-    // Handle ATC code changes
-    if (field === 'atcCode') {
-      async function updateAtc() {
-        const currentAmount = parseFormattedNumber(row.amount) || 0;
-        const currentVatAmount = parseFormattedNumber(row.vatAmount) || 0;
-        const newNetOfVat = +(currentAmount - currentVatAmount).toFixed(2);
-        const newATCAmount = row.atcCode ? await useTopATCAmount(row.atcCode, newNetOfVat) : 0;
-
-        row.atcAmount = formatNumber(newATCAmount);
-      }
-      await updateAtc();
-    }
-
-    // Due Date recalculation
-    if (field === 'paytermCode') {
-      const paytermData = await useTopPayTermRow(value);
-      if (paytermData && paytermData.daysDue && header.apv_date) {
-        const newDueDate = calculateDueDate(header.apv_date, paytermData.daysDue);
-        row.dueDate = newDueDate;
-      } else {
-        row.dueDate = '';
-      }
-    }
-
-    // Format amount and siAmount with 2 decimal places when calculations are run
-    if (field === 'amount') {
-      const num = parseFormattedNumber(value);
-      if (!isNaN(num)) {
-        row.amount = formatNumber(num);
-        row.siAmount = formatNumber(num);
-      }
-    }
-  }
-
-  updatedRows[index] = row;
-  updateState({ detailRows: updatedRows });
-  updateTotals(updatedRows);
-};
+    updatedRows[index] = row;
+    updateState({ detailRows: updatedRows });
+    updateTotals(updatedRows);
+  };
 
   const handleBlurGL = async (index, field, value, autoCompute = false) => {
     const updatedRowsGL = [...detailRowsGL];
@@ -1352,9 +1498,28 @@ const handleSelectAPAccount = async (accountCode) => {
     const parsedValue = parseFormattedNumber(value);
     row[field] = formatNumber(parsedValue);
 
-    if (autoCompute && ((withCurr2 && currencyCode !== glCurrDefault) || withCurr3)) {
-      if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-        const data = await useUpdateRowEditEntries(row, field, value, currencyCode, currencyRate, header.apv_date);
+    if (
+      autoCompute &&
+      ((withCurr2 && currencyCode !== glCurrDefault) || withCurr3)
+    ) {
+      if (
+        [
+          "debit",
+          "credit",
+          "debitFx1",
+          "creditFx1",
+          "debitFx2",
+          "creditFx2",
+        ].includes(field)
+      ) {
+        const data = await useUpdateRowEditEntries(
+          row,
+          field,
+          value,
+          currencyCode,
+          currencyRate,
+          header.apv_date
+        );
         if (data) {
           row.debit = formatNumber(data.debit);
           row.credit = formatNumber(data.credit);
@@ -1368,7 +1533,7 @@ const handleSelectAPAccount = async (accountCode) => {
       const pairs = [
         ["debit", "credit"],
         ["debitFx1", "creditFx1"],
-        ["debitFx2", "creditFx2"]
+        ["debitFx2", "creditFx2"],
       ];
 
       pairs.forEach(([a, b]) => {
@@ -1384,165 +1549,269 @@ const handleSelectAPAccount = async (accountCode) => {
     updateState({ detailRowsGL: updatedRowsGL });
   };
 
-
   const handleDetailChangeGL = async (index, field, value) => {
-      const updatedRowsGL = [...state.detailRowsGL];
-      let row = { ...updatedRowsGL[index] };
-  
-  
-      if (['acctCode', 'slCode', 'rcCode', 'sltypeCode', 'vatCode', 'atcCode'].includes(field)) {
-          const data = await useUpdateRowGLEntries(row,field,value,vendCode,docType);
-          if(data) {
-              row.acctCode = data.acctCode
-              row.sltypeCode = data.sltypeCode
-              row.slCode = data.slCode
-              row.rcCode = data.rcCode || (data.REQ_RC === 'Y' ? 'REQ RC' : '');
-              row.rcName= data.rcName
-              row.vatCode = data.vatCode
-              row.vatName = data.vatName
-              row.atcCode = data.atcCode
-              row.atcName = data.atcName
-              row.particular = data.particular
-              row.slRefNo = data.slRefNo
-              row.slRefDate = data.slRefDate
-          }
+    const updatedRowsGL = [...state.detailRowsGL];
+    let row = { ...updatedRowsGL[index] };
+
+    if (
+      [
+        "acctCode",
+        "slCode",
+        "rcCode",
+        "sltypeCode",
+        "vatCode",
+        "atcCode",
+      ].includes(field)
+    ) {
+      const data = await useUpdateRowGLEntries(
+        row,
+        field,
+        value,
+        vendCode,
+        docType
+      );
+      if (data) {
+        row.acctCode = data.acctCode;
+        row.sltypeCode = data.sltypeCode;
+        row.slCode = data.slCode;
+        row.rcCode = data.rcCode || (data.REQ_RC === "Y" ? "REQ RC" : "");
+        row.rcName = data.rcName;
+        row.vatCode = data.vatCode;
+        row.vatName = data.vatName;
+        row.atcCode = data.atcCode;
+        row.atcName = data.atcName;
+        row.particular = data.particular;
+        row.slRefNo = data.slRefNo;
+        row.slRefDate = data.slRefDate;
       }
-      
-      if (['debit', 'credit', 'debitFx1', 'creditFx1', 'debitFx2', 'creditFx2'].includes(field)) {
-          row[field] = value;
-          const parsedValue = parseFormattedNumber(value);
-          const pairs = {
-            debit: "credit",
-            credit: "debit",
-            debitFx1: "creditFx1",
-            creditFx1: "debitFx1",
-            debitFx2: "creditFx2",
-            creditFx2: "debitFx2"
-          };
-  
+    }
+
+    if (
+      [
+        "debit",
+        "credit",
+        "debitFx1",
+        "creditFx1",
+        "debitFx2",
+        "creditFx2",
+      ].includes(field)
+    ) {
+      row[field] = value;
+      const parsedValue = parseFormattedNumber(value);
+      const pairs = {
+        debit: "credit",
+        credit: "debit",
+        debitFx1: "creditFx1",
+        creditFx1: "debitFx1",
+        debitFx2: "creditFx2",
+        creditFx2: "debitFx2",
+      };
+
       if (parsedValue > 0 && pairs[field]) {
         row[pairs[field]] = "0.00";
       }
     }
-  
-      if (['slRefNo', 'slRefDate', 'remarks'].includes(field)) {
-          row[field] = value;
-      }
-      
-      updatedRowsGL[index] = row;
-      updateState({ detailRowsGL: updatedRowsGL });
+
+    if (["slRefNo", "slRefDate", "remarks"].includes(field)) {
+      row[field] = value;
+    }
+
+    updatedRowsGL[index] = row;
+    updateState({ detailRowsGL: updatedRowsGL });
   };
 
-// In your COA lookup component, make sure to include REC_RC in the returned data
-const handleCloseAccountModal = (selectedAccount) => {
-  if (selectedAccount && selectedRowIndex !== null) {
-    const specialAccounts = ['debitAcct', 'apAcct', 'vatAcct'];
-    if (specialAccounts.includes(accountModalSource)) {
-      // Add REC_RC to the row data
-      handleDetailChange(selectedRowIndex, accountModalSource, {
-  ...selectedAccount,
-  REC_RC: selectedAccount.REC_RC || 'N' // Ensure this is set
-}, false);
-
-    } else {
-      handleDetailChangeGL(selectedRowIndex, 'acctCode', selectedAccount);
-    }      
-  }
-  updateState({
-    showAccountModal: false,
-    selectedRowIndex: null,
-    accountModalSource: null
-  });
-};
+  // In your COA lookup component, make sure to include REC_RC in the returned data
+  const handleCloseAccountModal = (selectedAccount) => {
+    if (selectedAccount && selectedRowIndex !== null) {
+      const specialAccounts = ["debitAcct", "apAcct", "vatAcct"];
+      if (specialAccounts.includes(accountModalSource)) {
+        // Add REC_RC to the row data
+        handleDetailChange(
+          selectedRowIndex,
+          accountModalSource,
+          {
+            ...selectedAccount,
+            REC_RC: selectedAccount.REC_RC || "N", // Ensure this is set
+          },
+          false
+        );
+      } else {
+        handleDetailChangeGL(selectedRowIndex, "acctCode", selectedAccount);
+      }
+    }
+    updateState({
+      showAccountModal: false,
+      selectedRowIndex: null,
+      accountModalSource: null,
+    });
+  };
 
   const handleCloseRcModal = async (selectedRc) => {
-  if (selectedRc && selectedRowIndex !== null) {
-    const result = await useTopRCRow(selectedRc.rcCode);
-    if (result) {
-      handleDetailChange(selectedRowIndex, 'rcCode', result, false);
+    if (selectedRc && selectedRowIndex !== null) {
+      const result = await useTopRCRow(selectedRc.rcCode);
+      if (result) {
+        handleDetailChange(selectedRowIndex, "rcCode", result, false);
+      }
     }
-  }
-  updateState({
-    showRcModal: false,
-    selectedRowIndex: null,
-    accountModalSource: null
-  });
-};
+    updateState({
+      showRcModal: false,
+      selectedRowIndex: null,
+      accountModalSource: null,
+    });
+  };
 
   const handleCloseRcModalGL = async (selectedRc) => {
-      if (selectedRc && selectedRowIndex !== null) {
-        if (accountModalSource !== null) {
-          handleDetailChange(selectedRowIndex, 'rcCode', selectedRc, false);
-       
-       
-        } else {
-             const result = await useTopRCRow(selectedRc.rcCode);
-              if (result) {
-                handleDetailChangeGL(selectedRowIndex, 'rcCode', result);
-              }
+    if (selectedRc && selectedRowIndex !== null) {
+      if (accountModalSource !== null) {
+        handleDetailChange(selectedRowIndex, "rcCode", selectedRc, false);
+      } else {
+        const result = await useTopRCRow(selectedRc.rcCode);
+        if (result) {
+          handleDetailChangeGL(selectedRowIndex, "rcCode", result);
+        }
       }
       updateState({
-          showRcModal: false,
-          selectedRowIndex: null,
-          accountModalSource: null
-      })};
+        showRcModal: false,
+        selectedRowIndex: null,
+        accountModalSource: null,
+      });
+    }
   };
 
   const handleCloseSlModal = async (selectedSl) => {
-  if (selectedSl && selectedRowIndex !== null) {
-    handleDetailChange(selectedRowIndex, 'slCode', selectedSl, false);
-  }
-  updateState({
-    showSlModal: false,
-    selectedRowIndex: null
-  });
-};
+    if (selectedSl && selectedRowIndex !== null) {
+      handleDetailChange(selectedRowIndex, "slCode", selectedSl, false);
+    }
+    updateState({
+      showSlModal: false,
+      selectedRowIndex: null,
+    });
+  };
 
   const handleCloseSlModalGL = async (selectedSl) => {
     if (selectedSl && selectedRowIndex !== null) {
       if (accountModalSource !== null) {
-        handleDetailChange(selectedRowIndex, 'slCode', selectedSl, false);
-     
-     
+        handleDetailChange(selectedRowIndex, "slCode", selectedSl, false);
       } else {
-
-        handleDetailChangeGL(selectedRowIndex, 'slCode', selectedSl);
-          //  const result = await useTopRCRow(selectedSl.slCode);
-          //   if (result) {
-          //     handleDetailChangeGL(selectedRowIndex, 'slCode', result);
-          //   }
-    }
-    updateState({
+        handleDetailChangeGL(selectedRowIndex, "slCode", selectedSl);
+        //  const result = await useTopRCRow(selectedSl.slCode);
+        //   if (result) {
+        //     handleDetailChangeGL(selectedRowIndex, 'slCode', result);
+        //   }
+      }
+      updateState({
         showSlModal: false,
         selectedRowIndex: null,
-        accountModalSource: null
-    })};
-};
+        accountModalSource: null,
+      });
+    }
+  };
 
   const handleCloseCancel = async (confirmation) => {
-    if (confirmation && documentStatus !== "OPEN" && documentID !== null) {
-      const result = await useHandleCancel(docType, documentID, "NSI", confirmation.reason, updateState);
-      if (result.success) {
+    console.log("Close cancel called with:", confirmation);
+    console.log("Document Status:", documentStatus, "Document ID:", documentID);
+
+    if (confirmation && confirmation.reason && documentID) {
+      try {
+        console.log("Attempting to cancel document:", documentID);
+
+        const result = await useHandleCancel(
+          docType,
+          documentID,
+          "NSI",
+          confirmation.reason,
+          updateState
+        );
+        console.log("Cancel result:", result);
+
+        // Check if result exists and has success property
+        if (result && result.success) {
+          Swal.fire({
+            icon: "success",
+            title: "Success",
+            text: result.message || "Document cancelled successfully",
+          });
+
+          // Refresh the data
+          if (documentNo && branchCode) {
+            await fetchTranData(documentNo, branchCode);
+          }
+        } else {
+          // Handle failure case
+          Swal.fire({
+            icon: "error",
+            title: "Cancel Failed",
+            text: result?.message || "Failed to cancel document",
+          });
+        }
+      } catch (error) {
+        console.error("Error in handleCloseCancel:", error);
         Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: result.message,
+          icon: "error",
+          title: "Cancel Error",
+          text: error.message || "An unexpected error occurred",
         });
       }
-      await fetchTranData(documentNo, branchCode);
+    } else {
+      console.log("Cancel cancelled or missing data:", {
+        hasConfirmation: !!confirmation,
+        hasReason: confirmation?.reason,
+        hasDocumentID: !!documentID,
+      });
     }
+
     updateState({ showCancelModal: false });
   };
 
-  const handleCloseSignatory = async () => {
-    updateState({ showSpinner: true });
-    await useHandlePrint(documentID, docType);
+  const handleCloseSignatory = async (mode) => {
+  console.log("🔄 handleCloseSignatory called with mode:", mode);
+  console.log("📄 Current document state:", {
+    documentID,
+    documentNo,
+    docType,
+    status: documentStatus
+  });
 
-    updateState({
-      showSpinner: false,
-      showSignatoryModal: false,
+  if (!documentID) {
+    console.error("❌ Cannot print: documentID is undefined!");
+    Swal.fire({
+      icon: "error",
+      title: "Cannot Print",
+      text: "Document ID is missing. Please save the document first.",
     });
-  };
+    updateState({ showSignatoryModal: false });
+    return;
+  }
+
+  updateState({ 
+    showSpinner: true,
+    showSignatoryModal: false,
+    noReprints: mode === "Final" ? 1 : 0, 
+  });
+  
+  try {
+    console.log("🖨️ Calling useHandlePrint with:", { 
+      documentID, 
+      docType, 
+      mode,
+      timestamp: new Date().toISOString()
+    });
+    
+    await useHandlePrint(documentID, docType, mode);
+    
+    console.log("✅ Printing completed successfully");
+  } catch (error) {
+    console.error("❌ Printing failed:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Print Failed",
+      text: error.message || "Failed to generate print document",
+    });
+  } finally {
+    updateState({ showSpinner: false });
+  }
+};
+  
 
   const handleSaveAndPrint = async (documentID) => {
     updateState({ showSpinner: true });
@@ -1555,12 +1824,12 @@ const handleCloseAccountModal = (selectedAccount) => {
       const result = await useTopVatRow(selectedVat.vatCode);
       if (!result) return;
 
-      handleDetailChange(selectedRowIndex, 'vatCode', result, true);
+      handleDetailChange(selectedRowIndex, "vatCode", result, true);
     }
     updateState({
       showVatModal: false,
       selectedRowIndex: null,
-      accountModalSource: null
+      accountModalSource: null,
     });
   };
 
@@ -1569,12 +1838,12 @@ const handleCloseAccountModal = (selectedAccount) => {
       const result = await useTopVatRow(selectedVat.vatCode);
       if (!result) return;
 
-      handleDetailChangeGL(selectedRowIndex, 'vatCode', result);
+      handleDetailChangeGL(selectedRowIndex, "vatCode", result);
     }
     updateState({
       showVatModal: false,
       selectedRowIndex: null,
-      accountModalSource: null
+      accountModalSource: null,
     });
   };
 
@@ -1583,12 +1852,12 @@ const handleCloseAccountModal = (selectedAccount) => {
       const result = await useTopATCRow(selectedAtc.atcCode);
       if (!result) return;
 
-      handleDetailChange(selectedRowIndex, 'atcCode', result, true);
+      handleDetailChange(selectedRowIndex, "atcCode", result, true);
     }
     updateState({
       showAtcModal: false,
       selectedRowIndex: null,
-      accountModalSource: null
+      accountModalSource: null,
     });
   };
 
@@ -1597,12 +1866,12 @@ const handleCloseAccountModal = (selectedAccount) => {
       const result = await useTopATCRow(selectedAtc.atcCode);
       if (!result) return;
 
-      handleDetailChangeGL(selectedRowIndex, 'atcCode', result);
+      handleDetailChangeGL(selectedRowIndex, "atcCode", result);
     }
     updateState({
       showAtcModal: false,
       selectedRowIndex: null,
-      accountModalSource: null
+      accountModalSource: null,
     });
   };
 
@@ -1610,7 +1879,7 @@ const handleCloseAccountModal = (selectedAccount) => {
     if (selectedBranch) {
       updateState({
         branchCode: selectedBranch.branchCode,
-        branchName: selectedBranch.branchName
+        branchName: selectedBranch.branchName,
       });
     }
     updateState({ branchModalOpen: false });
@@ -1624,24 +1893,25 @@ const handleCloseAccountModal = (selectedAccount) => {
   };
 
   const handleSelectCurrency = async (currCode) => {
-  if (currCode) {
-    const result = await useTopCurrencyRow(currCode);
-    if (result) {
-      const rate = currCode === glCurrDefault
-        ? defaultCurrRate
-        : await useTopForexRate(currCode, header.apv_date);
+    if (currCode) {
+      const result = await useTopCurrencyRow(currCode);
+      if (result) {
+        const rate =
+          currCode === glCurrDefault
+            ? defaultCurrRate
+            : await useTopForexRate(currCode, header.apv_date);
 
-      // Make sure to parse and format the rate properly
-      const formattedRate = formatNumber(parseFormattedNumber(rate || 1), 6);
-      
-      updateState({
-        currencyCode: result.currCode,
-        currencyName: result.currName,
-        currencyRate: formattedRate
-      });
+        // Make sure to parse and format the rate properly
+        const formattedRate = formatNumber(parseFormattedNumber(rate || 1), 6);
+
+        updateState({
+          currencyCode: result.currCode,
+          currencyName: result.currName,
+          currencyRate: formattedRate,
+        });
+      }
     }
-  }
-};
+  };
 
   const handleClosePaytermModal = async (selectedPayterm) => {
     if (selectedPayterm && selectedRowIndex !== null) {
@@ -1660,14 +1930,13 @@ const handleCloseAccountModal = (selectedAccount) => {
             ...updatedRows[selectedRowIndex],
             paytermCode: result.paytermCode,
             paytermName: result.paytermName,
-            dueDate: calculateDueDate(header.apv_date, result.daysDue)
+            dueDate: calculateDueDate(header.apv_date, result.daysDue),
           };
           updateState({ detailRows: updatedRows });
         }
       }
     }
   };
-
 
   const getAtcRate = async (atcCode) => {
     if (!atcCode) return 0;
@@ -1700,49 +1969,49 @@ const handleCloseAccountModal = (selectedAccount) => {
   const handleSlDoubleClick = (index) => {
     const currentValue = detailRows[index]?.slCode;
     const updatedRows = [...detailRows];
-    
+
     if (currentValue) {
       updatedRows[index] = {
         ...updatedRows[index],
         slCode: vendCode || "",
-        slName: vendName?.vendName || ""
+        slName: vendName?.vendName || "",
       };
       updateState({ detailRows: updatedRows });
     } else {
-      updateState({ 
+      updateState({
         selectedRowIndex: index,
-        showSlModal: true 
+        showSlModal: true,
       });
     }
   };
 
   // DR Account double-click handler
-const handleAccountDoubleDtl1Click = (index) => {
-  const updatedRows = [...detailRows];
-  updatedRows[index] = {
-    ...updatedRows[index],
-    debitAcct: "",
-    debitAcctName: ""
+  const handleAccountDoubleDtl1Click = (index) => {
+    const updatedRows = [...detailRows];
+    updatedRows[index] = {
+      ...updatedRows[index],
+      debitAcct: "",
+      debitAcctName: "",
+    };
+    updateState({ detailRows: updatedRows });
   };
-  updateState({ detailRows: updatedRows });
-};
 
   // RC Code double-click handler
   const handleRcDoubleDtl1Click = (index) => {
     const currentValue = detailRows[index]?.rcCode;
     const updatedRows = [...detailRows];
-    
+
     if (currentValue) {
       updatedRows[index] = {
         ...updatedRows[index],
         rcCode: "",
-        rcName: ""
+        rcName: "",
       };
       updateState({ detailRows: updatedRows });
     } else {
-      updateState({ 
+      updateState({
         selectedRowIndex: index,
-        showRcModal: true 
+        showRcModal: true,
       });
     }
   };
@@ -1751,20 +2020,20 @@ const handleAccountDoubleDtl1Click = (index) => {
   const handleVatDoubleDtl1Click = (index) => {
     const currentValue = detailRows[index]?.vatCode;
     const updatedRows = [...detailRows];
-    
+
     if (currentValue) {
       updatedRows[index] = {
         ...updatedRows[index],
         vatCode: "",
         vatName: "",
-        vatAmount: "0.00"
+        vatAmount: "0.00",
       };
       updateState({ detailRows: updatedRows });
       updateTotals(updatedRows);
     } else {
-      updateState({ 
+      updateState({
         selectedRowIndex: index,
-        showVatModal: true 
+        showVatModal: true,
       });
     }
   };
@@ -1773,20 +2042,20 @@ const handleAccountDoubleDtl1Click = (index) => {
   const handleAtcDoubleDtl1Click = (index) => {
     const currentValue = detailRows[index]?.atcCode;
     const updatedRows = [...detailRows];
-    
+
     if (currentValue) {
       updatedRows[index] = {
         ...updatedRows[index],
         atcCode: "",
         atcName: "",
-        atcAmount: "0.00"
+        atcAmount: "0.00",
       };
       updateState({ detailRows: updatedRows });
       updateTotals(updatedRows);
     } else {
-      updateState({ 
+      updateState({
         selectedRowIndex: index,
-        showAtcModal: true 
+        showAtcModal: true,
       });
     }
   };
@@ -1795,19 +2064,19 @@ const handleAccountDoubleDtl1Click = (index) => {
   const handlePaytermDoubleClick = (index) => {
     const currentValue = detailRows[index]?.paytermCode;
     const updatedRows = [...detailRows];
-    
+
     if (currentValue) {
       updatedRows[index] = {
         ...updatedRows[index],
         paytermCode: "",
         paytermName: "",
-        dueDate: new Date().toISOString().split('T')[0]
+        dueDate: new Date().toISOString().split("T")[0],
       };
       updateState({ detailRows: updatedRows });
     } else {
-      updateState({ 
+      updateState({
         selectedRowIndex: index,
-        showPaytermModal: true 
+        showPaytermModal: true,
       });
     }
   };
@@ -1819,7 +2088,7 @@ const handleAccountDoubleDtl1Click = (index) => {
       ...updatedRows[index],
       atcCode: "",
       atcName: "",
-      atcAmount: "0.00"
+      atcAmount: "0.00",
     };
     updateState({ detailRows: updatedRows });
     updateTotals(updatedRows);
@@ -1832,7 +2101,7 @@ const handleAccountDoubleDtl1Click = (index) => {
       ...updatedRows[index],
       vatCode: "",
       vatName: "",
-      vatAmount: "0.00"
+      vatAmount: "0.00",
     };
     updateState({ detailRows: updatedRows });
     updateTotals(updatedRows);
@@ -1844,7 +2113,7 @@ const handleAccountDoubleDtl1Click = (index) => {
     updatedRows[index] = {
       ...updatedRows[index],
       rcCode: "",
-      rcName: ""
+      rcName: "",
     };
     updateState({ detailRows: updatedRows });
   };
@@ -1856,7 +2125,7 @@ const handleAccountDoubleDtl1Click = (index) => {
       ...updatedRows[index],
       paytermCode: "",
       paytermName: "",
-      dueDate: new Date().toISOString().split('T')[0]
+      dueDate: new Date().toISOString().split("T")[0],
     };
     updateState({ detailRows: updatedRows });
   };
@@ -1936,14 +2205,15 @@ const handleAccountDoubleDtl1Click = (index) => {
       {showSpinner && <LoadingSpinner />}
 
       <div className="global-tran-headerToolbar-ui">
-        <Header 
-          docType={docType} 
-          pdfLink={pdfLink} 
+        <Header
+          docType={docType}
+          pdfLink={pdfLink}
           videoLink={videoLink}
           onPrint={handlePrint}
-          printData={printData} 
+          printData={printData}
           onReset={handleReset}
           onSave={() => handleActivityOption("Upsert")}
+          onPost={handlePost} // Add this
           onCancel={handleCancel}
           onCopy={handleCopy}
           onAttach={handleAttach}
@@ -1952,7 +2222,7 @@ const handleAccountDoubleDtl1Click = (index) => {
         />
       </div>
 
-      {/* Page title and subheading */} 
+      {/* Page title and subheading */}
       {/* Header Section */}
       <div className="global-tran-header-ui">
         <div className="global-tran-headertext-div-ui">
@@ -1962,7 +2232,9 @@ const handleAccountDoubleDtl1Click = (index) => {
         <div className="global-tran-headerstat-div-ui">
           <div>
             <p className="global-tran-headerstat-text-ui">Transaction Status</p>
-            <h1 className={`global-tran-stat-text-ui ${statusColor}`}>{displayStatus}</h1>
+            <h1 className={`global-tran-stat-text-ui ${statusColor}`}>
+              {displayStatus}
+            </h1>
           </div>
         </div>
       </div>
@@ -1973,18 +2245,21 @@ const handleAccountDoubleDtl1Click = (index) => {
         <div className="global-tran-header-tab-div-ui">
           <button
             className={`global-tran-tab-padding-ui ${
-              activeTab === 'basic' 
-              ? 'global-tran-tab-text_active-ui' 
-              : 'global-tran-tab-text_inactive-ui'
+              activeTab === "basic"
+                ? "global-tran-tab-text_active-ui"
+                : "global-tran-tab-text_inactive-ui"
             }`}
-            onClick={() => updateState({ activeTab: 'basic' })}
+            onClick={() => updateState({ activeTab: "basic" })}
           >
             Basic Information
           </button>
         </div>
 
         {/* APV Header Form Section */}
-        <div id="apv_hd" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 rounded-lg relative" >
+        <div
+          id="apv_hd"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 rounded-lg relative"
+        >
           {/* Column 1 */}
           <div className="global-tran-textbox-group-div-ui">
             {/* Branch Name Input with lookup button */}
@@ -1996,7 +2271,7 @@ const handleAccountDoubleDtl1Click = (index) => {
                 value={branchName || ""}
                 readOnly
                 className="peer global-tran-textbox-ui"
-                disabled={isFormDisabled} 
+                disabled={isFormDisabled}
               />
               <label
                 htmlFor="branchName"
@@ -2010,9 +2285,9 @@ const handleAccountDoubleDtl1Click = (index) => {
                 type="button"
                 onClick={() => updateState({ branchModalOpen: true })}
                 className={`global-tran-textbox-button-search-padding-ui ${
-                  isFetchDisabled 
-                  ? "global-tran-textbox-button-search-disabled-ui" 
-                  : "global-tran-textbox-button-search-enabled-ui"
+                  isFetchDisabled
+                    ? "global-tran-textbox-button-search-disabled-ui"
+                    : "global-tran-textbox-button-search-enabled-ui"
                 } global-tran-textbox-button-search-ui`}
                 disabled={isFormDisabled}
               >
@@ -2029,7 +2304,9 @@ const handleAccountDoubleDtl1Click = (index) => {
                 onChange={(e) => updateState({ documentNo: e.target.value })}
                 onBlur={handleDocumentNoBlur}
                 placeholder=" "
-                className={`peer global-tran-textbox-ui ${isDocNoDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className={`peer global-tran-textbox-ui ${
+                  isDocNoDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 disabled={isDocNoDisabled}
               />
               <label htmlFor="apvNo" className="global-tran-floating-label">
@@ -2039,8 +2316,8 @@ const handleAccountDoubleDtl1Click = (index) => {
                 onClick={() => fetchTranData(documentNo, branchCode)}
                 className={`global-tran-textbox-button-search-padding-ui ${
                   isFetchDisabled || isDocNoDisabled
-                  ? "global-tran-textbox-button-search-disabled-ui" 
-                  : "global-tran-textbox-button-search-enabled-ui"
+                    ? "global-tran-textbox-button-search-disabled-ui"
+                    : "global-tran-textbox-button-search-enabled-ui"
                 } global-tran-textbox-button-search-ui`}
                 disabled={isDocNoDisabled}
               >
@@ -2056,14 +2333,13 @@ const handleAccountDoubleDtl1Click = (index) => {
                 className="peer global-tran-textbox-ui"
                 value={header.apv_date}
                 onChange={(e) =>
-                  updateState({ header: { ...header, apv_date: e.target.value } })
+                  updateState({
+                    header: { ...header, apv_date: e.target.value },
+                  })
                 }
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="APVDate"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="APVDate" className="global-tran-floating-label">
                 APV Date
               </label>
             </div>
@@ -2076,26 +2352,23 @@ const handleAccountDoubleDtl1Click = (index) => {
               <input
                 type="text"
                 id="payeeCode"
-                value={vendName?.vendCode || ''}
+                value={vendName?.vendCode || ""}
                 readOnly
                 placeholder=" "
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="payeeCode"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="payeeCode" className="global-tran-floating-label">
                 <span className="global-tran-asterisk-ui"> * </span>
-                Payee Code 
+                Payee Code
               </label>
               <button
                 type="button"
                 onClick={() => updateState({ payeeModalOpen: true })}
                 className={`global-tran-textbox-button-search-padding-ui ${
-                  isFetchDisabled 
-                  ? "global-tran-textbox-button-search-disabled-ui" 
-                  : "global-tran-textbox-button-search-enabled-ui"
+                  isFetchDisabled
+                    ? "global-tran-textbox-button-search-disabled-ui"
+                    : "global-tran-textbox-button-search-enabled-ui"
                 } global-tran-textbox-button-search-ui`}
                 disabled={isFormDisabled}
               >
@@ -2109,14 +2382,11 @@ const handleAccountDoubleDtl1Click = (index) => {
                 type="text"
                 id="payeeName"
                 placeholder=" "
-                value={vendName?.vendName || ''}
+                value={vendName?.vendName || ""}
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="payeeName"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="payeeName" className="global-tran-floating-label">
                 <span className="global-tran-asterisk-ui"> * </span>
                 Payee Name
               </label>
@@ -2124,39 +2394,44 @@ const handleAccountDoubleDtl1Click = (index) => {
 
             {/* AP Account Code Input */}
             <div className="relative">
-  <input
-    type="hidden"
-    id="apAccountCode"
-    value={apAccountCode || ""}
-  />
-  <input
-    type="text"
-    id="apAccountName"
-    value={apAccountName || ""}
-    placeholder=" "
-    readOnly
-    className="peer global-tran-textbox-ui"
-    disabled={isFormDisabled}
-  />
-  <label htmlFor="apAccountName" className="global-tran-floating-label">
-    AP Account
-  </label>
-  <button
-    type="button"
-    onClick={() => updateState({ 
-      showAccountModal: true, 
-      accountModalSource: "apAccount" 
-    })}
-    className={`global-tran-textbox-button-search-padding-ui ${
-      isFetchDisabled 
-      ? "global-tran-textbox-button-search-disabled-ui" 
-      : "global-tran-textbox-button-search-enabled-ui"
-    } global-tran-textbox-button-search-ui`}
-    disabled={isFormDisabled}
-  >
-    <FontAwesomeIcon icon={faMagnifyingGlass} />
-  </button>
-</div>
+              <input
+                type="hidden"
+                id="apAccountCode"
+                value={apAccountCode || ""}
+              />
+              <input
+                type="text"
+                id="apAccountName"
+                value={apAccountName || ""}
+                placeholder=" "
+                readOnly
+                className="peer global-tran-textbox-ui"
+                disabled={isFormDisabled}
+              />
+              <label
+                htmlFor="apAccountName"
+                className="global-tran-floating-label"
+              >
+                AP Account
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  updateState({
+                    showAccountModal: true,
+                    accountModalSource: "apAccount",
+                  })
+                }
+                className={`global-tran-textbox-button-search-padding-ui ${
+                  isFetchDisabled
+                    ? "global-tran-textbox-button-search-disabled-ui"
+                    : "global-tran-textbox-button-search-enabled-ui"
+                } global-tran-textbox-button-search-ui`}
+                disabled={isFormDisabled}
+              >
+                <FontAwesomeIcon icon={faMagnifyingGlass} />
+              </button>
+            </div>
           </div>
 
           {/* Column 3 */}
@@ -2171,18 +2446,15 @@ const handleAccountDoubleDtl1Click = (index) => {
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="currCode"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="currCode" className="global-tran-floating-label">
                 Currency
               </label>
               <button
                 onClick={() => updateState({ currencyModalOpen: true })}
                 className={`global-tran-textbox-button-search-padding-ui ${
-                  isFetchDisabled 
-                  ? "global-tran-textbox-button-search-disabled-ui" 
-                  : "global-tran-textbox-button-search-enabled-ui"
+                  isFetchDisabled
+                    ? "global-tran-textbox-button-search-disabled-ui"
+                    : "global-tran-textbox-button-search-enabled-ui"
                 } global-tran-textbox-button-search-ui`}
                 disabled={isFormDisabled}
               >
@@ -2201,10 +2473,7 @@ const handleAccountDoubleDtl1Click = (index) => {
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled || glCurrDefault === currencyCode}
               />
-              <label
-                htmlFor="currRate"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="currRate" className="global-tran-floating-label">
                 Currency Rate
               </label>
             </div>
@@ -2215,7 +2484,6 @@ const handleAccountDoubleDtl1Click = (index) => {
                 className="peer global-tran-textbox-ui"
                 value={selectedApType}
                 onChange={handleAPTypeChange}
-                
               >
                 <option value="">Select AP Type</option>
                 {apTypes.map((type) => (
@@ -2227,7 +2495,7 @@ const handleAccountDoubleDtl1Click = (index) => {
               <label htmlFor="apType" className="global-tran-floating-label">
                 AP Type
               </label>
-              
+
               {/* Dropdown Icon */}
               <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
                 <svg
@@ -2237,28 +2505,33 @@ const handleAccountDoubleDtl1Click = (index) => {
                   strokeWidth="2"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </div>
             </div>
-          </div>  
+          </div>
 
           {/* Column 4 */}
-          <div className="global-tran-textbox-group-div-ui">        
+          <div className="global-tran-textbox-group-div-ui">
             <div className="relative">
               <input
                 type="text"
                 id="refDocNo1"
                 placeholder=" "
                 value={header.refDocNo1 || ""}
-                onChange={(e) => updateState({ header: { ...header, refDocNo1: e.target.value } })}
+                onChange={(e) =>
+                  updateState({
+                    header: { ...header, refDocNo1: e.target.value },
+                  })
+                }
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="refDocNo1"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="refDocNo1" className="global-tran-floating-label">
                 Ref Doc No. 1
               </label>
             </div>
@@ -2269,30 +2542,35 @@ const handleAccountDoubleDtl1Click = (index) => {
                 id="refDocNo2"
                 placeholder=" "
                 value={header.refDocNo2 || ""}
-                onChange={(e) => updateState({ header: { ...header, refDocNo2: e.target.value } })}
+                onChange={(e) =>
+                  updateState({
+                    header: { ...header, refDocNo2: e.target.value },
+                  })
+                }
                 className="peer global-tran-textbox-ui"
                 disabled={isFormDisabled}
               />
-              <label
-                htmlFor="refDocNo2"
-                className="global-tran-floating-label"
-              >
+              <label htmlFor="refDocNo2" className="global-tran-floating-label">
                 Ref Doc No. 2
               </label>
             </div>
-          </div>  
+          </div>
 
           {/* Remarks Section */}
           {/* Column 4 - Remarks */}
-          <div className="col-span-full"> 
+          <div className="col-span-full">
             <div className="relative w-full p-2">
               <textarea
                 id="remarks"
                 placeholder=""
-                rows={5} 
+                rows={5}
                 className="peer global-tran-textbox-remarks-ui"
                 value={header.remarks || ""}
-                onChange={(e) => updateState({ header: { ...header, remarks: e.target.value } })}
+                onChange={(e) =>
+                  updateState({
+                    header: { ...header, remarks: e.target.value },
+                  })
+                }
                 disabled={isFormDisabled}
               />
               <label
@@ -2306,7 +2584,7 @@ const handleAccountDoubleDtl1Click = (index) => {
         </div>
       </div>
       <br />
-      
+
       {fieldVisibility.invoiceDetails && (
         <>
           {/* APV Detail Section */}
@@ -2317,11 +2595,11 @@ const handleAccountDoubleDtl1Click = (index) => {
               <div className="flex flex-row sm:flex-row">
                 <button
                   className={`global-tran-tab-padding-ui ${
-                    GLactiveTab === 'invoice'
-                      ? 'global-tran-tab-text_active-ui'
-                      : 'global-tran-tab-text_inactive-ui'
+                    GLactiveTab === "invoice"
+                      ? "global-tran-tab-text_active-ui"
+                      : "global-tran-tab-text_inactive-ui"
                   }`}
-                  onClick={() => updateState({ GLactiveTab: 'invoice' })}
+                  onClick={() => updateState({ GLactiveTab: "invoice" })}
                   disabled={isFormDisabled}
                 >
                   Invoice Details
@@ -2341,7 +2619,7 @@ const handleAccountDoubleDtl1Click = (index) => {
 
             {/* Invoice Details Button */}
             <div className="global-tran-table-main-div-ui">
-              <div className="global-tran-table-main-sub-div-ui"> 
+              <div className="global-tran-table-main-sub-div-ui">
                 <table className="min-w-full border-collapse">
                   <thead className="global-tran-thead-div-ui">
                     <tr>
@@ -2364,7 +2642,9 @@ const handleAccountDoubleDtl1Click = (index) => {
                       <th className="global-tran-th-ui">RC Code</th>
                       <th className="global-tran-th-ui">RC Name</th>
                       {fieldVisibility.sltypeCode && (
-                        <th className="global-tran-th-ui" id='sltypeCode'>SL Type Code</th>
+                        <th className="global-tran-th-ui" id="sltypeCode">
+                          SL Type Code
+                        </th>
                       )}
                       {fieldVisibility.slName && (
                         <th className="global-tran-th-ui">SL Code</th>
@@ -2378,23 +2658,36 @@ const handleAccountDoubleDtl1Click = (index) => {
                       <th className="global-tran-th-ui">Payment Terms</th>
                       <th className="global-tran-th-ui">Due Date</th>
                       {!isFormDisabled && (
-                        <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">Add</th>
+                        <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+                          Add
+                        </th>
                       )}
                       {!isFormDisabled && (
-                        <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">Delete</th>
+                        <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+                          Delete
+                        </th>
                       )}
                     </tr>
                   </thead>
                   <tbody className="relative">
                     {detailRows.map((row, index) => (
                       <tr key={index} className="global-tran-tr-ui">
-                        <td className="global-tran-td-ui text-center">{index + 1}</td>
+                        <td className="global-tran-td-ui text-center">
+                          {index + 1}
+                        </td>
                         {fieldVisibility.invType && (
                           <td className="global-tran-td-ui">
                             <select
                               className="w-[50px] global-tran-td-inputclass-ui"
                               value={row.invType || ""}
-                              onChange={(e) => handleDetailChange(index, 'invType', e.target.value, false)}
+                              onChange={(e) =>
+                                handleDetailChange(
+                                  index,
+                                  "invType",
+                                  e.target.value,
+                                  false
+                                )
+                              }
                               disabled={isFormDisabled}
                             >
                               <option value="FG">FG</option>
@@ -2409,7 +2702,14 @@ const handleAccountDoubleDtl1Click = (index) => {
                               type="text"
                               className="w-[100px] global-tran-td-inputclass-ui"
                               value={row.rrNo || ""}
-                              onChange={(e) => handleDetailChange(index, 'rrNo', e.target.value, false)}
+                              onChange={(e) =>
+                                handleDetailChange(
+                                  index,
+                                  "rrNo",
+                                  e.target.value,
+                                  false
+                                )
+                              }
                               disabled={isFormDisabled}
                             />
                           </td>
@@ -2420,7 +2720,14 @@ const handleAccountDoubleDtl1Click = (index) => {
                               type="text"
                               className="w-[100px] global-tran-td-inputclass-ui"
                               value={row.poNo || ""}
-                              onChange={(e) => handleDetailChange(index, 'poNo', e.target.value, false)}
+                              onChange={(e) =>
+                                handleDetailChange(
+                                  index,
+                                  "poNo",
+                                  e.target.value,
+                                  false
+                                )
+                              }
                               disabled={isFormDisabled}
                             />
                           </td>
@@ -2430,7 +2737,14 @@ const handleAccountDoubleDtl1Click = (index) => {
                             type="text"
                             className="w-[100px] global-tran-td-inputclass-ui"
                             value={row.siNo || ""}
-                            onChange={(e) => handleDetailChange(index, 'siNo', e.target.value, false)}
+                            onChange={(e) =>
+                              handleDetailChange(
+                                index,
+                                "siNo",
+                                e.target.value,
+                                false
+                              )
+                            }
                             disabled={isFormDisabled}
                           />
                         </td>
@@ -2439,73 +2753,113 @@ const handleAccountDoubleDtl1Click = (index) => {
                             type="date"
                             className="w-[100px] global-tran-td-inputclass-ui text-center"
                             value={row.siDate || ""}
-                            onChange={(e) => handleDetailChange(index, 'siDate', e.target.value, false)}
+                            onChange={(e) =>
+                              handleDetailChange(
+                                index,
+                                "siDate",
+                                e.target.value,
+                                false
+                              )
+                            }
                             disabled={isFormDisabled}
                           />
                         </td>
                         <td className="global-tran-td-ui">
-  <input
-  type="text"
-  ref={(el) => (amountRefs.current[index] = el)}
-  className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-  value={row.amount}
-  onFocus={(e) => {
-    if ((e.target.value === "0.00" || e.target.value === "0") && !row.touched) {
-      handleDetailChange(index, "amount", "", false, { touched: true });
-    }
-  }}
-  onChange={(e) => {
-    const value = e.target.value;
-    if (/^\d{0,12}(\.\d{0,2})?$/.test(value) || value === "") {
-      handleDetailChange(index, "amount", value, false, { touched: true });
-    }
-  }}
-  onKeyDown={async (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const value = e.target.value;
-      const num = parseFormattedNumber(value);
+                          <input
+                            type="text"
+                            ref={(el) => (amountRefs.current[index] = el)}
+                            className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                            value={row.amount}
+                            onFocus={(e) => {
+                              if (
+                                (e.target.value === "0.00" ||
+                                  e.target.value === "0") &&
+                                !row.touched
+                              ) {
+                                handleDetailChange(index, "amount", "", false, {
+                                  touched: true,
+                                });
+                              }
+                            }}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (
+                                /^\d{0,12}(\.\d{0,2})?$/.test(value) ||
+                                value === ""
+                              ) {
+                                handleDetailChange(
+                                  index,
+                                  "amount",
+                                  value,
+                                  false,
+                                  { touched: true }
+                                );
+                              }
+                            }}
+                            onKeyDown={async (e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const value = e.target.value;
+                                const num = parseFormattedNumber(value);
 
-      if (!isNaN(num)) {
-        await handleDetailChange(index, "amount", value, true, { touched: true });
-      }
+                                if (!isNaN(num)) {
+                                  await handleDetailChange(
+                                    index,
+                                    "amount",
+                                    value,
+                                    true,
+                                    { touched: true }
+                                  );
+                                }
 
-      if (index === detailRows.length - 1) {
-        handleAddRow(index);
-        setTimeout(() => {
-          if (amountRefs.current[index + 1]) {
-            amountRefs.current[index + 1].focus();
-          }
-        }, 100);
-      } else {
-        if (amountRefs.current[index + 1]) {
-          amountRefs.current[index + 1].focus();
-        }
-      }
-    }
-  }}
-  onBlur={async (e) => {
-    const value = e.target.value;
-    const num = parseFormattedNumber(value);
-    if (!isNaN(num) && value !== "") {
-      await handleDetailChange(index, "amount", value, true, { touched: true });
-    } else {
-      // restore 0.00 only if left empty
-      handleDetailChange(index, "amount", "0.00", true, { touched: false });
-    }
-  }}
-  disabled={isFormDisabled}
-/>
-
-
-
-
-</td>
+                                if (index === detailRows.length - 1) {
+                                  handleAddRow(index);
+                                  setTimeout(() => {
+                                    if (amountRefs.current[index + 1]) {
+                                      amountRefs.current[index + 1].focus();
+                                    }
+                                  }, 100);
+                                } else {
+                                  if (amountRefs.current[index + 1]) {
+                                    amountRefs.current[index + 1].focus();
+                                  }
+                                }
+                              }
+                            }}
+                            onBlur={async (e) => {
+                              const value = e.target.value;
+                              const num = parseFormattedNumber(value);
+                              if (!isNaN(num) && value !== "") {
+                                await handleDetailChange(
+                                  index,
+                                  "amount",
+                                  value,
+                                  true,
+                                  { touched: true }
+                                );
+                              } else {
+                                // restore 0.00 only if left empty
+                                handleDetailChange(
+                                  index,
+                                  "amount",
+                                  "0.00",
+                                  true,
+                                  { touched: false }
+                                );
+                              }
+                            }}
+                            disabled={isFormDisabled}
+                          />
+                        </td>
                         <td className="global-tran-td-ui">
                           <input
                             type="text"
                             className="w-[80px] global-tran-td-inputclass-ui text-center"
-                            value={vendName?.currCode ? `${vendName.currCode}` : "PHP"}
+                            value={
+                              vendName?.currCode
+                                ? `${vendName.currCode}`
+                                : "PHP"
+                            }
                             readOnly
                             disabled={isFormDisabled}
                           />
@@ -2520,59 +2874,68 @@ const handleAccountDoubleDtl1Click = (index) => {
                           />
                         </td>
                         {/* DR Account */}
-                                    <td className="global-tran-td-ui relative">
-  <div className="flex items-center">
-    <input
-      type="text"
-      className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-      value={row.debitAcct || ""}
-      readOnly
-      disabled={isFormDisabled}
-    />
-    {!isFormDisabled && (
-      <FontAwesomeIcon 
-        icon={faMagnifyingGlass} 
-        className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-        onClick={() => {
-          updateState({ 
-            selectedRowIndex: index,
-            showAccountModal: true,
-            accountModalSource: "debitAcct" 
-          }); 
-        }}
-      />
-    )}
-  </div>
-</td>
-                       {/* RC Code */}
-                                     <td className="global-tran-td-ui relative" >
-                                     <div className="flex items-center">
-                                       <input
-                                         type="text"
-                                         className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-                                         value={row.rcCode || ""}
-                                         readOnly
-                                       />
-                                       {!isFormDisabled && (
-                                       <FontAwesomeIcon 
-                                         icon={faMagnifyingGlass} 
-                                         className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                                         onClick={() => {
-                                         updateState({ selectedRowIndex: index,
-                                                       showRcModal: true,
-                                                       accountModalSource: "rcCode"}); 
-                                         }}
-                                       />)}
-                                     </div>
-                                   </td>
+                        <td className="global-tran-td-ui relative">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
+                              value={row.debitAcct || ""}
+                              readOnly
+                              disabled={isFormDisabled}
+                            />
+                            {!isFormDisabled && (
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                                onClick={() => {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showAccountModal: true,
+                                    accountModalSource: "debitAcct",
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                        </td>
+                        {/* RC Code */}
+                        <td className="global-tran-td-ui relative">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
+                              value={row.rcCode || ""}
+                              readOnly
+                            />
+                            {!isFormDisabled && (
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                                onClick={() => {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showRcModal: true,
+                                    accountModalSource: "rcCode",
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                        </td>
                         <td className="global-tran-td-ui">
                           <input
                             type="text"
                             className="w-[250px] global-tran-td-inputclass-ui"
                             value={row.rcName || ""}
-                            onChange={(e) => handleDetailChange(index, 'rcDescription', e.target.value, false)}
+                            onChange={(e) =>
+                              handleDetailChange(
+                                index,
+                                "rcDescription",
+                                e.target.value,
+                                false
+                              )
+                            }
                             disabled={isFormDisabled}
-
                             S
                           />
                         </td>
@@ -2582,117 +2945,154 @@ const handleAccountDoubleDtl1Click = (index) => {
                               type="text"
                               className="w-[100px] global-tran-td-inputclass-ui"
                               value={row.sltypeCode || ""}
-                              onChange={(e) => handleDetailChange(index, 'sltypeCode', e.target.value, false)}
+                              onChange={(e) =>
+                                handleDetailChange(
+                                  index,
+                                  "sltypeCode",
+                                  e.target.value,
+                                  false
+                                )
+                              }
                               disabled={isFormDisabled}
                             />
                           </td>
                         )}
                         {/* SL Field */}
-{/* SL Code */}
-              <td className="global-tran-td-ui relative" >
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-                  value={row.slCode || ""}
-                  readOnly
-                />
-                {!isFormDisabled && (
-                <FontAwesomeIcon 
-                  icon={faMagnifyingGlass} 
-                  className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                  onClick={() => {
-                  updateState({ selectedRowIndex: index,
-                                showSlModal: true,
-                                accountModalSource: "slCode"}); 
-                  }}
-                />)}
-              </div>
-            </td>
+                        {/* SL Code */}
+                        <td className="global-tran-td-ui relative">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
+                              value={row.slCode || ""}
+                              readOnly
+                            />
+                            {!isFormDisabled && (
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                                onClick={() => {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showSlModal: true,
+                                    accountModalSource: "slCode",
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                        </td>
                         {/* VAT Code */}
-                                     <td className="global-tran-td-ui relative">
-                                      <div className="flex items-center">
-                                        <input
-                                          type="text"
-                                          className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-                                          value={row.vatCode || ""}
-                                          readOnly
-                                        />
-                                        {!isFormDisabled && (
-                                        <FontAwesomeIcon 
-                                          icon={faMagnifyingGlass} 
-                                          className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                                          onClick={() => {
-                                            updateState({ selectedRowIndex: index,
-                                                          showVatModal: true,
-                                                          accountModalSource: "vatCode" }); 
-                                          }}
-                                        />)}
-                                      </div>
-                                    </td>
-                        
-                                    {/* VAT Name */}
-                                    <td className="global-tran-td-ui">
-                                        <input
-                                            type="text"
-                                            className="w-[250px] global-tran-td-inputclass-ui"
-                                            value={row.vatName || ""}
-                                            readOnly
-                                        />
-                                    </td>
-                        
-                                    {/* VAT Amount */}
-                                    <td className="global-tran-td-ui">
-                                      <input
-                                        type="text"
-                                        className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                                        value={formatNumber(parseFormattedNumber(row.vatAmount)) || formatNumber(parseFormattedNumber(row.vatAmount)) || ""}
-                                        readOnly
-                                      />
-                                    </td>
-                        
-                                    {/* ATC Code */}
-                                    <td className="global-tran-td-ui relative">
-                                      <div className="flex items-center">
-                                        <input
-                                          type="text"
-                                          className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-                                          value={row.atcCode || ""}
-                                          readOnly
-                                        />
-                                        {!isFormDisabled && (
-                                        <FontAwesomeIcon 
-                                          icon={faMagnifyingGlass} 
-                                          className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                                          onClick={() => {
-                                            updateState({ selectedRowIndex: index ,
-                                                          showAtcModal: true,
-                                                          accountModalSource: "atcCode" }); 
-                                          }}
-                                        />)}
-                                      </div>
-                                    </td>
-                        
-                                    
-                                    {/* ATC Name */}
-                                    <td className="global-tran-td-ui">
-                                      <input
-                                        type="text"
-                                        className="w-[250px] global-tran-td-inputclass-ui"
-                                        value={row.atcName || ""}
-                                        readOnly
-                                      />
-                                    </td>
-                        
-                                    {/* ATC Amount */}
-                                    <td className="global-tran-td-ui">
-                                        <input
-                                           type="text"
-                                           className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
-                                            value={formatNumber(parseFormattedNumber(row.atcAmount)) || formatNumber(parseFormattedNumber(row.atcAmount)) || ""}
-                                           onChange={(e) => handleDetailChange(index, 'atcAmount', e.target.value)}
-                                        />
-                                    </td>
+                        <td className="global-tran-td-ui relative">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
+                              value={row.vatCode || ""}
+                              readOnly
+                            />
+                            {!isFormDisabled && (
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                                onClick={() => {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showVatModal: true,
+                                    accountModalSource: "vatCode",
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* VAT Name */}
+                        <td className="global-tran-td-ui">
+                          <input
+                            type="text"
+                            className="w-[250px] global-tran-td-inputclass-ui"
+                            value={row.vatName || ""}
+                            readOnly
+                          />
+                        </td>
+
+                        {/* VAT Amount */}
+                        <td className="global-tran-td-ui">
+                          <input
+                            type="text"
+                            className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                            value={
+                              formatNumber(
+                                parseFormattedNumber(row.vatAmount)
+                              ) ||
+                              formatNumber(
+                                parseFormattedNumber(row.vatAmount)
+                              ) ||
+                              ""
+                            }
+                            readOnly
+                          />
+                        </td>
+
+                        {/* ATC Code */}
+                        <td className="global-tran-td-ui relative">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
+                              value={row.atcCode || ""}
+                              readOnly
+                            />
+                            {!isFormDisabled && (
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                                onClick={() => {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showAtcModal: true,
+                                    accountModalSource: "atcCode",
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* ATC Name */}
+                        <td className="global-tran-td-ui">
+                          <input
+                            type="text"
+                            className="w-[250px] global-tran-td-inputclass-ui"
+                            value={row.atcName || ""}
+                            readOnly
+                          />
+                        </td>
+
+                        {/* ATC Amount */}
+                        <td className="global-tran-td-ui">
+                          <input
+                            type="text"
+                            className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
+                            value={
+                              formatNumber(
+                                parseFormattedNumber(row.atcAmount)
+                              ) ||
+                              formatNumber(
+                                parseFormattedNumber(row.atcAmount)
+                              ) ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              handleDetailChange(
+                                index,
+                                "atcAmount",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
                         <td className="global-tran-td-ui relative">
                           <div className="flex items-center">
                             <input
@@ -2700,17 +3100,19 @@ const handleAccountDoubleDtl1Click = (index) => {
                               className="w-[100px] global-tran-td-inputclass-ui text-center pr-6"
                               value={row.paytermCode || ""}
                               readOnly
-                              onDoubleClick={() => handlePaytermDoubleClick(index)}
+                              onDoubleClick={() =>
+                                handlePaytermDoubleClick(index)
+                              }
                               disabled={isFormDisabled}
                             />
                             {!isFormDisabled && (
-                              <FontAwesomeIcon 
-                                icon={faMagnifyingGlass} 
+                              <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
                                 className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
                                 onClick={() => {
-                                  updateState({ 
+                                  updateState({
                                     selectedRowIndex: index,
-                                    showPaytermModal: true 
+                                    showPaytermModal: true,
                                   });
                                 }}
                               />
@@ -2762,7 +3164,8 @@ const handleAccountDoubleDtl1Click = (index) => {
                   className="global-tran-tab-footer-button-add-ui"
                   disabled={isFormDisabled}
                 >
-                  <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
+                  <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                  Add
                 </button>
               </div>
 
@@ -2773,7 +3176,10 @@ const handleAccountDoubleDtl1Click = (index) => {
                   <label className="global-tran-tab-footer-total-label-ui">
                     Total Invoice Amount:
                   </label>
-                  <label id="totalInvoiceAmount" className="global-tran-tab-footer-total-value-ui">
+                  <label
+                    id="totalInvoiceAmount"
+                    className="global-tran-tab-footer-total-value-ui"
+                  >
                     0.00
                   </label>
                 </div>
@@ -2783,7 +3189,10 @@ const handleAccountDoubleDtl1Click = (index) => {
                   <label className="global-tran-tab-footer-total-label-ui">
                     Total VAT Amount:
                   </label>
-                  <label id="totalVATAmount" className="global-tran-tab-footer-total-value-ui">
+                  <label
+                    id="totalVATAmount"
+                    className="global-tran-tab-footer-total-value-ui"
+                  >
                     0.00
                   </label>
                 </div>
@@ -2793,7 +3202,10 @@ const handleAccountDoubleDtl1Click = (index) => {
                   <label className="global-tran-tab-footer-total-label-ui">
                     Total ATC Amount:
                   </label>
-                  <label id="totalATCAmount" className="global-tran-tab-footer-total-value-ui">
+                  <label
+                    id="totalATCAmount"
+                    className="global-tran-tab-footer-total-value-ui"
+                  >
                     0.00
                   </label>
                 </div>
@@ -2803,7 +3215,10 @@ const handleAccountDoubleDtl1Click = (index) => {
                   <label className="global-tran-tab-footer-total-label-ui">
                     Total Payable Amount:
                   </label>
-                  <label id="totalPayableAmount" className="global-tran-tab-footer-total-value-ui">
+                  <label
+                    id="totalPayableAmount"
+                    className="global-tran-tab-footer-total-value-ui"
+                  >
                     0.00
                   </label>
                 </div>
@@ -2821,11 +3236,11 @@ const handleAccountDoubleDtl1Click = (index) => {
           <div className="flex flex-row sm:flex-row">
             <button
               className={`global-tran-tab-padding-ui ${
-                GLactiveTab === 'invoice'
-                  ? 'global-tran-tab-text_active-ui'
-                  : 'global-tran-tab-text_inactive-ui'
+                GLactiveTab === "invoice"
+                  ? "global-tran-tab-text_active-ui"
+                  : "global-tran-tab-text_inactive-ui"
               }`}
-              onClick={() => updateState({ GLactiveTab: 'invoice' })}
+              onClick={() => updateState({ GLactiveTab: "invoice" })}
             >
               General Ledger
             </button>
@@ -2838,14 +3253,14 @@ const handleAccountDoubleDtl1Click = (index) => {
               className="global-tran-button-generateGL"
               disabled={isLoading || isFormDisabled}
             >
-              {isLoading ? 'Generating...' : 'Generate GL Entries'}
+              {isLoading ? "Generating..." : "Generate GL Entries"}
             </button>
           </div>
         </div>
 
         {/* GL Details Table */}
         <div className="global-tran-table-main-div-ui">
-          <div className="global-tran-table-main-sub-div-ui"> 
+          <div className="global-tran-table-main-sub-div-ui">
             <table className="min-w-full border-collapse">
               <thead className="global-tran-thead-div-ui">
                 <tr>
@@ -2861,25 +3276,35 @@ const handleAccountDoubleDtl1Click = (index) => {
                   <th className="global-tran-th-ui ">ATC Name</th>
 
                   <th className="global-tran-th-ui">Debit ({glCurrDefault})</th>
-                  <th className="global-tran-th-ui">Credit ({glCurrDefault})</th>
-                  
-                  <th className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}>
+                  <th className="global-tran-th-ui">
+                    Credit ({glCurrDefault})
+                  </th>
+
+                  <th
+                    className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}
+                  >
                     Debit ({withCurr3 ? glCurrGlobal2 : currencyCode})
                   </th>
-                  <th className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}>
+                  <th
+                    className={`global-tran-th-ui ${withCurr2 ? "" : "hidden"}`}
+                  >
                     Credit ({withCurr3 ? glCurrGlobal2 : currencyCode})
                   </th>
-                  <th className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}>
+                  <th
+                    className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}
+                  >
                     Debit ({glCurrGlobal3})
                   </th>
-                  <th className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}>
+                  <th
+                    className={`global-tran-th-ui ${withCurr3 ? "" : "hidden"}`}
+                  >
                     Credit ({glCurrGlobal3})
                   </th>
 
                   <th className="global-tran-th-ui">SL Ref. No.</th>
                   <th className="global-tran-th-ui">SL Ref. Date</th>
                   <th className="global-tran-th-ui">Remarks</th>
-                  
+
                   {!isFormDisabled && (
                     <>
                       <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
@@ -2895,7 +3320,9 @@ const handleAccountDoubleDtl1Click = (index) => {
               <tbody className="relative">
                 {detailRowsGL.map((row, index) => (
                   <tr key={index} className="global-tran-tr-ui">
-                    <td className="global-tran-td-ui text-center">{index + 1}</td>
+                    <td className="global-tran-td-ui text-center">
+                      {index + 1}
+                    </td>
 
                     <td className="global-tran-td-ui">
                       <div className="relative w-fit">
@@ -2903,21 +3330,28 @@ const handleAccountDoubleDtl1Click = (index) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.acctCode || ""}
-                          onChange={(e) => handleDetailChangeGL(index, 'acctCode', e.target.value)}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "acctCode",
+                              e.target.value
+                            )
+                          }
                           disabled={isFormDisabled}
                         />
                         {!isFormDisabled && (
-                        <FontAwesomeIcon 
-                          icon={faMagnifyingGlass} 
-                          className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                          onClick={() => {
-                            updateState({
-                              selectedRowIndex: index,
-                              showAccountModal: true,
-                              accountModalSource: "acctCode" 
-                            });
-                          }}
-                        />)}
+                          <FontAwesomeIcon
+                            icon={faMagnifyingGlass}
+                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                            onClick={() => {
+                              updateState({
+                                selectedRowIndex: index,
+                                showAccountModal: true,
+                                accountModalSource: "acctCode",
+                              });
+                            }}
+                          />
+                        )}
                       </div>
                     </td>
 
@@ -2927,22 +3361,30 @@ const handleAccountDoubleDtl1Click = (index) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.rcCode || ""}
-                          onChange={(e) => handleDetailChangeGL(index, 'rcCode', e.target.value)}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "rcCode",
+                              e.target.value
+                            )
+                          }
                           readOnly
                           disabled={isFormDisabled}
                         />
-                        {!isFormDisabled && (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && (
-                          <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                            onClick={() => {
-                              updateState({
-                                selectedRowIndex: index,
-                                showRcModal: true,
-                              });
-                            }}
-                          />
-                        )}
+                        {!isFormDisabled &&
+                          (row.rcCode === "REQ RC" ||
+                            (row.rcCode && row.rcCode !== "REQ RC")) && (
+                            <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                updateState({
+                                  selectedRowIndex: index,
+                                  showRcModal: true,
+                                });
+                              }}
+                            />
+                          )}
                       </div>
                     </td>
 
@@ -2951,7 +3393,13 @@ const handleAccountDoubleDtl1Click = (index) => {
                         type="text"
                         className="w-[100px] global-tran-td-inputclass-ui"
                         value={row.sltypeCode || ""}
-                        onChange={(e) => handleDetailChangeGL(index, 'sltypeCode', e.target.value)}
+                        onChange={(e) =>
+                          handleDetailChangeGL(
+                            index,
+                            "sltypeCode",
+                            e.target.value
+                          )
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -2962,45 +3410,59 @@ const handleAccountDoubleDtl1Click = (index) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.slCode || ""}
-                          onChange={(e) => handleDetailChangeGL(index, 'slCode', e.target.value)}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "slCode",
+                              e.target.value
+                            )
+                          }
                           readOnly
                           disabled={isFormDisabled}
                         />
-                        {!isFormDisabled && (row.slCode === "REQ SL" || row.slCode) && ( 
-                          <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                            onClick={() => {
-                              if (row.slCode === "REQ SL" || row.slCode) { 
-                                updateState({
-                                  selectedRowIndex: index,
-                                  showSlModal: true,
-                                });
-                              }
-                            }}
-                          />
-                        )}
+                        {!isFormDisabled &&
+                          (row.slCode === "REQ SL" || row.slCode) && (
+                            <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                if (row.slCode === "REQ SL" || row.slCode) {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showSlModal: true,
+                                  });
+                                }
+                              }}
+                            />
+                          )}
                       </div>
                     </td>
-                    
+
                     <td className="global-tran-td-ui">
-  <div className="relative inline-block">
-    {/* Hidden span to measure text width */}
-    <span className="invisible absolute whitespace-pre px-2">
-      {row.particular || " "}
-    </span>
+                      <div className="relative inline-block">
+                        {/* Hidden span to measure text width */}
+                        <span className="invisible absolute whitespace-pre px-2">
+                          {row.particular || " "}
+                        </span>
 
-    <input
-      type="text"
-      className="global-tran-td-inputclass-ui"
-      style={{ width: `${(row.particular?.length || 1) * 7}px` }} 
-      value={row.particular || ""}
-      onChange={(e) => handleDetailChangeGL(index, 'particular', e.target.value)}
-      disabled={isFormDisabled}
-    />
-  </div>
-</td>
-
+                        <input
+                          type="text"
+                          className="global-tran-td-inputclass-ui"
+                          style={{
+                            width: `${(row.particular?.length || 1) * 7}px`,
+                          }}
+                          value={row.particular || ""}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "particular",
+                              e.target.value
+                            )
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </div>
+                    </td>
 
                     <td className="global-tran-td-ui">
                       <div className="relative w-fit">
@@ -3008,22 +3470,30 @@ const handleAccountDoubleDtl1Click = (index) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.vatCode || ""}
-                          onChange={(e) => handleDetailChangeGL(index, 'vatCode', e.target.value)}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "vatCode",
+                              e.target.value
+                            )
+                          }
                           readOnly
                           disabled={isFormDisabled}
                         />
-                        {!isFormDisabled && row.vatCode && row.vatCode.length > 0 && (
-                          <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                            onClick={() => {
-                              updateState({
-                                selectedRowIndex: index,
-                                showVatModal: true,
-                              });
-                            }}
-                          />
-                        )}
+                        {!isFormDisabled &&
+                          row.vatCode &&
+                          row.vatCode.length > 0 && (
+                            <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                updateState({
+                                  selectedRowIndex: index,
+                                  showVatModal: true,
+                                });
+                              }}
+                            />
+                          )}
                       </div>
                     </td>
 
@@ -3043,24 +3513,31 @@ const handleAccountDoubleDtl1Click = (index) => {
                           type="text"
                           className="w-[100px] pr-6 global-tran-td-inputclass-ui cursor-pointer"
                           value={row.atcCode || ""}
-                          onChange={(e) => handleDetailChangeGL(index, 'atcCode', e.target.value)}
+                          onChange={(e) =>
+                            handleDetailChangeGL(
+                              index,
+                              "atcCode",
+                              e.target.value
+                            )
+                          }
                           readOnly
                           disabled={isFormDisabled}
                         />
-                        {!isFormDisabled && (row.atcCode !== "" || row.atcCode) && ( 
-                          <FontAwesomeIcon
-                            icon={faMagnifyingGlass}
-                            className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
-                            onClick={() => {
-                              if (row.atcCode !== "" || row.atcCode) { 
-                                updateState({
-                                  selectedRowIndex: index,
-                                  showAtcModal: true,
-                                });
-                              }
-                            }}
-                          />
-                        )}
+                        {!isFormDisabled &&
+                          (row.atcCode !== "" || row.atcCode) && (
+                            <FontAwesomeIcon
+                              icon={faMagnifyingGlass}
+                              className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
+                              onClick={() => {
+                                if (row.atcCode !== "" || row.atcCode) {
+                                  updateState({
+                                    selectedRowIndex: index,
+                                    showAtcModal: true,
+                                  });
+                                }
+                              }}
+                            />
+                          )}
                       </div>
                     </td>
 
@@ -3069,7 +3546,9 @@ const handleAccountDoubleDtl1Click = (index) => {
                         type="text"
                         className="w-[200px] global-tran-td-inputclass-ui"
                         value={row.atcName || ""}
-                        onChange={(e) => handleDetailChangeGL(index, 'atcName', e.target.value)}
+                        onChange={(e) =>
+                          handleDetailChangeGL(index, "atcName", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3081,24 +3560,39 @@ const handleAccountDoubleDtl1Click = (index) => {
                         value={row.debit || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "debit", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "debit",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'debit', e.target.value, true);
+                            handleBlurGL(index, "debit", e.target.value, true);
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "debit", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'debit', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "debit", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3110,138 +3604,249 @@ const handleAccountDoubleDtl1Click = (index) => {
                         value={row.credit || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "credit", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "credit",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'credit', e.target.value, true);
+                            handleBlurGL(index, "credit", e.target.value, true);
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "credit", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'credit', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "credit", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
 
-                    <td className={`global-tran-td-ui text-right ${withCurr2 ? "" : "hidden"}`}>
+                    <td
+                      className={`global-tran-td-ui text-right ${
+                        withCurr2 ? "" : "hidden"
+                      }`}
+                    >
                       <input
                         type="text"
                         className="w-[120px] global-tran-td-inputclass-ui text-right"
                         value={row.debitFx1 || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "debitFx1", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "debitFx1",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'debitFx1', e.target.value, true);
+                            handleBlurGL(
+                              index,
+                              "debitFx1",
+                              e.target.value,
+                              true
+                            );
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "debitFx1", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'debitFx1', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "debitFx1", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
-                    <td className={`global-tran-td-ui text-right ${withCurr2 ? "" : "hidden"}`}>
+                    <td
+                      className={`global-tran-td-ui text-right ${
+                        withCurr2 ? "" : "hidden"
+                      }`}
+                    >
                       <input
                         type="text"
                         className="w-[120px] global-tran-td-inputclass-ui text-right"
                         value={row.creditFx1 || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "creditFx1", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "creditFx1",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'creditFx1', e.target.value, true);
+                            handleBlurGL(
+                              index,
+                              "creditFx1",
+                              e.target.value,
+                              true
+                            );
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "creditFx1", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'creditFx1', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "creditFx1", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
 
-                    <td className={`global-tran-td-ui text-right ${withCurr3 ? "" : "hidden"}`}>
+                    <td
+                      className={`global-tran-td-ui text-right ${
+                        withCurr3 ? "" : "hidden"
+                      }`}
+                    >
                       <input
                         type="text"
                         className="w-[120px] global-tran-td-inputclass-ui text-right"
                         value={row.debitFx2 || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "debitFx2", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "debitFx2",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'debitFx2', e.target.value, true);
+                            handleBlurGL(
+                              index,
+                              "debitFx2",
+                              e.target.value,
+                              true
+                            );
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "debitFx2", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'debitFx2', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "debitFx2", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
-                    <td className={`global-tran-td-ui text-right ${withCurr3 ? "" : "hidden"}`}>
+                    <td
+                      className={`global-tran-td-ui text-right ${
+                        withCurr3 ? "" : "hidden"
+                      }`}
+                    >
                       <input
                         type="text"
                         className="w-[120px] global-tran-td-inputclass-ui text-right"
                         value={row.creditFx2 || ""}
                         onChange={(e) => {
                           const inputValue = e.target.value;
-                          const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
-                          if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
-                            handleDetailChangeGL(index, "creditFx2", sanitizedValue);
+                          const sanitizedValue = inputValue.replace(
+                            /[^0-9.]/g,
+                            ""
+                          );
+                          if (
+                            /^\d*\.?\d{0,2}$/.test(sanitizedValue) ||
+                            sanitizedValue === ""
+                          ) {
+                            handleDetailChangeGL(
+                              index,
+                              "creditFx2",
+                              sanitizedValue
+                            );
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            handleBlurGL(index, 'creditFx2', e.target.value, true);
+                            handleBlurGL(
+                              index,
+                              "creditFx2",
+                              e.target.value,
+                              true
+                            );
                           }
                         }}
                         onFocus={(e) => {
-                          if (e.target.value === "0.00" || e.target.value === "0") {
+                          if (
+                            e.target.value === "0.00" ||
+                            e.target.value === "0"
+                          ) {
                             e.target.value = "";
                             handleDetailChangeGL(index, "creditFx2", "");
                           }
                         }}
-                        onBlur={(e) => handleBlurGL(index, 'creditFx2', e.target.value)}
+                        onBlur={(e) =>
+                          handleBlurGL(index, "creditFx2", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3252,7 +3857,9 @@ const handleAccountDoubleDtl1Click = (index) => {
                         className="w-[100px] global-tran-td-inputclass-ui"
                         value={row.slRefNo || ""}
                         maxLength={25}
-                        onChange={(e) => handleDetailChangeGL(index, 'slRefNo', e.target.value)}
+                        onChange={(e) =>
+                          handleDetailChangeGL(index, "slRefNo", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3262,7 +3869,13 @@ const handleAccountDoubleDtl1Click = (index) => {
                         type="date"
                         className="w-[100px] global-tran-td-inputclass-ui"
                         value={row.slrefDate || ""}
-                        onChange={(e) => handleDetailChangeGL(index, 'slrefDate', e.target.value)}
+                        onChange={(e) =>
+                          handleDetailChangeGL(
+                            index,
+                            "slrefDate",
+                            e.target.value
+                          )
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3272,8 +3885,12 @@ const handleAccountDoubleDtl1Click = (index) => {
                         type="text"
                         className="w-[100px] global-tran-td-inputclass-ui"
                         value={row.remarks || header.remarks || ""}
-                        style={{ width: `${(row.particular?.length || 1) * 8}px` }} 
-                        onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
+                        style={{
+                          width: `${(row.particular?.length || 1) * 8}px`,
+                        }}
+                        onChange={(e) =>
+                          handleDetailChangeGL(index, "remarks", e.target.value)
+                        }
                         disabled={isFormDisabled}
                       />
                     </td>
@@ -3314,7 +3931,8 @@ const handleAccountDoubleDtl1Click = (index) => {
               className="global-tran-tab-footer-button-add-ui"
               disabled={isFormDisabled}
             >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />Add
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              Add
             </button>
           </div>
 
@@ -3322,20 +3940,32 @@ const handleAccountDoubleDtl1Click = (index) => {
           <div className="global-tran-tab-footer-total-main-div-ui">
             {/* Total Debit */}
             <div className="global-tran-tab-footer-total-div-ui">
-              <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-label-ui">
+              <label
+                htmlFor="TotalDebit"
+                className="global-tran-tab-footer-total-label-ui"
+              >
                 Total Debit:
               </label>
-              <label htmlFor="TotalDebit" className="global-tran-tab-footer-total-value-ui">
+              <label
+                htmlFor="TotalDebit"
+                className="global-tran-tab-footer-total-value-ui"
+              >
                 {totalDebit}
               </label>
             </div>
 
             {/* Total Credit */}
             <div className="global-tran-tab-footer-total-div-ui">
-              <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-label-ui">
+              <label
+                htmlFor="TotalCredit"
+                className="global-tran-tab-footer-total-label-ui"
+              >
                 Total Credit:
               </label>
-              <label htmlFor="TotalCredit" className="global-tran-tab-footer-total-value-ui">
+              <label
+                htmlFor="TotalCredit"
+                className="global-tran-tab-footer-total-value-ui"
+              >
                 {totalCredit}
               </label>
             </div>
@@ -3345,14 +3975,14 @@ const handleAccountDoubleDtl1Click = (index) => {
 
       {/* Modals */}
       {branchModalOpen && (
-        <BranchLookupModal 
+        <BranchLookupModal
           isOpen={branchModalOpen}
           onClose={handleCloseBranchModal}
         />
       )}
 
       {currencyModalOpen && (
-        <CurrLookupModal 
+        <CurrLookupModal
           isOpen={currencyModalOpen}
           onClose={handleCloseCurrencyModal}
         />
@@ -3372,40 +4002,34 @@ const handleAccountDoubleDtl1Click = (index) => {
           onClose={handleCloseAccountModal}
           source={accountModalSource}
         />
-       )}
+      )}
 
       {/* RC Code Modal */}
-{showRcModal && (
-  <RCLookupModal 
-    isOpen={showRcModal}
-    onClose={handleCloseRcModalGL}
-    source={accountModalSource}
-  />
-)}
+      {showRcModal && (
+        <RCLookupModal
+          isOpen={showRcModal}
+          onClose={handleCloseRcModalGL}
+          source={accountModalSource}
+        />
+      )}
 
       {/* VAT Code Modal */}
       {showVatModal && (
-        <VATLookupModal  
-          isOpen={showVatModal}
-          onClose={handleCloseVatModal}
-        />
+        <VATLookupModal isOpen={showVatModal} onClose={handleCloseVatModal} />
       )}
 
       {/* ATC Code Modal */}
       {showAtcModal && (
-        <ATCLookupModal  
-          isOpen={showAtcModal}
-          onClose={handleCloseAtcModal}
-        />
+        <ATCLookupModal isOpen={showAtcModal} onClose={handleCloseAtcModal} />
       )}
 
       {/* SL Code Lookup Modal */}
-{showSlModal && (
-  <SLMastLookupModal
-    isOpen={showSlModal}
-    onClose={handleCloseSlModalGL}
-  />
-)}
+      {showSlModal && (
+        <SLMastLookupModal
+          isOpen={showSlModal}
+          onClose={handleCloseSlModalGL}
+        />
+      )}
 
       {/* Payment Terms Lookup Modal */}
       {showPaytermModal && (
@@ -3417,18 +4041,7 @@ const handleAccountDoubleDtl1Click = (index) => {
 
       {/* Cancellation Modal */}
       {showCancelModal && (
-        <CancelTranModal
-          isOpen={showCancelModal}
-          onClose={handleCloseCancel}
-        />
-      )}
-
-      {/* Post Modal */}
-      {showPostModal && (
-        <PostTranModal
-          isOpen={showPostModal}
-          onClose={handleClosePost}
-        />
+        <CancelTranModal isOpen={showCancelModal} onClose={handleCloseCancel} />
       )}
 
       {showAttachModal && (
@@ -3445,14 +4058,26 @@ const handleAccountDoubleDtl1Click = (index) => {
       )}
 
       {showSignatoryModal && (
-        <DocumentSignatories
-          isOpen={showSignatoryModal}
-          params={documentID}
-          onClose={handleCloseSignatory}
-          onCancel={() => updateState({ showSignatoryModal: false })}
-        />
-      )}
+  <DocumentSignatories
+    isOpen={showSignatoryModal}
+    params={{
+      documentID: documentID,        // ✅ Pass the actual document ID
+      noReprints: 0,                 // ✅ Add this if needed
+      docType: docType               // ✅ Add this if needed
+    }}
+    onClose={handleCloseSignatory}
+    onCancel={() => updateState({ showSignatoryModal: false })}
+  />
+)}
 
+      {/* Post Modal */}
+       {showPostingModal && (
+    <PostAPV
+      isOpen={showPostingModal}
+      userCode={userCode} // This should now work
+      onClose={() => updateState({ showPostingModal: false })}
+    />
+  )}
       {showSpinner && <LoadingSpinner />}
     </div>
   );

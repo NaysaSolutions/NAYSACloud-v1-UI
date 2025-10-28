@@ -38,11 +38,16 @@ import PostJV    from "./NAYSA Cloud/Module/Main Module/General Ledger/PostJV.js
 import BranchRef from "./NAYSA Cloud/Reference File/BranchRef.jsx";
 import BankRef   from "./NAYSA Cloud/Reference File/BankRef.jsx";
 import UserAccessRights   from "./NAYSA Cloud/Reference File/UserAccessRights.jsx";
+import CutoffRef from "./NAYSA Cloud/Reference File/CutoffRef.jsx";
 
 import ARReportModal from "./NAYSA Cloud/Printing/ARReport.jsx";
 import APReportModal from "./NAYSA Cloud/Printing/APReport.jsx";
+import GLReportModal from "./NAYSA Cloud/Printing/GLReport.jsx";
 import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
 import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
+
+
+import ARINQ from "./NAYSA Cloud/Query/ARINQ.jsx";
 
 
 
@@ -72,11 +77,11 @@ export const pageRegistry = {
 
 
   //Global
-  AllTranHistory,
+  AllTranHistory,ARINQ,
 
   // Global Reference
   BranchRef,
-  BankRef,
+  BankRef,CutoffRef,
   UserAccessRights,
 
  
@@ -87,6 +92,7 @@ export const pageRegistry = {
 
 
   //Printing
+  GLReportModal,
   ARReportModal,
   APReportModal,
   VIReportModal,

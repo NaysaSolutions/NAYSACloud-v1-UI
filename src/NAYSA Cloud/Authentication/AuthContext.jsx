@@ -29,13 +29,12 @@ const IDLE_LIMIT_MS = IDLE_LIMIT_MINUTES * 60 * 1000;
 
 /* -------- Heartbeats --------
    Remote heartbeat: configured in SECONDS (default 15s).
-   Expire heartbeat: aligned to VITE_SESSION_LIFETIME in MINUTES (minimum 1 minute).
+   Expire heartbeat: aligned to the lifetime window in minutes (minimum 1 minute).
 */
 const REMOTE_HEARTBEAT_MS = Math.max(
   1000,
   (Number(import.meta.env.VITE_REMOTE_HEARTBEAT_SECONDS ?? 15) | 0) * 1000
 );
-// Align expiry heartbeat to the lifetime window in minutes (never less than 1 minute).
 const EXPIRE_HEARTBEAT_MS = Math.max(60_000, IDLE_LIMIT_MINUTES * 60_000);
 
 /* ---------------- Leader heartbeat across tabs ---------------- */
@@ -108,15 +107,79 @@ export default function AuthProvider({ children }) {
     markAuthReady(false);
   }, []);
 
-  /* ---------------- API logout ---------------- */
-  const logout = useCallback(async () => {
+  /* ---------------- Unified server-side logout (server → broadcast → local) ---------------- */
+ const serverLogout = useCallback(
+  async (reason = "manual") => {
+    if (logoutLatchRef.current) return; // avoid duplicate calls across tabs
+    logoutLatchRef.current = true;
+
+    // 1) Server first → clears login_active on backend
     try {
       await apiClient.post("/logout");
-    } catch {/* ignore */} finally {
-      bcRef.current?.postMessage({ type: "logout", reason: "manual" });
-      hardLogout();
+    } catch {
+      // ignore; scheduler still frees stale seats as fallback
     }
-  }, [hardLogout]);
+
+    // 2) Broadcast to other tabs so they can show their own popup
+    try {
+      bcRef.current?.postMessage({ type: "logout", reason });
+    } catch {}
+
+    // 3) Show popup LOCALLY in this (initiating) tab, with auto-close 5s
+    const showPopup = document.visibilityState === "visible";
+    if (showPopup) {
+      const msg =
+        reason === "idle"
+          ? {
+              icon: "warning",
+              title: "Signed out for inactivity",
+              text: "You were inactive and have been signed out. Please sign in again.",
+            }
+          : reason === "expired"
+          ? {
+              icon: "warning",
+              title: "Session expired",
+              text: "Your session expired. Please sign in again.",
+            }
+          : reason === "remote"
+          ? {
+              icon: "info",
+              title: "Signed out",
+              text:
+                "Your account was signed in elsewhere or the server ended the session.",
+            }
+          : {
+              icon: "warning",
+              title: "Session ended",
+              text: "Your session has ended. Please sign in again.",
+            };
+
+      try {
+        await Swal.fire({
+          ...msg,
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+      } catch {}
+    } else {
+      // queue a notice to show when the tab regains focus
+      pendingLogoutNoticeRef.current = true;
+    }
+
+    // 4) Finally, clear local state
+    hardLogout();
+  },
+  [hardLogout]
+);
+
+
+  /* ---------------- API logout (manual) ---------------- */
+  const logout = useCallback(async () => {
+    await serverLogout("manual");
+  }, [serverLogout]);
 
   /* ---------------- BroadcastChannel ---------------- */
   useEffect(() => {
@@ -124,7 +187,7 @@ export default function AuthProvider({ children }) {
     const bc = new BroadcastChannel(AUTH_BC_NAME);
     bcRef.current = bc;
 
-    bc.onmessage = (e) => {
+    bc.onmessage = async (e) => {
       if (!e?.data?.type) return;
 
       if (e.data.type === "logout") {
@@ -133,6 +196,14 @@ export default function AuthProvider({ children }) {
 
         const reason = e.data.reason;
         const showPopup = document.visibilityState === "visible";
+
+        // Ensure DB is updated FIRST by having the leader call /logout
+        if (tryAcquireLeader()) {
+          try {
+            await apiClient.post("/logout");
+          } catch {}
+          renewLeader();
+        }
 
         const msg =
           reason === "idle"
@@ -160,12 +231,21 @@ export default function AuthProvider({ children }) {
                 text: "Your session has ended. Please sign in again.",
               };
 
+        // Show popup AFTER server call; auto-close in 5 seconds
         if (showPopup) {
-          Swal.fire({ ...msg, confirmButtonText: "OK" }).then(() => hardLogout());
+          await Swal.fire({
+            ...msg,
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+          });
         } else {
           pendingLogoutNoticeRef.current = true;
-          hardLogout();
         }
+
+        hardLogout();
         return;
       }
 
@@ -228,7 +308,12 @@ export default function AuthProvider({ children }) {
             icon: "warning",
             title: "Session ended",
             text: "Your session has ended. Please sign in again.",
-            confirmButtonText: "OK",
+            confirmButtonText: undefined,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
           });
         }
         check();
@@ -261,25 +346,14 @@ export default function AuthProvider({ children }) {
 
     let stopped = false;
 
-    // 1) Idle
-    const idleCheck = () => {
+    // 1) Idle — server first; popup handled by BC receiver with 5s timer
+    const idleCheck = async () => {
       if (stopped) return;
       const idleFor = Date.now() - lastActivity.current;
-   
 
       if (idleFor >= IDLE_LIMIT_MS) {
-        bcRef.current?.postMessage({ type: "logout", reason: "idle" });
-        const msg = {
-          icon: "warning",
-          title: "Signed out for inactivity",
-          text: "You were inactive and have been signed out. Please sign in again.",
-        };
-        if (document.visibilityState === "visible") {
-          Swal.fire({ ...msg, confirmButtonText: "OK" }).then(() => hardLogout());
-        } else {
-          pendingLogoutNoticeRef.current = true;
-          hardLogout();
-        }
+        await serverLogout("idle");
+        return;
       } else {
         idleTimer.current = window.setTimeout(idleCheck, 1000);
       }
@@ -340,7 +414,7 @@ export default function AuthProvider({ children }) {
       if (remoteHbTimer.current) clearTimeout(remoteHbTimer.current);
       if (expireHbTimer.current) clearTimeout(expireHbTimer.current);
     };
-  }, [user, hardLogout]);
+  }, [user, serverLogout]);
 
   /* ---------------- Login ---------------- */
   const login = useCallback(
@@ -376,4 +450,3 @@ export default function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
-

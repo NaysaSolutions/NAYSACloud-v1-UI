@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { postRequest } from "@/NAYSA Cloud/Configuration/BaseURL";
+import { exportHistoryExcel } from "@/NAYSA Cloud/Global/report";
+import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
 import { subDays, format } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Modal from "react-modal";
 import { useNavigate, useLocation } from "react-router-dom";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faList, faPen, faCalendarAlt, faFilter, faDownload, faRedo, faArrowUp, faArrowDown
-} from "@fortawesome/free-solid-svg-icons";
+import { faList, faPen, faCalendarAlt, faFilter, faDownload, faRedo, faArrowUp, faArrowDown} from "@fortawesome/free-solid-svg-icons";
 
-import { postRequest } from "@/NAYSA Cloud/Configuration/BaseURL";
 import { useReturnToDate } from "@/NAYSA Cloud/Global/dates";
 import { useSelectedHSColConfig } from "@/NAYSA Cloud/Global/selectedData";
 import Header, { HeaderSpacer } from "@/NAYSA Cloud/Components/Header";
-import { useHandleExportExcelHistoryReport } from "@/NAYSA Cloud/Global/report";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 Modal.setAppElement("#root");
 
@@ -27,9 +25,6 @@ function getGlobalCache() {
   }
   return {};
 }
-
-
-
 
 /* ---------------- Formatting helpers ---------------- */
 const formatCellValue = (value, config) => {
@@ -62,10 +57,6 @@ const formatCellValue = (value, config) => {
   }
 };
 
-
-
-
-
 /* -------------- Column config loader -------------- */
 const getColumnConfig = async (groupId) => {
   try {
@@ -95,16 +86,14 @@ const getColumnConfig = async (groupId) => {
   }
 };
 
-
-
-
-
 /* ============================== Component =============================== */
 const AllTranHistory = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const navState = location.state || {};
   const didInitRef = useRef(false);
+  const hydratedFromCacheRef = useRef(false);
+  const { user } = useAuth();
 
   const {
     endpoint: endpointProp,
@@ -112,29 +101,43 @@ const AllTranHistory = (props) => {
     branchCode: branchCodeProp,
     startDate: startDateProp,
     endDate: endDateProp,
-    status: statusProp,             
+    status: statusProp,                 // incoming status value from parent
+    statusOptions: statusOptionsProp,   // incoming status options from parent
     prefillSearchFields: prefillProp,
     onRowDoubleClick,
     showHeader: showHeaderProp,
-    cacheKey: cacheKeyProp,        
+    cacheKey: cacheKeyProp,
+    historyExportName: historyExportNameProp,
   } = props || {};
 
   const endpoint =
     (endpointProp !== undefined && endpointProp) ||
-    (navState.endpoint !== undefined && navState.endpoint) 
+    (navState.endpoint !== undefined && navState.endpoint);
 
   const baseKey =
     (typeof cacheKeyProp === "string" && cacheKeyProp) ||
     (typeof endpoint === "string" && endpoint) ||
     "HISTORY";
 
-  const backToPath = navState.backToPath 
+  const backToPath = navState.backToPath;
   const embedded =
     typeof onRowDoubleClick === "function" ||
     endpointProp !== undefined ||
     cacheKeyProp !== undefined;
 
   const showHeader = showHeaderProp !== undefined ? showHeaderProp : !embedded;
+
+  /* -------- status options from parent (fallback if not provided) -------- */
+  const fallbackStatusOptions = [
+    { value: "All", label: "All Statuses" },
+    { value: "F",   label: "FINALIZED" },
+    { value: "",    label: "OPEN" },
+    { value: "X",   label: "CANCELLED" },
+    { value: "C",   label: "CLOSED" },
+  ];
+  const statusOptions = Array.isArray(statusOptionsProp) && statusOptionsProp.length
+    ? statusOptionsProp
+    : fallbackStatusOptions;
 
   /* ---------------- Local state ---------------- */
   const [branchCode, setBranchCode] = useState(
@@ -156,29 +159,22 @@ const AllTranHistory = (props) => {
   const [dates, setDates] = useState(initialDates());
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
-  const [status, setStatus] = useState(
-    statusProp !== undefined ? statusProp :
-    (navState.status !== undefined ? navState.status : "All")
-  );
+  // Normalize: if parent sends "", we treat the initial UI as "All"
+  const normalizeStatus = (v) => (v === "" ? "All" : (v ?? "All"));
 
-  const [searchFields, setSearchFields] = useState(
-    prefillProp || navState.prefillSearchFields || {}
-  );
-
+  const [status, setStatus] = useState(() => normalizeStatus(statusProp));
+  const [searchFields, setSearchFields] = useState(prefillProp || navState.prefillSearchFields || {});
   const [tabData, setTabData] = useState({});
   const [tabConfigs, setTabConfigs] = useState({});
   const [activeTab, setActiveTab] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc", tabKey: null });
 
-  const hydratedFromCacheRef = useRef(false);
-  
-
   useEffect(() => {
-  if (didInitRef.current) return;   
-  didInitRef.current = true;
+    if (didInitRef.current) return;
+    didInitRef.current = true;
   }, []);
-
 
   /* ---------------- restore from window cache ---------------- */
   useEffect(() => {
@@ -187,6 +183,7 @@ const AllTranHistory = (props) => {
     const incomingBranch = (branchCodeProp !== undefined && branchCodeProp) ||
                            (navState.branchCode !== undefined && navState.branchCode) ||
                            "";
+
     if (snap && incomingBranch && snap.branchCode && snap.branchCode !== incomingBranch) {
       delete cache[baseKey];
       snap = undefined;
@@ -196,18 +193,20 @@ const AllTranHistory = (props) => {
       hydratedFromCacheRef.current = true;
       setDates(snap.dates || initialDates());
       setDateRangeType(snap.dateRangeType || "Last 7 Days");
-      setStatus(snap.status !== undefined ? snap.status : "All");
+      // Priority: explicit prop -> cache -> default
+      const desired = statusProp !== undefined ? normalizeStatus(statusProp)
+                    : (snap.status !== undefined ? normalizeStatus(snap.status) : "All");
+      setStatus(desired);
       setSearchFields(snap.searchFields || {});
       setTabData(snap.tabData || {});
       setTabConfigs(snap.tabConfigs || {});
       setActiveTab(snap.activeTab || null);
       setBranchCode((snap.branchCode !== undefined && snap.branchCode) || branchCode);
+    } else {
+      // No cache: still respect incoming prop for first render
+      if (statusProp !== undefined) setStatus(normalizeStatus(statusProp));
     }
-  }, [baseKey]);
-
-
-
-
+  }, [baseKey, statusProp, branchCode, branchCodeProp, navState.branchCode]);
 
   /* ---------------- keep cache updated on important changes ---------------- */
   useEffect(() => {
@@ -217,11 +216,6 @@ const AllTranHistory = (props) => {
       tabData, tabConfigs, activeTab, branchCode
     };
   }, [baseKey, dates, dateRangeType, status, searchFields, tabData, tabConfigs, activeTab, branchCode]);
-
-
-
-
-
 
   /* ---------------- date presets (don’t override hydrated state) ------------ */
   useEffect(() => {
@@ -235,10 +229,6 @@ const AllTranHistory = (props) => {
 
   const formatDateRange = (start, end) =>
     start && end ? `${format(start, "MM/dd/yyyy")} - ${format(end, "MM/dd/yyyy")}` : "";
-
-
-
-
 
   /* ---------------- columns for a tab ---------------- */
   const getColumnsForTab = useCallback((tabKey) => {
@@ -257,10 +247,6 @@ const AllTranHistory = (props) => {
   const currentRows = tabData[activeTab] || [];
   const currentColumns = useMemo(() => getColumnsForTab(activeTab), [activeTab, getColumnsForTab]);
 
-
-
-
-
   /* ---------------- filtered rows ---------------- */
   const filteredData = useMemo(() => {
     const base = currentRows.filter((row) =>
@@ -270,19 +256,16 @@ const AllTranHistory = (props) => {
       })
     );
     if (status === "All") return base;
-    const statusFieldCandidates = ["status", "doc_stat", "docStatus", "stat"];
+
+    const statusFieldCandidates = ["C", "doc_stat", "docStatus", "status", "stat"];
     return base.filter((row) => {
       const rowStatus =
         statusFieldCandidates
           .map((f) => (row[f] !== undefined ? String(row[f]) : undefined))
-          .find((v) => v !== undefined) || "";
+          .find((v) => v !== undefined) ?? "";
       return rowStatus === status;
     });
   }, [currentRows, searchFields, status]);
-
-
-
-
 
   /* ---------------- fetch on APPLY FILTER only ---------------- */
   const fetchHistory = useCallback(async () => {
@@ -298,9 +281,8 @@ const AllTranHistory = (props) => {
       },
     };
 
+  
     try {
-
-      console.log(endpoint)
       const dataResponse = await postRequest(endpoint, JSON.stringify(payload));
       const raw = dataResponse && dataResponse.data && dataResponse.data[0] && dataResponse.data[0].result ? dataResponse.data[0].result : "{}";
       let parsed;
@@ -348,7 +330,7 @@ const AllTranHistory = (props) => {
       setSearchFields((prev) => (Object.keys(prev).length ? prev : prefillProp || navState.prefillSearchFields || {}));
       setSortConfig({ key: null, direction: "asc", tabKey: initialTabKey });
 
-      // this snapshot write makes APPLY FILTER the only "reset" path
+      // snapshot cache
       const cache = getGlobalCache();
       cache[baseKey] = {
         dates, dateRangeType, status,
@@ -370,10 +352,6 @@ const AllTranHistory = (props) => {
     activeTabKeyProp, prefillProp, navState.activeTabKey, navState.prefillSearchFields,
     baseKey, dateRangeType, status
   ]);
-
-
-
-
 
   /* ---------------- handlers ---------------- */
   const handleSearchChange = (e, key) => {
@@ -408,10 +386,6 @@ const AllTranHistory = (props) => {
     setTabData((prev) => ({ ...prev, [activeTab]: sorted }));
   };
 
-
-
-
-  // UI-only reset; keeps current table visible; user decides when to re-fetch
   const handleResetUI = () => {
     hydratedFromCacheRef.current = false;
     const today = new Date();
@@ -421,119 +395,92 @@ const AllTranHistory = (props) => {
     setStatus("All");
   };
 
-  // const handleExport = () => {
-  //   if (filteredData.length === 0 || !activeTab) return;
-  //   const cols = getColumnsForTab(activeTab);
-  //   const exportData = filteredData.map((row) => {
-  //     const out = {};
-  //     cols.forEach((col) => {
-  //       const formattedValue = formatCellValue(row[col.key], col);
-  //       out[col.label] = typeof formattedValue === "object" && formattedValue !== null
-  //         ? (formattedValue.props && formattedValue.props.children) || ""
-  //         : formattedValue;
-  //     });
-  //     return out;
-  //   });
-  //   const ws = XLSX.utils.json_to_sheet(exportData);
-  //   const wb = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(wb, ws, (activeTab || "Sheet").toUpperCase());
-  //   const buff = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  //   const blob = new Blob([buff], { type: "application/octet-stream" });
-  //   saveAs(blob, `${activeTab}_History_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`);
-  // };
+  // Row color by status in row (X=red, C|F=blue, else default)
+  const getRowClassByStatus = (row) => {
+    const statusFieldCandidates = ["C", "doc_stat", "docStatus", "status", "stat"];
+    const rowStatus = statusFieldCandidates
+      .map((f) => (row[f] !== undefined ? String(row[f]) : undefined))
+      .find((v) => v !== undefined) ?? "";
 
-
-  //Export functions and helper
-  // Build one sheet payload from a tab (visible columns only)
-const tabToSheet = (tabKey) => {
-  const cols = getColumnsForTab(tabKey);      // already filters out hidden cols
-  const headers = cols.map(c => c.label || c.key);
-
-  const rows = (tabData[tabKey] || []).map((row) => {
-    const obj = {};
-    cols.forEach((col) => {
-      const header = col.label || col.key;
-      const val = formatCellValue(row[col.key], col);
-
-      // Strip any React element (e.g., <span/>) to plain text for the API
-      obj[header] = React.isValidElement(val)
-        ? (val.props?.children ?? "")
-        : val;
-    });
-    return obj;
-  });
-
-  // Optional: prettify sheet name like your tab button
-  const sheetName = tabKey
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .slice(0, 31); // Excel sheet name max length
-
-  return { sheetName, headers, rows };
-};
-
-// Build the full jsonSheets array for all tabs currently loaded
-const buildJsonSheets = () =>
-  Object.keys(tabData).map((tabKey) => tabToSheet(tabKey));
-
-
-
-
-const handleExport = async () => {
-  const tabKeys = Object.keys(tabData);
-  if (!tabKeys.length) {
-    alert("No data to export. Please Apply Filter first.");
-    return;
-  }
-
-  const jsonSheets = buildJsonSheets();
-
-  // Build the payload Laravel expects
-  const payload = {
-    reportName: "SVI History",                   // or pass via props if you like
-    userCode:    "AGA",         // <- plug your actual user code source
-    branchCode: branchCode || "",
-    startDate:  dates?.[0] ? format(dates[0], "yyyy-MM-dd") : null,
-    endDate:    dates?.[1] ? format(dates[1], "yyyy-MM-dd") : null,
-    jsonSheets,                                   // 👈 REQUIRED by your Laravel controller
+    if (rowStatus === "X") return "text-red-600";
+    if (rowStatus === "C" || rowStatus === "F") return "text-blue-700";
+    return "";
   };
 
-  try {
+  /* ---------------- Export helpers ---------------- */
+  const tabToSheet = (tabKey) => {
+    const cols = getColumnsForTab(tabKey);
+    const headers = cols.map(c => c.label || c.key);
 
-    // Call your Laravel controller (adjust path to your route)
-    const res = await useHandleExportExcelHistoryReport(payload)
-    //console.log(payload)
+    const rows = (tabData[tabKey] || []).map((row) => {
+      const obj = {};
+      cols.forEach((col) => {
+        const header = col.label || col.key;
+        const val = formatCellValue(row[col.key], col);
+        obj[header] = React.isValidElement(val)
+          ? (val.props?.children ?? "")
+          : val;
+      });
+      return obj;
+    });
+    const sheetName = tabKey
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .slice(0, 31);
 
-    // if (!res.ok) {
-    //   const text = await res.text();
-    //   console.error("Export failed:", text);
-    //   alert("Export failed.");
-    //   return;
-    // }
+    return { sheetName, headers, rows };
+  };
 
-    // // Laravel returns the Excel file (stream). Download it.
-    // const blob = await res.blob();
-    // const url = URL.createObjectURL(blob);
-    // const a = document.createElement("a");
-    // const ts = format(new Date(), "yyyyMMdd_HHmmss");
-    // a.href = url;
-    // a.download = `SVI_History_${ts}.xlsx`;
-    // document.body.appendChild(a);
-    // a.click();
-    // a.remove();
-    // URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Export error:", err);
-    alert("Export error. See console for details.");
+  const buildJsonSheets = () =>
+    Object.keys(tabData || {}).map((tabKey) => tabToSheet(tabKey));
+
+  function toTabbedJson( jsonSheets) {
+    const data = {};
+    for (const tab of jsonSheets || []) {
+      const key = tab.sheetName || "Sheet";
+      data[key] = Array.isArray(tab.rows) ? tab.rows : [];
+    }
+    return {
+      Data: data,
+    };
   }
-};
 
+  const exportName =
+    historyExportNameProp ??
+    (location.state && location.state.historyExportName) ??
+    "Transaction History";
 
+  const handleExport = async () => {
+    const tabKeys = Object.keys(tabData || {});
+    if (!tabKeys.length) {
+      alert("No data to export. Please Apply Filter first.");
+      return;
+    }
+    setExporting(true);
 
+    const reportName = exportName;
+    const start = dates?.[0] ? format(dates[0], "yyyy-MM-dd") : null;
+    const end   = dates?.[1] ? format(dates[1], "yyyy-MM-dd") : null;
 
+    const sheets = buildJsonSheets();
+    const jsonData = toTabbedJson(sheets);
 
+  
+    const payload = {
+      ReportName: reportName,
+      UserCode:   user?.USER_CODE,
+      Branch:     branchCode || "",
+      StartDate:  start,
+      EndDate:    end,
+      JsonData:   jsonData,
+    };
 
+    await exportHistoryExcel ("/exportHistoryReport",JSON.stringify(payload),setExporting,reportName);
+  };
 
+  
+  
+    
   const handleRowDoubleClick = useCallback((row) => {
     const docNo = row?.docNo ?? row?.documentNo ?? row?.DOC_NO ?? "";
     const bcode = row?.branchCode ?? row?.BRANCH_CODE ?? "";
@@ -594,22 +541,31 @@ const handleExport = async () => {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filteredData.length > 0 ? (
-              filteredData.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className="hover:bg-blue-50 transition cursor-pointer"
-                  onDoubleClick={() => handleRowDoubleClick(row)}
-                >
-                  {cols.map((col) => (
-                    <td key={col.key} className={`px-3 py-2 border whitespace-nowrap ${col.classNames || "text-left"}`} title={String(row?.[col.key] ?? "")}>
-                      {formatCellValue(row?.[col.key], col)}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              filteredData.map((row, idx) => {
+                const rowClass = getRowClassByStatus(row);
+                return (
+                  <tr
+                    key={idx}
+                    className={`hover:bg-blue-50 transition cursor-pointer ${rowClass}`}
+                    onDoubleClick={() => handleRowDoubleClick(row)}
+                  >
+                    {cols.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-3 py-2 border whitespace-nowrap ${col.classNames || "text-left"}`}
+                        title={String(row?.[col.key] ?? "")}
+                      >
+                        {formatCellValue(row?.[col.key], col)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={cols.length} className="text-center text-gray-500 py-4 border">No records found matching the filter criteria.</td>
+                <td colSpan={cols.length} className="text-center text-gray-500 py-4 border">
+                  No records found matching the filter criteria.
+                </td>
               </tr>
             )}
           </tbody>
@@ -647,7 +603,11 @@ const handleExport = async () => {
           <div className="min-w-[300px]">
             <label className="block text-sm font-medium text-gray-600 mb-1">Date Range:</label>
             <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
-              <select className="border-none focus:ring-0 text-sm bg-transparent pr-2" value={dateRangeType} onChange={(e) => setDateRangeType(e.target.value)}>
+              <select
+                className="border-none focus:ring-0 text-sm bg-transparent pr-2"
+                value={dateRangeType}
+                onChange={(e) => setDateRangeType(e.target.value)}
+              >
                 <option>Last 7 Days</option>
                 <option>Last 30 Days</option>
                 <option>Custom Range</option>
@@ -670,32 +630,45 @@ const handleExport = async () => {
             <label className="block text-sm font-medium text-gray-600 mb-1">Status:</label>
             <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
               <FontAwesomeIcon icon={faFilter} className="text-gray-400 mr-2" />
-              <select className="w-full h-[30px] border-none focus:ring-0 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="All">All Statuses</option>
-                <option value="F">FINALIZED</option>
-                <option value="">OPEN</option>
-                <option value="X">CANCELLED</option>
-                <option value="C">CLOSED</option>
+              <select
+                className="w-full h-[30px] border-none focus:ring-0 text-sm"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                {statusOptions.map((opt) => (
+                  <option key={String(opt.value)} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <div className="flex-shrink-0 w-full md:w-auto mt-auto">
-            <button className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full h-[38px]"
-              onClick={fetchHistory} disabled={loading}>
+            <button
+              className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full h-[38px]"
+              onClick={fetchHistory}
+              disabled={loading}
+            >
               <FontAwesomeIcon icon={faFilter} className="mr-2" />
               {loading ? "LOADING..." : "APPLY FILTER"}
             </button>
           </div>
 
           <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 ml-auto">
-            <button className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md text-sm hover:bg-green-600 h-[38px]"
-              onClick={handleExport} disabled={loading || filteredData.length === 0}>
+            <button
+              className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md text-sm hover:bg-green-600 h-[38px]"
+              onClick={handleExport}
+              disabled={loading || exporting || filteredData.length === 0}
+            >
               <FontAwesomeIcon icon={faDownload} className="mr-2" />
               EXPORT
             </button>
-            <button className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600 h-[38px]"
-              onClick={handleResetUI}>
+            <button
+              className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600 h-[38px]"
+              onClick={handleResetUI}
+              disabled={loading || exporting}
+            >
               <FontAwesomeIcon icon={faRedo} className="mr-2" />
               RESET
             </button>
@@ -743,11 +716,10 @@ const handleExport = async () => {
           </button>
         </div>
       </Modal>
+
+      {(loading || exporting) && <LoadingSpinner />}
     </>
   );
 };
 
 export default AllTranHistory;
-
-
-

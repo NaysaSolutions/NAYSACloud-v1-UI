@@ -24,7 +24,6 @@ import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
-import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 import {
   docTypeNames,
@@ -72,8 +71,8 @@ import Header from '@/NAYSA Cloud/Components/Header';
 import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 const JV = () => {
-  const { user } = useAuth();
   const { resetFlag } = useReset();
+
   const [state, setState] = useState({
     // HS Option
     glCurrMode: "M",
@@ -89,7 +88,6 @@ const JV = () => {
     documentSeries: "Auto",
     documentDocLen: 8,
     documentID: null,
-    // documentDate:useGetCurrentDay(), 
     documentNo: "",
     documentStatus: "",
     status: "OPEN",
@@ -125,7 +123,6 @@ const JV = () => {
 
     // Other Header Info
     jvTypes: [],
-    refdocTypes: [],
     refDocNo: "",
     refDocNo2: "",
     fromDate: null,
@@ -133,8 +130,7 @@ const JV = () => {
     remarks: "",
     billtermCode: "",
     billtermName: "",
-    selectedJVType: "",
-    selectedRefDocType: "",
+    selectedJVType: "REG",
 
     userCode: 'NSI', // Default value
 
@@ -170,7 +166,7 @@ const JV = () => {
     setState(prev => ({ ...prev, ...updates }));
   };
 
-const [jvType, setJvType] = useState('');
+const [jvType, setJvType] = useState('regular');
 const [refDocType, setRefDocType] = useState('');
 
 
@@ -215,7 +211,6 @@ const [refDocType, setRefDocType] = useState('');
     currName,
     currRate,
     jvTypes,
-    refdocTypes,
     refDocNo,
     refDocNo2,
     fromDate,
@@ -224,7 +219,6 @@ const [refDocType, setRefDocType] = useState('');
     billtermCode,
     billtermName,
     selectedJVType,
-    selectedRefDocType,
 
     // Transaction details
     detailRows,
@@ -399,28 +393,7 @@ const [refDocType, setRefDocType] = useState('');
     updateTotalsDisplay(0, 0, 0, 0, 0, 0);
   };   
 
-
-
-
-
   const loadCompanyData = async () => {
-
-    updateState({isLoading:true})
-
-
-    try {
-      const [jvType, refDocType] = await Promise.all([
-        useTopDocDropDown(docType, "JVTRAN_TYPE"),
-        useTopDocDropDown(docType, "JVDOC_TYPE"),
-      ]);
-
-      if (jvType) {
-        updateState({ jvTypes: jvType, selectedJVType: "JV01" });
-      }
-      if (refDocType) {
-        updateState({ refdocTypes: refDocType, selectedRefDocType: "JV" });
-      }
-
     const hsOption = await useTopHSOption();
     if (hsOption) {
       updateState({
@@ -440,10 +413,6 @@ const [refDocType, setRefDocType] = useState('');
         });
       }
     }
-      } catch (err) {
-      console.error("Error fetching data:", err);
-    }
-
   };
 
   const loadCurrencyMode = (
@@ -477,7 +446,7 @@ const [refDocType, setRefDocType] = useState('');
     if (data) {
       updateState({
         jvTypes: data,
-        selectedJVType: "JV01",
+        selectedJVType: "REG",
       });
     }    
   };
@@ -532,7 +501,6 @@ const [refDocType, setRefDocType] = useState('');
         branchCode: data.branchCode,
         header: { jv_date: jvDateForHeader },
         selectedJVType: data.jvtranType,
-        selectedRefDocType: data.refDocType,
         custCode: data.slCode,
         custName: data.slName,
         refDocNo: data.refDocNo,
@@ -587,7 +555,6 @@ const [refDocType, setRefDocType] = useState('');
         documentID,
         header,
         selectedJVType,
-        selectedRefDocType,
         custCode,
         custName,
         refDocNo,
@@ -608,7 +575,6 @@ const [refDocType, setRefDocType] = useState('');
         jvId: documentID || "",
         jvDate: header.jv_date,
         jvtranType: selectedJVType,
-        refDocType: selectedRefDocType,
         slCode: custCode,
         slName: custName,
         refDocNo: refDocNo,
@@ -1265,34 +1231,6 @@ const handleSelectBillTerm = async (billtermCode) => {
 };
 
 
-// const handleFieldBehavior = (option) => {
-//   switch (option) {
-
-//     case "disableOnSaved":
-//      return (
-//         isFormDisabled ||
-//         (selectedJVType === "CR11" && state.documentNo !== "" )
-//       );
-
-
-
-//     default:
-//       return false; 
-//   }
-// };
-
-  const handleJVTypeChange = (e) => {
-   const selectedType = e.target.value;
-    updateState({selectedJVType:selectedType})
-     
-  };
-
-  const handleRefDocTypeChange = (e) => {
-   const selectedType = e.target.value;
-    updateState({selectedRefDocType:selectedType})
-     
-  };
-
 return (
 
     <div className="global-tran-main-div-ui">
@@ -1481,68 +1419,92 @@ return (
                 </div>
                 
                 <div className="relative">
-                    <select id="jvType"
-                        className="peer global-tran-textbox-ui"
-                        value={selectedJVType}
-                        // disabled={handleFieldBehavior("disableOnSaved")} 
-                        onChange={(e) => handleJVTypeChange(e)}
-                    >
-                        {jvTypes.length > 0 ?
-                        (
-                            <>  
-                                {jvTypes.map((type) =>
-                                (
-                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-                                        {type.DROPDOWN_NAME}
-                                    </option>
-                                ))}
-                            </>
-                        ) : (<option value="">Loading Transaction Types...</option>)}
-                    </select>
-                    <label htmlFor="jvType" className="global-tran-floating-label">JV Type</label>
-                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </div>
+ <select
+  id="jvType"
+  className="peer global-tran-textbox-ui"
+  value={jvType}
+  onChange={(e) => setJvType(e.target.value)}
+>
+  <option value="regular">Regular Adjustment</option>
+  <option value="transaction-reversal">Transaction Reversal</option>
+  <option value="ar-settlement">AR Settlement Application</option>
+</select>
+  <label
+    htmlFor="jvType"
+    className="global-tran-floating-label"
+  >
+    JV Type
+  </label>
 
-
+  {/* Dropdown Icon */}
+  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+    <svg
+      className="h-4 w-4 text-gray-500"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+               
+            </div>
                   </div>
 
 
             {/* Column 3 */}
             {/* Ref Doc Type */}
             <div className="global-tran-textbox-group-div-ui">
-       
-          
-                <div className="relative">
-                    <select id="refDocType"
-                        className="peer global-tran-textbox-ui"
-                        value={selectedRefDocType}
-                        // disabled={handleFieldBehavior("disableOnSaved")} 
-                        onChange={(e) => handleRefDocTypeChange(e)}
-                    >
-                        {refdocTypes.length > 0 ?
-                        (
-                            <>  
-                                {refdocTypes.map((type) =>
-                                (
-                                    <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
-                                        {type.DROPDOWN_NAME}
-                                    </option>
-                                ))}
-                            </>
-                        ) : (<option value="">Loading Ref Doc Types...</option>)}
-                    </select>
-                    <label htmlFor="refDocType" className="global-tran-floating-label">JV Type</label>
-                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                        <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </div>
+           <div className="relative">
+  <select
+  id="refDocType"
+  className="peer global-tran-textbox-ui"
+  value={refDocType}
+  onChange={(e) => setRefDocType(e.target.value)}
+>
+  {jvType === 'regular' && (
+    <option value="journal-voucher">Journal Voucher</option>
+  )}
 
+  {jvType === 'transaction-reversal' && (
+    <>
+      <option value="accounts-payable">Accounts Payable</option>
+      <option value="collection-receipt">Collection Receipt</option>
+      <option value="check-voucher">Check Voucher</option>
+      <option value="acknowledgment-receipt">Acknowledgment Receipt</option>
+      <option value="journal-voucher">Journal Voucher</option>
+      <option value="petty-cash-voucher">Petty Cash Voucher</option>
+    </>
+  )}
+
+  {jvType === 'ar-settlement' && (
+    <>
+      <option value="ar-credit-memo">AR Credit Memo</option>
+      <option value="collection-receipt">Collection Receipt</option>
+      <option value="acknowledgment-receipt">Acknowledgment Receipt</option>
+    </>
+  )}
+</select>
+  <label
+    htmlFor="refDocType"
+    className="global-tran-floating-label"
+  >
+    Reference Document Type
+  </label>
+</div>
+{/* Dropdown Icon */}
+  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+    <svg
+      className="h-4 w-4 text-gray-500"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
 
                           
 
@@ -2345,4 +2307,3 @@ return (
 };
 
 export default JV;
-

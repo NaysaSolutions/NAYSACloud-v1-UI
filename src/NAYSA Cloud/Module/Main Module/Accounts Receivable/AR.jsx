@@ -1607,7 +1607,7 @@ const handleCloseSignatory = async (mode) => {
         showSpinner: true,
         showSignatoryModal: false,
         noReprints: mode === "Final" ? 1 : 0, });
-    await useHandlePrint(documentID, docType, mode );
+    await useHandlePrint(documentID, docType, mode, userCode );
 
     updateState({
       showSpinner: false 
@@ -3678,6 +3678,7 @@ const handleCloseBranchModal = (selectedBranch) => {
             return "All";
           })()}
           onRowDoubleClick={handleHistoryRowPick}
+          historyExportName={`${documentTitle} History`} 
     />
   </div>
 

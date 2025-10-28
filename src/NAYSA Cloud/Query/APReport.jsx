@@ -1,28 +1,29 @@
-import { useState, useEffect, useMemo, useRef,useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL";
 import { useHandlePrintARReport, useHandleDownloadExcelARReport } from "@/NAYSA Cloud/Global/report";
 import { useTopHSRptRow, useTopUserRow } from "@/NAYSA Cloud/Global/top1RefTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faXmark, faCircleNotch, faRotateLeft, faBroom, faDownload, faPrint, faCircleXmark,faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faXmark, faCircleNotch, faRotateLeft, faBroom, faDownload, faPrint, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
 import { useGetCurrentDay, useFormatToDate } from "@/NAYSA Cloud/Global/dates";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
-import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
+import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import Swal from "sweetalert2";
 
-
-const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) => {
-
+/** -----------------------------------------------------------
+ * APReportModal — Enhanced, responsive, accessible
+ * ----------------------------------------------------------*/
+const APReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) => {
   const today = useGetCurrentDay();
   const firstDayOfMonth = useMemo(() => {
     const d = new Date(today);
     return useFormatToDate(new Date(d.getFullYear(), d.getMonth(), 1));
   }, [today, useFormatToDate]);
 
-
   const [loading, setLoading] = useState(false);
   const [branchModalOpen, setBranchModalOpen] = useState(false);
-  const [customerModalOpen, setCustomerModalOpen] = useState(false);
-  const [sCustMode, setCustMode] = useState("S"); 
+  const [payeeModalOpen, setPayeeModalOpen] = useState(false);
+  const [sPayeeMode, setPayeeMode] = useState("S");
+
   const [reportList, setReportList] = useState([]);
   const [reportQuery, setReportQuery] = useState("");
   const [selected, setSelected] = useState({ id: 0, name: "" });
@@ -32,12 +33,11 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     branchName: "",
     startDate: firstDayOfMonth,
     endDate: today,
-    sCustCode: "",
-    sCustName: "",
-    eCustCode: "",
-    eCustName: "",
+    sPayeeCode: "",
+    sPayeeName: "",
+    ePayeeCode: "",
+    ePayeeName: "",
   });
-
 
   const updateState = (patch) => setFilters((f) => ({ ...f, ...patch }));
   const alertFired = useRef(false);
@@ -56,55 +56,55 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     return () => (document.body.style.overflow = prev);
   }, [isOpen]);
 
+  // Fetch report list + user’s default branch
   useEffect(() => {
-     if (!isOpen) return;
-     let cancelled = false;
-     alertFired.current = false;
-     setLoading(true);
- 
-     (async () => {
-       try {
-         const params = { mdl: "AR", userCode };
-         const [rptRes, userRes] = await Promise.all([
-           fetchData("hsrpt", params),
-           useTopUserRow(userCode),
-         ]);
- 
-         if (!cancelled && userRes) {
-           updateState({
-             branchCode: userRes.branchCode,
-             branchName: userRes.branchName,
-           });
-         }
- 
-         const list = rptRes?.data?.[0]?.result ? JSON.parse(rptRes.data[0].result) : [];
-         if (!cancelled) {
-           if (list.length === 0 && !alertFired.current) {
-             Swal.fire({ icon: "info", title: "No Records Found", text: "Management report not defined." });
-             alertFired.current = true;
-             onClose?.();
-             return;
-           }
-           setReportList(list);
-           if (list.length > 0) setSelected({ id: list[0].reportId, name: list[0].reportName });
-         }
-       } catch (e) {
-         if (!cancelled) {
-           console.error("Error fetching data:", e);
-           Swal.fire({ icon: "error", title: "Load failed", text: e?.message ?? "Unable to load reports." });
-         }
-       } finally {
-         if (!cancelled) setLoading(false);
-       }
-     })();
- 
-     return () => {
-       cancelled = true;
-     };
-   }, [isOpen, userCode, onClose]);
+    if (!isOpen) return;
+    let cancelled = false;
+    alertFired.current = false;
+    setLoading(true);
 
+    (async () => {
+      try {
+        const params = { mdl: "AP", userCode };
+        const [rptRes, userRes] = await Promise.all([
+          fetchData("hsrpt", params),
+          useTopUserRow(userCode),
+        ]);
 
- // Keyboard handlers (ESC to close, focus trap with Tab)
+        if (!cancelled && userRes) {
+          updateState({
+            branchCode: userRes.branchCode,
+            branchName: userRes.branchName,
+          });
+        }
+
+        const list = rptRes?.data?.[0]?.result ? JSON.parse(rptRes.data[0].result) : [];
+        if (!cancelled) {
+          if (list.length === 0 && !alertFired.current) {
+            Swal.fire({ icon: "info", title: "No Records Found", text: "Management report not defined." });
+            alertFired.current = true;
+            onClose?.();
+            return;
+          }
+          setReportList(list);
+          if (list.length > 0) setSelected({ id: list[0].reportId, name: list[0].reportName });
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error("Error fetching data:", e);
+          Swal.fire({ icon: "error", title: "Load failed", text: e?.message ?? "Unable to load reports." });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userCode, onClose]);
+
+  // Keyboard handlers (ESC to close, focus trap with Tab)
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => {
@@ -133,7 +133,6 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, onClose]);
 
-
   // Backdrop click to close
   const handleBackdropClick = (e) => {
     if (!closeOnBackdrop) return;
@@ -142,6 +141,7 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
   // Helpers
   const normalizeDates = useCallback((start, end) => {
+    // If accidentally swapped, auto-correct (and warn lightly)
     if (start && end && new Date(start) > new Date(end)) {
       Swal.fire({
         icon: "info",
@@ -168,58 +168,71 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
     setBranchModalOpen(false);
   };
 
+const handleClosePayeeModal = (payload) => {
+  // Closed without picking
+  if (!payload) {
+    setPayeeModalOpen(false);
+    return;
+  }
+
+  // Normalize keys from the modal
+  const payeeCode = payload.payeeCode ?? payload.vendCode ?? "";
+  const payeeName = payload.payeeName ?? payload.vendName ?? "";
+
+  if (sPayeeMode === "S") {
+    updateState({
+      sPayeeCode: payeeCode,
+      sPayeeName: payeeName,
+      ePayeeCode: payeeCode,
+      ePayeeName: payeeName,
+    });
+  } else {
+    updateState({ ePayeeCode: payeeCode, ePayeeName: payeeName });
+  }
+
+  setPayeeModalOpen(false);
+};
 
 
-  const handleCloseCustomerModal = ({ custCode, custName }) => {
-    if (sCustMode === "S") {
-      updateState({ sCustCode: custCode, sCustName: custName, eCustCode: custCode, eCustName: custName });
-    } else {
-      updateState({ eCustCode: custCode, eCustName: custName });
-    }
-    setCustomerModalOpen(false);
-  };
-
-
-  
-  const clearSCustomer = () => updateState({ sCustCode: "", sCustName: "" });
-  const clearECustomer = () => updateState({ eCustCode: "", eCustName: "" });
+  const clearSPayee = () => updateState({ sPayeeCode: "", sPayeeName: "" });
+  const clearEPayee = () => updateState({ ePayeeCode: "", ePayeeName: "" });
 
   const handleReset = () => {
-    updateState({ sCustCode: "", sCustName: "", eCustCode: "", eCustName: "" });
+    // Keep dates/branch, clear payees only
+    updateState({
+      sPayeeCode: "",
+      sPayeeName: "",
+      ePayeeCode: "",
+      ePayeeName: "",
+    });
   };
 
-
-  
   const handlePreview = async () => {
     try {
-
       if (!selected.id) {
-              Swal.fire({ icon: "info", title: "Select a report", text: "Please choose a report first." });
-              return;
-            }
-      
+        Swal.fire({ icon: "info", title: "Select a report", text: "Please choose a report first." });
+        return;
+      }
 
       const { startDate, endDate } = normalizeDates(filters.startDate, filters.endDate);
       updateState({ startDate, endDate });
-      
-         
 
       setLoading(true);
 
       const params = {
         reportId: selected.id,
         branchCode: filters.branchCode,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        sCustCode: filters.sCustCode,
-        eCustCode: filters.eCustCode,
+        startDate,
+        endDate,
+        sPayeeCode: filters.sPayeeCode,
+        ePayeeCode: filters.ePayeeCode,
         userCode,
       };
 
       const meta = await useTopHSRptRow(params.reportId);
 
       if (!meta?.crptName && meta?.export !== "Y") {
-        Swal.fire({ icon: "info", title: "No Records Found", text: "Report File not Defined." });
+        Swal.fire({ icon: "info", title: "No Records Found", text: "Report file not defined." });
         return;
       }
 
@@ -231,18 +244,17 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
       if (!meta.crptName && meta.export !== "Y") {
         console.error("⚠️ Failed to generate report:", response);
       }
-   } catch (err) {
-         console.error("❌ Error generating report:", err);
-         Swal.fire({ icon: "error", title: "Generate failed", text: err?.message ?? "Unexpected error." });
-       } finally {
-         setLoading(false);
-       }
+    } catch (err) {
+      console.error("❌ Error generating report:", err);
+      Swal.fire({ icon: "error", title: "Generate failed", text: err?.message ?? "Unexpected error." });
+    } finally {
+      setLoading(false);
+    }
   };
-   
 
   if (!isOpen) return null;
 
- return (
+  return (
     <div
       ref={backdropRef}
       onMouseDown={handleBackdropClick}
@@ -260,7 +272,7 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 md:px-6 py-3 border-b bg-gradient-to-r from-white to-blue-100">
           <h2 id="ap-report-title" className="text-sm md:text-base font-semibold text-blue-700">
-            Accounts Receivable Reports
+            Accounts Payable Reports
           </h2>
           <button
             onClick={onClose}
@@ -387,23 +399,23 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                 />
               </div>
 
-              {/* Starting Customer */}
+              {/* Starting Payee */}
               <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
-                <label className="text-xs md:text-sm font-medium">Starting Customer</label>
+                <label className="text-xs md:text-sm font-medium">Starting Payee</label>
                 <div className="relative">
                   <input
                     type="text"
                     readOnly
-                    value={filters.sCustName}
-                    placeholder="Select Customer"
+                    value={filters.sPayeeName}
+                    placeholder="Select payee"
                     className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
                   />
-                  {filters.sCustName && (
+                  {filters.sPayeeName && (
                     <button
                       type="button"
-                      onClick={clearSCustomer}
+                      onClick={clearSPayee}
                       className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
-                      aria-label="Clear starting Customer"
+                      aria-label="Clear starting payee"
                       title="Clear"
                     >
                       <FontAwesomeIcon icon={faCircleXmark} />
@@ -411,31 +423,31 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                   )}
                   <button
                     className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    onClick={() => { setCustMode("S"); setCustomerModalOpen(true); }}
-                    aria-label="Find starting Customer"
+                    onClick={() => { setPayeeMode("S"); setPayeeModalOpen(true); }}
+                    aria-label="Find starting payee"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
                 </div>
               </div>
 
-              {/* Ending Customer */}
+              {/* Ending Payee */}
               <div className="grid grid-cols-1 md:grid-cols-[7.5rem_1fr] items-center gap-2 md:gap-4">
-                <label className="text-xs md:text-sm font-medium">Ending Customer</label>
+                <label className="text-xs md:text-sm font-medium">Ending Payee</label>
                 <div className="relative">
                   <input
                     type="text"
                     readOnly
-                    value={filters.eCustName}
-                    placeholder="Select Customer"
+                    value={filters.ePayeeName}
+                    placeholder="Select payee"
                     className="border rounded-lg pl-3 pr-20 py-2 w-full text-xs md:text-sm focus:ring-2 focus:ring-blue-300 outline-none"
                   />
-                  {filters.eCustName && (
+                  {filters.ePayeeName && (
                     <button
                       type="button"
-                      onClick={clearECustomer}
+                      onClick={clearEPayee}
                       className="absolute right-9 inset-y-0 my-auto w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-red-600 rounded-md"
-                      aria-label="Clear ending Customer"
+                      aria-label="Clear ending payee"
                       title="Clear"
                     >
                       <FontAwesomeIcon icon={faCircleXmark} />
@@ -443,8 +455,8 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                   )}
                   <button
                     className="absolute inset-y-0 right-1 my-auto w-8 h-8 inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    onClick={() => { setCustMode("E"); setCustomerModalOpen(true); }}
-                    aria-label="Find ending Customer"
+                    onClick={() => { setPayeeMode("E"); setPayeeModalOpen(true); }}
+                    aria-label="Find ending payee"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
@@ -458,8 +470,22 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
                     onClick={handleReset}
                     className="inline-flex items-center justify-center gap-2 w-full md:w-40 py-2 border rounded-lg text-white bg-blue-600 hover:bg-gray-700 text-xs md:text-sm"
                   >
+                    {/* <FontAwesomeIcon icon={faRotateLeft} /> */}
                     Reset
                   </button>
+                  {/* <button
+                    onClick={() => {
+                      // quick convenience: reset dates to current month
+                      const d = new Date(today);
+                      const start = useFormatToDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                      updateState({ startDate: start, endDate: today });
+                    }}
+                    className="inline-flex items-center justify-center gap-2 w-full md:w-40 py-2 border rounded-lg bg-white hover:bg-gray-50 text-xs md:text-sm"
+                    title="Set to current month"
+                  >
+                    <FontAwesomeIcon icon={faRotateLeft} />
+                    This Month
+                  </button> */}
                   <button
                     onClick={handlePreview}
                     disabled={loading || !selected.id}
@@ -486,25 +512,24 @@ const ARReportModal = ({ isOpen, onClose, userCode, closeOnBackdrop = true }) =>
 
         {/* Loading overlay */}
         {loading && (
-           <div className="global-tran-spinner-main-div-ui">
-                <div className="global-tran-spinner-sub-div-ui">
-                  <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
-                  <p>Please wait...</p>
-                </div>
-           </div>
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] grid place-items-center pointer-events-none">
+            <div className="inline-flex items-center gap-3 text-blue-700 text-sm font-medium">
+              <FontAwesomeIcon icon={faCircleNotch} spin />
+              Processing…
+            </div>
+          </div>
         )}
 
         {/* Child modals */}
         {branchModalOpen && (
           <BranchLookupModal isOpen={branchModalOpen} onClose={handleCloseBranchModal} />
         )}
-        {customerModalOpen && (
-          <CustomerMastLookupModal isOpen={customerModalOpen} onClose={handleCloseCustomerModal} />
+        {payeeModalOpen && (
+          <PayeeMastLookupModal isOpen={payeeModalOpen} onClose={handleClosePayeeModal} />
         )}
       </div>
     </div>
   );
 };
 
-
-export default ARReportModal;
+export default APReportModal;
