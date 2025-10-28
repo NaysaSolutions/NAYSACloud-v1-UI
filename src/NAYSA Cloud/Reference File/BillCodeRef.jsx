@@ -25,9 +25,9 @@ import {
 // Global
 import { reftables, reftablesPDFGuide, reftablesVideoGuide } from "@/NAYSA Cloud/Global/reftable";
 
-// import * as XLSX from "xlsx";
-// import jsPDF from "jspdf";
-// import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ------- Config / helpers ----------------------------------------------------
 const API = axios.create({ baseURL: "http://localhost:8000/api" });
