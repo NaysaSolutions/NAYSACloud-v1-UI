@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback  } from "react";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner } from "@fortawesome/free-solid-svg-icons";
-
-import { useNavigate } from "react-router-dom";
 
 // Lookup/Modal
 import BranchLookupModal from "../../../Lookup/SearchBranchRef";
@@ -22,13 +21,13 @@ import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
-// import CVHistory from "./NAYSA Cloud/Module/Main Module/Accounts Payable/CVHistory.jsx";
-import CVHistory from "@/NAYSA Cloud/Module/Main Module/Accounts Payable/CVHistory.jsx";
 
 // Configuration
-import {fetchData , postRequest, fetchDataJsonLookup} from '../../../Configuration/BaseURL.jsx'
+import { fetchData , postRequest, fetchDataJsonLookup } from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
 import {
   docTypeNames,
@@ -55,6 +54,13 @@ import {
   useTopBankMastRow,
 } from '@/NAYSA Cloud/Global/top1RefTable';
 
+
+import {
+  useGetCurrentDay,
+  useFormatToDate,
+} from '@/NAYSA Cloud/Global/dates';
+
+
 import {
   useUpdateRowGLEntries,
   useTransactionUpsert,
@@ -64,6 +70,8 @@ import {
   useHandleCancel,
   useHandlePost,
 } from '@/NAYSA Cloud/Global/procedure';
+
+
 
 import {
   useHandlePrint,
@@ -88,9 +96,11 @@ import Header from '@/NAYSA Cloud/Components/Header';
 
 
 const CV = () => {
-  const { resetFlag } = useReset();
-
+   const loadedFromUrlRef = useRef(false);
    const navigate = useNavigate();
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -111,6 +121,7 @@ const CV = () => {
     documentID: null,
     documentNo: "",
     documentStatus:"",
+    documentDate:useGetCurrentDay(),   
     status: "OPEN",
     noReprints:"0",
 
@@ -156,10 +167,6 @@ const CV = () => {
     selectedCvType : "APV01",
     selectedPayType : "CV01",
 
-    // withAPV : "Y",
-    // paymentType: "CV01",
-    // cvType: "APV01",
-
 
     refDocNo1: "",
     refDocNo2: "",
@@ -171,9 +178,8 @@ const CV = () => {
     bankAcctNo: "",
     checkNo: "",
 
+    userCode: user.USER_CODE, 
 
-    userCode: 'NSI', // Default value
-    noReprints: "0",
 
     //Detail 1-2
     detailRows  :[],
@@ -233,7 +239,9 @@ const CV = () => {
   documentID,
   documentStatus,
   documentNo,
+  documentDate,
   status,
+  userCode,
   noReprints,
 
   // Tabs & loading
@@ -247,6 +255,7 @@ const CV = () => {
   isSaveDisabled,
   isResetDisabled,
   isFetchDisabled,
+  triggerGLEntries,
 
 
 
@@ -1207,6 +1216,34 @@ const handleCopy = async () => {
 };
 
 
+
+ //  ** View Document and Transaction History Retrieval ***
+  const cleanUrl = useCallback(() => {
+     navigate(location.pathname, { replace: true });
+   }, [navigate, location.pathname]);
+ 
+ 
+   const handleHistoryRowPick = useCallback((row) => {
+     const docNo = row?.docNo;
+     const branchCode = row?.branchCode;
+     if (!docNo || !branchCode) return;
+     fetchTranData(docNo, branchCode);
+     setTopTab("details");
+   });
+ 
+ 
+   useEffect(() => {
+     const params = new URLSearchParams(location.search);
+     const docNo = params.get("cvNo");         
+     const branchCode = params.get("branchCode");    
+     
+     if (!loadedFromUrlRef.current && docNo && branchCode) {
+       loadedFromUrlRef.current = true;
+       handleHistoryRowPick({ docNo, branchCode });
+       cleanUrl();
+     }
+   }, [location.search, handleHistoryRowPick, cleanUrl]);
+ 
 
 
   const printData = {
@@ -2209,17 +2246,27 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
         pdfLink={pdfLink} 
         videoLink={videoLink}
         onPrint={handlePrint} 
+        onPost={handlePost} 
         printData={printData} 
         onReset={handleReset}
         onSave={() => handleActivityOption("Upsert")}
-        onPost={handlePost} 
         onCancel={handleCancel} 
         onCopy={handleCopy} 
         onAttach={handleAttach}
+        activeTopTab={topTab} 
+        showActions={topTab === "details"} 
+        showBIRForm={false}      
+        onDetails={() => setTopTab("details")}
+        onHistory={() => setTopTab("history")}
+        disableRouteNavigation={true}         
         isSaveDisabled={isSaveDisabled} // Pass disabled state
         isResetDisabled={isResetDisabled} // Pass disabled state
+        detailsRoute="/page/CV"
       />
       </div>
+
+      
+  <div className={topTab === "details" ? "" : "hidden"}>
 
       {/* Page title and subheading */} 
 
@@ -4088,6 +4135,31 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
 )}
 
 {showSpinner && <LoadingSpinner />}
+    </div>
+    
+
+  <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getCVHistory"
+        cacheKey={`CV:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="CV_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+        status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+          historyExportName={`${documentTitle} History`} 
+    />
+  </div>
+
     </div>
   );
 };
