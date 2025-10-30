@@ -1858,15 +1858,18 @@ const handleCloseAccountModal = (selectedAccount) => {
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
-      const result = await useHandleCancel(docType,documentID,"NSI",confirmation.reason,updateState);
+      const result = await useHandleCancel(docType,documentID,userCode,confirmation.password,confirmation.reason,updateState);
       if (result.success) 
       {
-        Swal.fire({
+       Swal.fire({
           icon: "success",
           title: "Success",
-          text: result.message,
-        });       
-      } 
+          text: "Cancellation Completed",
+          timer: 5000, 
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });    
+      }    
      await fetchTranData(documentNo,branchCode);
     }
     updateState({showCancelModal: false});
@@ -2241,28 +2244,28 @@ const checkDuplicateCheckNo = async (checkNo, docId) => {
       {showSpinner && <LoadingSpinner />}
 
       <div className="global-tran-headerToolbar-ui">
-      <Header 
-        docType={docType} 
-        pdfLink={pdfLink} 
-        videoLink={videoLink}
-        onPrint={handlePrint} 
-        onPost={handlePost} 
-        printData={printData} 
-        onReset={handleReset}
-        onSave={() => handleActivityOption("Upsert")}
-        onCancel={handleCancel} 
-        onCopy={handleCopy} 
-        onAttach={handleAttach}
-        activeTopTab={topTab} 
-        showActions={topTab === "details"} 
-        showBIRForm={false}      
-        onDetails={() => setTopTab("details")}
-        onHistory={() => setTopTab("history")}
-        disableRouteNavigation={true}         
-        isSaveDisabled={isSaveDisabled} // Pass disabled state
-        isResetDisabled={isResetDisabled} // Pass disabled state
-        detailsRoute="/page/CV"
-      />
+        <Header 
+              docType={docType} 
+              pdfLink={pdfLink} 
+              videoLink={videoLink}
+              onPrint={handlePrint} 
+              onPost={handlePost} 
+              printData={printData} 
+              onReset={handleReset}
+              onSave={() => handleActivityOption("Upsert")}
+              onCancel={handleCancel} 
+              onCopy={handleCopy} 
+              onAttach={handleAttach}
+              activeTopTab={topTab} 
+              showActions={topTab === "details"} 
+              showBIRForm={false}      
+              onDetails={() => setTopTab("details")}
+              onHistory={() => setTopTab("history")}
+              disableRouteNavigation={true}         
+              isSaveDisabled={isSaveDisabled} // Pass disabled state
+              isResetDisabled={isResetDisabled} // Pass disabled state
+              detailsRoute="/page/CV"
+        />
       </div>
 
       
