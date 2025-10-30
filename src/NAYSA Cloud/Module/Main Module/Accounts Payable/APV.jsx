@@ -26,7 +26,6 @@ import PaytermLookupModal from "../../../Lookup/SearchPayTermRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
-import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import PostAPV from "./PostAPV.jsx";
 import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
