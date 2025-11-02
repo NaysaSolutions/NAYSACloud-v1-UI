@@ -26,8 +26,8 @@ import PaytermLookupModal from "../../../Lookup/SearchPayTermRef.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
-import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import PostAPV from "./PostAPV.jsx";
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
 // Configuration
 import { fetchData, postRequest } from "../../../Configuration/BaseURL.jsx";
@@ -4070,6 +4070,28 @@ const APV = () => {
   />
 )}
 
+<div className={topTab === "history" ? "" : "hidden"}>
+        <AllTranHistory
+          showHeader={false}
+          endpoint="/getSVIHistory"
+          cacheKey={`SVI:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+          activeTabKey="SVI_Summary"
+          branchCode={state.branchCode}
+          startDate={state.fromDate}
+          endDate={state.toDate}
+            status={(() => {
+              const s = (state.status || "").toUpperCase();
+              if (s === "FINALIZED") return "F";
+              if (s === "CANCELLED") return "X";
+              if (s === "CLOSED")    return "C";
+              if (s === "OPEN")      return "";
+              return "All";
+            })()}
+            onRowDoubleClick={handleHistoryRowPick}
+            historyExportName={`${documentTitle} History`} 
+      />
+    </div>
+
       {/* Post Modal */}
        {showPostingModal && (
     <PostAPV
@@ -4081,6 +4103,7 @@ const APV = () => {
       {showSpinner && <LoadingSpinner />}
     </div>
   );
+
 };
 
 export default APV;

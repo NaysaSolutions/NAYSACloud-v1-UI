@@ -53,7 +53,7 @@ const MenuItem = ({ item, level = 0, searchTerm, onNavigate, onOpenModal }) => {
   const hasSubMenu = Array.isArray(item?.subMenu) && item.subMenu.length > 0;
   const Icon = level === 0 ? iconMap[item?.name] : null;
   const ChevronIcon = hasSubMenu ? (isOpen ? FiChevronDown : FiChevronRight) : null;
-  const isPost = /post/i.test(item?.name ?? "");
+  const isPost = /finalize/i.test(item?.name ?? "");
 
   useEffect(() => {
     const lc = (searchTerm || "").toLowerCase();

@@ -20,10 +20,10 @@ import APV       from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APV.jsx
 import PostAPV   from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostAPV.jsx";
 
 import APCM      from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APCM.jsx";
-// import PostAPCM  from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostAPCM.jsx";
+import PostAPCM  from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostAPCM.jsx";
 
 import APDM      from "./NAYSA Cloud/Module/Main Module/Accounts Payable/APDM.jsx";
-// import PostAPDM  from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostAPDM.jsx";
+import PostAPDM  from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostAPDM.jsx";
 
 import PCV       from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PCV.jsx";
 import PostPCV   from "./NAYSA Cloud/Module/Main Module/Accounts Payable/PostPCV.jsx";
@@ -66,7 +66,6 @@ export const pageRegistry = {
   // Accounts Payable
   APV,
   APCM,
-  // PostAPCM,
   APDM,
   PCV,
   CV,
@@ -87,7 +86,7 @@ export const pageRegistry = {
  
   //Posting
   PostSVI,PostSOA,PostARCM,PostARDM,PostCR,PostAR,
-  PostCV,PostPCV,PostJV,PostAPV,
+  PostCV,PostPCV,PostJV,PostAPV,PostAPCM,PostAPDM,
 
 
 

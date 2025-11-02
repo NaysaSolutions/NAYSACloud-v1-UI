@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect,useRef,useCallback } from "react";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,7 +9,7 @@ import { faMagnifyingGlass, faPlus, faMinus, faTrashAlt, faFolderOpen, faSpinner
 // Lookup/Modal
 import BranchLookupModal from "../../../Lookup/SearchBranchRef";
 import CurrLookupModal from "../../../Lookup/SearchCurrRef.jsx";
-import PayeeMastLookupModal from "../../../Lookup/SearchCustMast";
+import PayeeMastLookupModal from "../../../Lookup/SearchVendMast";
 import COAMastLookupModal from "../../../Lookup/SearchCOAMast.jsx";
 import RCLookupModal from "../../../Lookup/SearchRCMast.jsx";
 import VATLookupModal from "../../../Lookup/SearchVATRef.jsx";
@@ -18,12 +19,15 @@ import BankMastLookupModal from "../../../Lookup/SearchBankMast.jsx";
 import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
-// import PostAPCM from "../../../Module/Main Module/Accounts Payable/PostAPCM.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
+
 
 // Configuration
-import {fetchData , postRequest,fetchDataJson} from '../../../Configuration/BaseURL.jsx'
+import {fetchData , postRequest, fetchDataJson} from '../../../Configuration/BaseURL.jsx'
 import { useReset } from "../../../Components/ResetContext";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
+
 
 import {
   docTypeNames,
@@ -53,7 +57,7 @@ import {
 
 
 import {
-  useSelectedOpenARBalance,
+  useSelectedOpenAPBalance,
   useSelectedHSColConfig,
 } from '@/NAYSA Cloud/Global/selectedData';
 
@@ -91,8 +95,11 @@ import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 
 const APCM = () => {
-  const { resetFlag } = useReset();
-
+   const loadedFromUrlRef = useRef(false);
+   const navigate = useNavigate();
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
    const [state, setState] = useState({
 
     // HS Option
@@ -115,6 +122,7 @@ const APCM = () => {
     documentDate:useGetCurrentDay(),    
     documentStatus:"",
     status: "OPEN",
+    noReprints:"0",
 
 
     // UI state
@@ -133,8 +141,8 @@ const APCM = () => {
     branchName: "Head Office",
     
     // Vendor information
-    custCode: "",
-    custName: "",
+    vendCode: "",
+    vendName: "",
     chainCode:"",
     chainName:"",
 
@@ -148,7 +156,7 @@ const APCM = () => {
 
     //Other Header Info
     prcNo:"",
-    arcmTypes :[],
+    apcmTypes :[],
     depBankCode:"",
     depAcctName:"",
     depAcctNo:"",
@@ -162,7 +170,7 @@ const APCM = () => {
     remarks: "",
 
     selectedAPCMType : "APCM01",
-    userCode: 'NSI', // Default value
+    userCode: user.USER_CODE, 
 
     //Detail 1-2
     detailRows  :[],
@@ -184,11 +192,11 @@ const APCM = () => {
     showVatModal:false,
     showAtcModal:false,
     showSlModal:false,
-    showARBalanceModal:false,
+    showAPBalanceModal:false,
 
     currencyModalOpen:false,
     branchModalOpen:false,
-    custModalOpen:false,
+    payeeModalOpen:false,
     showCancelModal:false,
     showAttachModal:false,
     showSignatoryModal:false,
@@ -210,6 +218,7 @@ const APCM = () => {
   documentNo,
   documentDate,
   status,
+  noReprints,
 
   // Tabs & loading
   activeTab,
@@ -242,13 +251,13 @@ const APCM = () => {
   // Transaction Header
   branchCode,
   branchName,
-  custCode,
-  custName,
+  vendCode,
+  vendName,
   currCode,
   currName,
   currRate,
   selectedAPCMType,
-  arcmTypes,
+  apcmTypes,
   checkNo,
   checkDate,
   bank,
@@ -281,11 +290,11 @@ const APCM = () => {
   showBankMastModal,
   currencyModalOpen,
   branchModalOpen,
-  custModalOpen,
+  payeeModalOpen,
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-  showARBalanceModal,
+  showAPBalanceModal,
   showPostingModal,
 
 } = state;
@@ -352,7 +361,7 @@ const APCM = () => {
 
 
   useEffect(() => {
-  }, [custCode]);
+  }, [vendCode]);
 
 
 
@@ -380,14 +389,14 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (custName?.currCode && detailRows.length > 0) {
+    if (vendName?.currCode && detailRows.length > 0) {
       const updatedRows = detailRows.map(row => ({
         ...row,
-        currency: custName.currCode
+        currency: vendName.currCode
       }));
        updateState({ detailRows: updatedRows });
     }
-  }, [custName?.currCode]);
+  }, [vendName?.currCode]);
 
 
 
@@ -436,8 +445,10 @@ useEffect(() => {
 
       branchCode: "HO",
       branchName: "Head Office",
+      userCode: user.USER_CODE, 
       documentDate:useGetCurrentDay(),
       selectedAPCMType : "APCM01",
+      noReprints:"0",
 
 
       refDocNo1: "",
@@ -445,8 +456,8 @@ useEffect(() => {
       checkDate:null,
       remarks:"",
 
-      custName:"",
-      custCode:"",
+      vendName:"",
+      vendCode:"",
       chainCode:"",
       chainName:"",
       prcNo:"",
@@ -479,11 +490,11 @@ useEffect(() => {
 
     try {
       // 🔹 1. Run these in parallel since they don’t depend on each other
-      const [ arcmType] = await Promise.all([
+      const [ apcmType] = await Promise.all([
         useTopDocDropDown(docType, "APCMTRAN_TYPE"),
       ]);
-      if (arcmType) {
-        updateState({ arcmTypes: arcmType, selectedARMType: "APCM01" });
+      if (apcmType) {
+        updateState({ apcmTypes: apcmType, selectedARMType: "APCM01" });
       }
      
 
@@ -579,10 +590,10 @@ const fetchTranData = async (documentNo, branchCode) => {
   updateState({ isLoading: true });
 
   try {
-    const data = await useFetchTranData(documentNo, branchCode,docType,"arcmNo");
+    const data = await useFetchTranData(documentNo, branchCode,docType,"apcmNo");
 
 
-    if (!data?.arcmId) {
+    if (!data?.apcmId) {
       Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
       return resetState();
     }
@@ -613,15 +624,15 @@ const fetchTranData = async (documentNo, branchCode) => {
 
    
     updateState({
-      documentStatus: data.arcmStatus,
+      documentStatus: data.apcmStatus,
       status: data.docStatus,
-      documentID: data.arcmId,
-      documentNo: data.arcmNo,
+      documentID: data.apcmId,
+      documentNo: data.apcmNo,
       branchCode: data.branchCode,
-      documentDate: useFormatToDate(data.arcmDate),
-      selectedAPCMType: data.arcmtranType,
-      custCode: data.custCode,
-      custName: data.custName,
+      documentDate: useFormatToDate(data.apcmDate),
+      selectedAPCMType: data.apcmtranType,
+      vendCode: data.vendCode,
+      vendName: data.vendName,
       refDocNo1: data.refDocNo1,
       refDocNo2: data.refDocNo2,
       currCode: data.currCode,
@@ -691,8 +702,8 @@ const handleCurrRateNoBlur = (e) => {
         branchCode,
         documentNo,
         documentID,
-        custCode,
-        custName,
+        vendCode,
+        vendName,
         refDocNo1,
         refDocNo2,  
         currCode,
@@ -706,12 +717,12 @@ const handleCurrRateNoBlur = (e) => {
 
     const glData = {
       branchCode: branchCode,
-      arcmNo: documentNo || "",
-      arcmId: documentID || "",
-      arcmDate: documentDate,
-      arcmtranType: selectedAPCMType,   
-      custCode: custCode,
-      custName: custName,
+      apcmNo: documentNo || "",
+      apcmId: documentID || "",
+      apcmDate: documentDate,
+      apcmtranType: selectedAPCMType,   
+      vendCode: vendCode,
+      vendName: vendName,
       refDocNo1: refDocNo1 || "",
       refDocNo2: refDocNo2 || "",
       currCode: currCode || "PHP",
@@ -720,6 +731,7 @@ const handleCurrRateNoBlur = (e) => {
       userCode: userCode,
       dt1: detailRows.map((row, index) => ({
           lnNo: String(index + 1),
+          apvNo: row.apvNo,
           siNo: row.siNo,
           siDate: row.siDate,
           siAmount: parseFormattedNumber(row.siAmount), 
@@ -732,7 +744,7 @@ const handleCurrRateNoBlur = (e) => {
           atcName: row.atcName,
           atcRate: row.atcRate,
           atcAmount: parseFormattedNumber(row.atcAmount, 2),
-          arAcct: row.arAcct,
+          apAcct: row.apAcct,
           drAcct:row.drAcct,
           rcCode: row.rcCode,
           currCode: row.currCode,
@@ -788,7 +800,7 @@ const handleCurrRateNoBlur = (e) => {
     if (action === "Upsert") {
         try {
 
-          const response = await useTransactionUpsert(docType, glData, updateState, 'arcmId', 'arcmNo');
+          const response = await useTransactionUpsert(docType, glData, updateState, 'apcmId', 'apcmNo');
           if (response) {
 
             useSwalshowSaveSuccessDialog(
@@ -814,25 +826,26 @@ const handleCurrRateNoBlur = (e) => {
 
   const handleAddRow = async () => {
    
-    if (!custCode) {
+    if (!vendCode) {
       return;
     }
 
 
-    if (['APCM01','APCM02','APCM04','APCM03','APCM05','APCM06'].includes(selectedAPCMType)) {
-      await handleOpenARBalance();
+    if (['APCM01'].includes(selectedAPCMType)) {
+      await handleOpenAPBalance();
       return;
     }
    
 
 
   try {
-    const items = await handleFetchDetail(custCode);
+    const items = await handleFetchDetail(vendCode);
     const itemList = Array.isArray(items) ? items : [items];
     const newRows = await Promise.all(itemList.map(async (item) => {
 
       return {
         lnNo: "",
+        apvNo: "00000000",
         siNo: "00000000",
         siDate: documentDate,
         siAmount:"0.00",
@@ -845,7 +858,7 @@ const handleCurrRateNoBlur = (e) => {
         atcAmount:"0.00",
         currCode: currCode,
         currRate: formatNumber(currRate,6) ,
-        arAcct:"",
+        apAcct:"",
         drAcct:"",
         rcCode:"",
         refBranchcode: branchCode,
@@ -881,7 +894,7 @@ const handleCurrRateNoBlur = (e) => {
 
 
 const handleAddRowGL = () => {
-    if(handleFieldBehavior("reversalInvoice")){
+    if(handleFieldBehavior("CWTReversal")){
       return;
     }
 
@@ -892,7 +905,7 @@ const handleAddRowGL = () => {
         {
       acctCode: "",
       rcCode: "",
-      sltypeCode:"SU",
+      sltypeCode:"CU",
       slCode: "",
       particulars: "",
       vatCode: "",
@@ -930,7 +943,7 @@ const handleAddRowGL = () => {
 
   
   const handleDeleteRowGL =  (index) => {
-    if(handleFieldBehavior("reversalInvoice")){
+    if(handleFieldBehavior("CWTReversal")){
       return;
     }
 
@@ -942,13 +955,13 @@ const handleAddRowGL = () => {
 
 
 
-  const handleFetchDetail = async (custCode) => {
-    if (!custCode) return [];
+  const handleFetchDetail = async (vendCode) => {
+    if (!vendCode) return [];
   
     try {
       const custPayload = {
         json_data: {
-          custCode: custCode,
+          vendCode: vendCode,
         },
       };
       const vendResponse = await postRequest("addPayeeDetail", JSON.stringify(custPayload));
@@ -963,13 +976,13 @@ const handleAddRowGL = () => {
   };
 
 
+
 const handlePrint = async () => {
  if (!detailRows || detailRows.length === 0) {
       return;
       }
-  if (documentID) {
-    updateState({ showSignatoryModal: true });
-  }
+  updateState({ showSignatoryModal: true });
+
 };
 
 
@@ -994,6 +1007,7 @@ const handleCancel = async () => {
       return;
       }
 
+
   if (documentID && (documentStatus === '')) {
     updateState({ showCancelModal: true });
   }
@@ -1012,7 +1026,7 @@ const handleAttach = async () => {
 
 
 const handleCopy = async () => {
-if (selectedAPCMType !== "APCM07" || !detailRows?.length) {
+if (selectedAPCMType !== "APCM02" || !detailRows?.length) {
   return;
   }
 
@@ -1027,7 +1041,36 @@ if (selectedAPCMType !== "APCM07" || !detailRows?.length) {
 };
 
 
-
+  
+  
+    //  ** View Document and Transaction History Retrieval ***
+     const cleanUrl = useCallback(() => {
+        navigate(location.pathname, { replace: true });
+      }, [navigate, location.pathname]);
+    
+    
+      const handleHistoryRowPick = useCallback((row) => {
+        const docNo = row?.docNo;
+        const branchCode = row?.branchCode;
+        if (!docNo || !branchCode) return;
+        fetchTranData(docNo, branchCode);
+        setTopTab("details");
+      });
+    
+    
+      useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const docNo = params.get("apcmNo");         
+        const branchCode = params.get("branchCode");    
+        
+        if (!loadedFromUrlRef.current && docNo && branchCode) {
+          loadedFromUrlRef.current = true;
+          handleHistoryRowPick({ docNo, branchCode });
+          cleanUrl();
+        }
+      }, [location.search, handleHistoryRowPick, cleanUrl]);
+    
+  
 
   const printData = {
     apv_no: documentNo,
@@ -1036,35 +1079,34 @@ if (selectedAPCMType !== "APCM07" || !detailRows?.length) {
   };
 
 
-  const handleCloseCustModal = async (selectedData) => {
+  const handleClosePayeeModal = async (selectedData) => {
     if (!selectedData) {
-        updateState({ custModalOpen: false });
+        updateState({ payeeModalOpen: false });
         return;
     }
 
-    updateState({ custModalOpen: false });
+    updateState({ payeeModalOpen: false });
     updateState({ isLoading: true });
 
     try {
-        const custDetails = {
-            custCode: selectedData?.custCode || '',
-            custName: selectedData?.custName || '',
+        const payeeDetails = {
+            vendCode: selectedData?.vendCode || '',
+            vendName: selectedData?.vendName || '',
             currCode: selectedData?.currCode || '',
         };
 
         updateState({
-            custName: selectedData.custName,
-            custCode: selectedData.custCode
+            vendName: selectedData.vendName,
+            vendCode: selectedData.vendCode
         });
         
-
         if (!selectedData.currCode) {
-            const payload = { CUST_CODE: selectedData.custCode };
+            const payload = { VEND_CODE: selectedData.vendCode };
             const response = await postRequest("getPayee", JSON.stringify(payload));
 
             if (response.success) {
                 const data = JSON.parse(response.data[0].result);
-                custDetails.currCode = data[0]?.currCode;
+                payeeDetails.currCode = data[0]?.currCode;
             } else {
                 console.warn("API call for getPayee returned success: false", response.message);
             }
@@ -1073,7 +1115,7 @@ if (selectedAPCMType !== "APCM07" || !detailRows?.length) {
 
      updateState({
           detailRowsGL: [],
-          ...(selectedAPCMType !== "APCM07" && { detailRows: [] }),
+          ...(selectedAPCMType !== "APCM02" && { detailRows: [] }),
           ...updateTotalsDisplay (0, 0, 0, 0),
         });
 
@@ -1128,7 +1170,7 @@ const handleDetailChange = async (index, field, value, runCalculations = true) =
      const row = updatedRows[index];
 
      
-    if (['arAcct','drAcct'].includes(field)) {
+    if (['apAcct','drAcct'].includes(field)) {
       row[field] = value.acctCode;
     }
 
@@ -1159,20 +1201,17 @@ let atcRate      = parseFormattedNumber(row.atcRate)      || 0;
 let origApplied  = parseFormattedNumber(row.appliedAmount) || 0;
 let siAmount     = parseFormattedNumber(row.siAmount)     || 0;
 
-const isAPCM07 = selectedAPCMType === "APCM07";
-const isAllTypes = isAPCM07 || selectedAPCMType === "APCM01";
+const isAPCM02 = selectedAPCMType === "APCM02";
+const isAllTypes = isAPCM02 || selectedAPCMType === "APCM01";
 
 
 if (field === "appliedAmount") {
-  if (isAPCM07) {
+  if (isAPCM02) {
     siAmount = parseFormattedNumber(row.appliedAmount);
     row.siAmount = formatNumber(siAmount);
   }
 
   if (isAllTypes) {
-    const baseAmount = isAPCM07 ? siAmount : origApplied;
-    origApplied = Math.min(origApplied, baseAmount);
-
     row.vatAmount      = formatNumber(origApplied * vatRate);
     row.atcAmount      = formatNumber(origApplied * atcRate);
     row.appliedAmount  = formatNumber(origApplied);
@@ -1181,7 +1220,7 @@ if (field === "appliedAmount") {
 
 
 
-if (isAPCM07 && (field === "vatCode" || field === "atcCode") || field === "appliedAmount") {
+if ((field === "vatCode" || field === "atcCode") || field === "appliedAmount") {
   const appliedAmt = parseFormattedNumber(row.appliedAmount);
 
   const vatAmt = row.vatCode
@@ -1216,29 +1255,29 @@ const handleFieldBehavior = (option) => {
  case "withoutInvoice":
       return (
         !isFormDisabled ||
-        selectedAPCMType === "APCM07" 
+        selectedAPCMType === "APCM02" 
       );
 
 
  case "wInvoice":
       return (
         !isFormDisabled ||
-        selectedAPCMType !== "APCM07" 
+        selectedAPCMType !== "APCM02" 
       );
 
 
  case "disableOnSaved" :
    return (
         isFormDisabled ||
-        (selectedAPCMType !== "APCM07" && state.documentNo !== "" )
+        (selectedAPCMType !== "APCM02" && state.documentNo !== "" )
       );
 
 
 
-  case "reversalInvoice" :
+  case "CWTReversal" :
     return (
       isFormDisabled ||
-      ["APCM02", "APCM03", "APCM04", "APCM04"].includes(selectedAPCMType)
+      ["APCM03"].includes(selectedAPCMType)
       );
 
 
@@ -1258,7 +1297,7 @@ const handleFieldBehavior = (option) => {
    updateState({
       detailRowsGL: [],
       selectedAPCMType:selectedType,
-      ...(selectedAPCMType !== "APCM07" && { detailRows: [] }),
+      ...(selectedAPCMType !== "APCM02" && { detailRows: [] }),
       ...updateTotalsDisplay (0, 0, 0, 0),
     });
   };
@@ -1279,7 +1318,7 @@ const handleDetailChangeGL = async (index, field, value) => {
 
 
     if (['acctCode', 'slCode', 'rcCode', 'sltypeCode', 'vatCode', 'atcCode'].includes(field)) {
-        const data = await useUpdateRowGLEntries(row,field,value,custCode,docType);
+        const data = await useUpdateRowGLEntries(row,field,value,vendCode,docType);
         if(data) {
             row.acctCode = data.acctCode
             row.sltypeCode = data.sltypeCode
@@ -1377,7 +1416,7 @@ const handleCloseAccountModal = (selectedAccount) => {
 
     if (selectedAccount && selectedRowIndex !== null) {
 
-        const specialAccounts = ['arAcct','drAcct'];
+        const specialAccounts = ['apAcct','drAcct'];
         if (specialAccounts.includes(accountModalSource)) {
           handleDetailChange(selectedRowIndex, accountModalSource, selectedAccount,false);
           updateState({detailRowsGL: []})
@@ -1437,15 +1476,18 @@ const handleCloseAccountModal = (selectedAccount) => {
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
-      const result = await useHandleCancel(docType,documentID,"NSI",confirmation.reason,updateState);
+      const result = await useHandleCancel(docType,documentID,userCode,confirmation.password,confirmation.reason,updateState);
       if (result.success) 
       {
-        Swal.fire({
+       Swal.fire({
           icon: "success",
           title: "Success",
-          text: result.message,
-        });       
-      } 
+          text: "Cancellation Completed",
+          timer: 5000, 
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });    
+      }    
      await fetchTranData(documentNo,branchCode);
     }
     updateState({showCancelModal: false});
@@ -1486,7 +1528,7 @@ const handleCloseBankMast = async (selectedBankCode) => {
 
 
 
-const handleOpenARBalance = async () => {
+const handleOpenAPBalance = async () => {
   try {
     updateState({ isLoading: true });
 
@@ -1497,8 +1539,8 @@ const handleOpenARBalance = async () => {
     }
 
 
-    const endpoint ="getOpenARBalance"
-    const response = await fetchDataJson(endpoint, { custCode, branchCode, tranType:selectedAPCMType, groupIdSelected });
+    const endpoint ="getOpenAPBalance"
+    const response = await fetchDataJson(endpoint, { vendCode, branchCode, tranType:selectedAPCMType, groupIdSelected });
     const custData = response?.data?.[0]?.result ? JSON.parse(response.data[0].result) : [];
 
     const colConfig = await useSelectedHSColConfig(endpoint);
@@ -1506,7 +1548,7 @@ const handleOpenARBalance = async () => {
    if (custData.length === 0) {
       await Swal.fire({
         icon: "info",
-        title: "Open AR Balance",
+        title: "Open AP Balance",
         text: "There are no AR balance records for the selected customer/branch.",
       });
        updateState({ isLoading: false });
@@ -1515,15 +1557,15 @@ const handleOpenARBalance = async () => {
 
     updateState({ globalLookupRow: custData,
                   globalLookupHeader:colConfig,
-                  showARBalanceModal: true
+                  showAPBalanceModal: true
       });
 
   } catch (error) {
-    console.error("Failed to fetch Open AR Balance:", error);
+    console.error("Failed to fetch Open AP Balance:", error);
     Swal.fire({
       icon: "error",
       title: "Error",
-      text: "Failed to fetch Open AR Balance.",
+      text: "Failed to fetch Open AP Balance.",
     });
     updateState({ 
         globalLookupRow: [] ,
@@ -1536,28 +1578,33 @@ const handleOpenARBalance = async () => {
 
 
 
-const handleCloseARBalance = async (payload) => {
+const handleCloseAPBalance = async (payload) => {
 
 
   if (payload && payload !== null) {
     updateState({ isLoading: true });
 
-      const result = await useSelectedOpenARBalance(payload,selectedAPCMType);
+      const result = await useSelectedOpenAPBalance(payload,selectedAPCMType);
       if (result) {
         const newRows = result.map((entry, idx) => {
-        const netDisc = parseFormattedNumber(entry.netDiscAmt);
+        const netDisc = parseFormattedNumber(entry.balance);
         const vatRate = parseFormattedNumber(entry.vatCalcRate);
         const atcRate = parseFormattedNumber(entry.atcCalcRate);
 
-        const vatAmount = netDisc * vatRate;   
-        const atcAmount = netDisc * atcRate;   
+        const vatAmount = 0;
+        const atcAmount = 0;
+        const applied = 0;
+
+        // const vatAmount = netDisc * vatRate;   
+        // const atcAmount = netDisc * atcRate;   
 
         return {
           lnNo: idx + 1,
+          apvNo: entry.apvNo,
           siNo: entry.siNo,
           siDate: entry.siDate,
           siAmount: formatNumber(netDisc), 
-          appliedAmount: formatNumber(netDisc), 
+          appliedAmount: formatNumber(applied), 
           vatCode: entry.vatCode,
           vatName: entry.vatName,
           vatRate: entry.vatCalcRate,
@@ -1566,8 +1613,8 @@ const handleCloseARBalance = async (payload) => {
           atcName: entry.atcName,
           atcRate: entry.atcCalcRate,
           atcAmount: formatNumber(atcAmount, 2),
-          arAcct: entry.arAcct,
-          drAcct:entry.drAcct,
+          apAcct: entry.apAccount,
+          drAcct:entry.drAccount,
           rcCode: entry.rcCode,
           currCode: entry.currCode,
           currRate: formatNumber(entry.currRate, 6),
@@ -1585,7 +1632,7 @@ const handleCloseARBalance = async (payload) => {
   }
 
   updateState({ 
-    showARBalanceModal: false,
+    showAPBalanceModal: false,
     isLoading: false
   });
 };
@@ -1718,24 +1765,32 @@ const handleCloseBranchModal = (selectedBranch) => {
       {showSpinner && <LoadingSpinner />}
 
       <div className="global-tran-headerToolbar-ui">
-      <Header 
-  docType={docType} 
-  pdfLink={pdfLink} 
-  videoLink={videoLink}
-  onPrint={handlePrint} 
-  onPost={handlePost} 
-  printData={printData} 
-  onReset={handleReset}
-  onSave={() => handleActivityOption("Upsert")}
-  onCancel={handleCancel} 
-  onCopy={handleCopy} 
-  onAttach={handleAttach}
-  isSaveDisabled={isSaveDisabled} // Pass disabled state
-  isResetDisabled={isResetDisabled} // Pass disabled state
-/>
+        <Header 
+              docType={docType} 
+              pdfLink={pdfLink} 
+              videoLink={videoLink}
+              onPrint={handlePrint} 
+              onPost={handlePost} 
+              printData={printData} 
+              onReset={handleReset}
+              onSave={() => handleActivityOption("Upsert")}
+              onCancel={handleCancel} 
+              onCopy={handleCopy} 
+              onAttach={handleAttach}
+              activeTopTab={topTab} 
+              showActions={topTab === "details"} 
+              showBIRForm={false}      
+              onDetails={() => setTopTab("details")}
+              onHistory={() => setTopTab("history")}
+              disableRouteNavigation={true}         
+              isSaveDisabled={isSaveDisabled} 
+              isResetDisabled={isResetDisabled} 
+              detailsRoute="/page/APCM"
+        />
       </div>
 
-      {/* Page title and subheading */} 
+  <div className={topTab === "details" ? "" : "hidden"}>
+          {/* Page title and subheading */} 
 
       {/* Header Section */}
       <div className="global-tran-header-ui">
@@ -1810,20 +1865,20 @@ const handleCloseBranchModal = (selectedBranch) => {
                 <div className="relative">
                     <input
                         type="text"
-                        id="arcmNo"
+                        id="apcmNo"
                         value={state.documentNo}
                         onChange={(e) => updateState({ documentNo: e.target.value })}
                         onBlur={handleCrNoBlur}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault(); 
-                            document.getElementById("arcmDate")?.focus();
+                            document.getElementById("apcmDate")?.focus();
                           }}}
                         placeholder=" "
                         className={`peer global-tran-textbox-ui ${state.isDocNoDisabled ? 'bg-blue-100 cursor-not-allowed' : ''}`}
                         disabled={state.isDocNoDisabled}
                     />
-                    <label htmlFor="arcmNo" className="global-tran-floating-label">
+                    <label htmlFor="apcmNo" className="global-tran-floating-label">
                         APCM No.
                     </label>
                     <button
@@ -1846,13 +1901,13 @@ const handleCloseBranchModal = (selectedBranch) => {
                 {/* APCM Date Picker */}
                 <div className="relative">
                     <input type="date"
-                        id="arcmDate"
+                        id="apcmDate"
                         className="peer global-tran-textbox-ui"
                         value={documentDate}
                         onChange={(e) => updateState({ documentDate: e.target.value })} 
                         disabled={isFormDisabled} 
                     />
-                    <label htmlFor="arcmDate" className="global-tran-floating-label">APCM Date</label>
+                    <label htmlFor="apcmDate" className="global-tran-floating-label">APCM Date</label>
                 </div>
 
                 
@@ -1869,16 +1924,16 @@ const handleCloseBranchModal = (selectedBranch) => {
 
                   {/* Transaction Type */}
                 <div className="relative">
-                    <select id="arcmType"
+                    <select id="apcmType"
                         className="peer global-tran-textbox-ui"
                         value={selectedAPCMType}
                         disabled={handleFieldBehavior("disableOnSaved")} 
                         onChange={(e) => handleAPCMTypeChange(e)}
                     >
-                        {arcmTypes.length > 0 ?
+                        {apcmTypes.length > 0 ?
                         (
                             <>  
-                                {arcmTypes.map((type) =>
+                                {apcmTypes.map((type) =>
                                 (
                                     <option key={type.DROPDOWN_CODE} value={type.DROPDOWN_CODE}>
                                         {type.DROPDOWN_NAME}
@@ -1887,7 +1942,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             </>
                         ) : (<option value="">Loading Transaction Types...</option>)}
                     </select>
-                    <label htmlFor="arcmType" className="global-tran-floating-label">Tran Type</label>
+                    <label htmlFor="apcmType" className="global-tran-floating-label">Tran Type</label>
                     <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
                         <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -1898,8 +1953,8 @@ const handleCloseBranchModal = (selectedBranch) => {
                 {/* Payee Code */}
                 <div className="relative">
                     <input type="text"
-                        id="custCode"
-                        value={custCode}
+                        id="vendCode"
+                        value={vendCode}
                         readOnly
                         placeholder=" "
                         className="peer global-tran-textbox-ui"
@@ -1909,7 +1964,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     </label>
                     <button
                         type="button"
-                        onClick={() => updateState({ custModalOpen: true })}
+                        onClick={() => updateState({ payeeModalOpen: true })}
                         className={`global-tran-textbox-button-search-padding-ui ${
                             isFetchDisabled
                             ? "global-tran-textbox-button-search-disabled-ui"
@@ -1923,8 +1978,8 @@ const handleCloseBranchModal = (selectedBranch) => {
 
                 {/* Payee Name Display - Make this wider */}
                 <div className="relative w-full md:w-6/6 lg:w-4/4"> {/* Added width classes here */}
-                    <input type="text" id="custName" placeholder=" " value={custName} className="peer global-tran-textbox-ui"/>
-                    <label htmlFor="custName"className="global-tran-floating-label">
+                    <input type="text" id="vendName" placeholder=" " value={vendName} className="peer global-tran-textbox-ui"/>
+                    <label htmlFor="vendName"className="global-tran-floating-label">
                         <span className="global-tran-asterisk-ui"> * </span>Payee Name
                     </label>
                 </div>
@@ -1937,12 +1992,8 @@ const handleCloseBranchModal = (selectedBranch) => {
             <div className="global-tran-textbox-group-div-ui">
 
                 
-                
-                {/* NEW FLEX CONTAINER FOR CURRENCY AND CURRENCY RATE */}
-                <div className="flex space-x-4"> {/* Added flex container with spacing */}
-
                     {/* Currency */}
-                    <div className="relative flex-grow w-2/3"> {/* Used flex-grow to make it longer */}
+                    <div className="relative"> {/* Used flex-grow to make it longer */}
                         <input type="text" 
                             id="currCode" 
                             value={currCode}  
@@ -1969,7 +2020,7 @@ const handleCloseBranchModal = (selectedBranch) => {
  
 
                     {/* Currency Rate */}
-                    <div className="relative flex-grow"> {/* Used flex-grow to take remaining space (or you can use w-1/3) */}
+                    <div className="relative"> {/* Used flex-grow to take remaining space (or you can use w-1/3) */}
                         <input type="text" id="currRate" value={currRate} 
                             onChange={(e) => {
                             const inputValue = e.target.value;
@@ -1995,9 +2046,6 @@ const handleCloseBranchModal = (selectedBranch) => {
                         <label htmlFor="currName" className="global-tran-floating-label"> Currency Rate
                         </label>
                     </div>
-                </div>
-
-
             </div>
 
 
@@ -2057,7 +2105,7 @@ const handleCloseBranchModal = (selectedBranch) => {
 </div>
       
       {/* APV Detail Section */}
-      <div id="arcm_dtl" className="global-tran-tab-div-ui" >
+      <div id="apcm_dtl" className="global-tran-tab-div-ui" >
 
       {/* Tab Navigation */}
       <div className="global-tran-tab-nav-ui">
@@ -2084,9 +2132,10 @@ const handleCloseBranchModal = (selectedBranch) => {
       <thead className="global-tran-thead-div-ui">
         <tr>
           <th className="global-tran-th-ui">LN</th>
-          <th className="global-tran-th-ui">SI/SVI No.</th>
-          <th className="global-tran-th-ui">SI/SVI Date</th>
-          <th className="global-tran-th-ui">SI/SVI Amount</th>
+          <th className="global-tran-th-ui">APV No.</th>
+          <th className="global-tran-th-ui">Invoice No.</th>
+          <th className="global-tran-th-ui">Invoice Date</th>
+          <th className="global-tran-th-ui">Invoice Amount</th>
           <th className="global-tran-th-ui">Applied Amount</th>
           <th className="global-tran-th-ui">VAT Code</th>
           <th className="global-tran-th-ui">VAT Name</th>
@@ -2096,8 +2145,8 @@ const handleCloseBranchModal = (selectedBranch) => {
           <th className="global-tran-th-ui">ATC Amount</th>
           <th className="global-tran-th-ui">Curr Code</th>
           <th className="global-tran-th-ui">Curr Rate</th>
-          <th className="global-tran-th-ui">AR Account</th>
-          <th className="global-tran-th-ui">DR Account</th>
+          <th className="global-tran-th-ui">AP Account</th>
+          <th className="global-tran-th-ui">CR Account</th>
           <th className="global-tran-th-ui">RC Code</th>
           <th className="global-tran-th-ui hidden">Ref Branch</th>
           <th className="global-tran-th-ui hidden">Ref Doc Code</th>
@@ -2106,13 +2155,13 @@ const handleCloseBranchModal = (selectedBranch) => {
           <th className="global-tran-th-ui hidden">ATC Rate</th>
                  
          {!isFormDisabled && (
-          <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+          <th className="global-tran-th-ui sticky right-[43px] bg-blue-200 dark:bg-blue-900 z-30">
             Add
           </th>
         )}
 
         {!isFormDisabled && (
-          <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+          <th className="global-tran-th-ui sticky right-0 bg-blue-200 dark:bg-blue-900 z-30">
             Delete
           </th>
         )}
@@ -2127,6 +2176,16 @@ const handleCloseBranchModal = (selectedBranch) => {
           {/* LN */}
           <td className="global-tran-td-ui text-center">{index + 1}</td>
 
+         {/* APV No */}
+          <td className="global-tran-td-ui">
+              <input
+                type="text"
+                className="w-[100px] global-tran-td-inputclass-ui"
+                value={row.apvNo || ""}
+                onChange={(e) => handleDetailChange(index, 'apvNo', e.target.value)}
+                readOnly
+              />
+            </td>
           
          {/* SI No */}
           <td className="global-tran-td-ui">
@@ -2170,7 +2229,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     type="text"
                     className="w-[100px] h-7 text-xs bg-transparent text-right focus:outline-none focus:ring-0"
                     value={row.appliedAmount || ""}
-                    readOnly={handleFieldBehavior("reversalInvoice")}
+                    readOnly={handleFieldBehavior("CWTReversal")}
                     onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2185,7 +2244,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                       }}  
 
                     onBlur={async (e) => {
-                         if (handleFieldBehavior("reversalInvoice")) {
+                         if (handleFieldBehavior("CWTReversal")) {
                                   return;
                                 }
 
@@ -2197,7 +2256,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                         setFocusedCell(null);
                     }}
                     onKeyDown={async (e) => {
-                         if (handleFieldBehavior("reversalInvoice")) {
+                         if (handleFieldBehavior("CWTReversal")) {
                                   return;
                                 }
 
@@ -2223,7 +2282,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   value={row.vatCode || ""}
                   readOnly
                 />
-                {!handleFieldBehavior("reversalInvoice") && (
+                {!handleFieldBehavior("CWTReversal") && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2262,7 +2321,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   value={row.atcCode || ""}
                   readOnly
                 />
-                {!handleFieldBehavior("reversalInvoice") && (
+                {!handleFieldBehavior("CWTReversal") && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2322,7 +2381,7 @@ const handleCloseBranchModal = (selectedBranch) => {
               <input
                 type="text"
                 className="w-[100px] global-tran-td-inputclass-ui text-center pr-6 cursor-pointer"
-                value={row.arAcct || ""}
+                value={row.apAcct || ""}
                 readOnly
               />
               {(handleFieldBehavior("withoutInvoice") && (row.groupId == null || row.groupId === "")) && (
@@ -2332,7 +2391,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   onClick={() => {
                     updateState({ selectedRowIndex: index ,
                                   showAccountModal: true,
-                                  accountModalSource: "arAcct"  });
+                                  accountModalSource: "apAcct"  });
                   }}
                 />
               )}
@@ -2350,7 +2409,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                 value={row.drAcct || ""}
                 readOnly
               />
-              {(!handleFieldBehavior("reversalInvoice") && handleFieldBehavior("wInvoice")) && (
+              {(!handleFieldBehavior("CWTReversal") && handleFieldBehavior("wInvoice")) && (
                 <FontAwesomeIcon 
                   icon={faMagnifyingGlass} 
                   className="absolute right-2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2617,10 +2676,10 @@ const handleCloseBranchModal = (selectedBranch) => {
             
             {!isFormDisabled && (
               <>
-                <th className="global-tran-th-ui sticky right-[43px] bg-blue-300 dark:bg-blue-900 z-30">
+                <th className="global-tran-th-ui sticky right-[43px] bg-blue-200 dark:bg-blue-900 z-30">
                   Add
                 </th>
-                <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
+                <th className="global-tran-th-ui sticky right-0 bg-blue-200 dark:bg-blue-900 z-30">
                   Delete
                 </th>
               </>
@@ -2643,7 +2702,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                     onChange={(e) => handleDetailChangeGL(index, 'acctCode', e.target.value)}      
       
                   />
-                  {!handleFieldBehavior("reversalInvoice") && (
+                  {!handleFieldBehavior("CWTReversal") && (
                   <FontAwesomeIcon 
                     icon={faMagnifyingGlass} 
                     className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2669,7 +2728,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                         onChange={(e) => handleDetailChangeGL(index, 'rcCode', e.target.value)}
                         readOnly
                     />
-                   {!handleFieldBehavior("reversalInvoice") && (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && (
+                   {!handleFieldBehavior("CWTReversal") && (row.rcCode === "REQ RC" || (row.rcCode && row.rcCode !== "REQ RC")) && (
                       <FontAwesomeIcon
                         icon={faMagnifyingGlass}
                         className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2708,7 +2767,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                           readOnly
                       />
 
-                      {!handleFieldBehavior("reversalInvoice") && (row.slCode === "REQ SL" || row.slCode) && ( 
+                      {!handleFieldBehavior("CWTReversal") && (row.slCode === "REQ SL" || row.slCode) && ( 
                           <FontAwesomeIcon
                               icon={faMagnifyingGlass}
                               className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2747,7 +2806,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                           readOnly
                       />
 
-                      {!handleFieldBehavior("reversalInvoice") && row.vatCode && row.vatCode.length > 0 && (
+                      {!handleFieldBehavior("CWTReversal") && row.vatCode && row.vatCode.length > 0 && (
                           <FontAwesomeIcon
                             icon={faMagnifyingGlass}
                             className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2786,7 +2845,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                           readOnly
                       />
 
-                      {!handleFieldBehavior("reversalInvoice") && (row.atcCode !== "" || row.atcCode) && ( 
+                      {!handleFieldBehavior("CWTReversal") && (row.atcCode !== "" || row.atcCode) && ( 
                           <FontAwesomeIcon
                               icon={faMagnifyingGlass}
                               className="absolute top-1/2 right-2 -translate-y-1/2 text-blue-600 text-lg cursor-pointer hover:text-blue-900"
@@ -2821,7 +2880,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debit || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2830,7 +2889,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                         }}}
 
                   onKeyDown={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                           if (e.key === "Enter") {
@@ -2838,7 +2897,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'debit', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                         if (e.target.value === "0.00" || e.target.value === "0") {
@@ -2856,7 +2915,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.credit || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2864,7 +2923,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleDetailChangeGL(index, "credit", sanitizedValue);
                         }}}
                   onKeyDown={(e) => {
-                        if(handleFieldBehavior("reversalInvoice")) {
+                        if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                             
@@ -2873,7 +2932,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'credit', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                             
@@ -2891,7 +2950,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx1 || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2899,7 +2958,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleDetailChangeGL(index, "debitFx1", sanitizedValue);
                         }}}
                   onKeyDown={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                             
@@ -2908,7 +2967,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'debitFx1', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                         if (e.target.value === "0.00" || e.target.value === "0") {
@@ -2924,7 +2983,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx1 || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2932,7 +2991,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleDetailChangeGL(index, "creditFx1", sanitizedValue);
                         }}}
                   onKeyDown={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                             
@@ -2941,7 +3000,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'creditFx1', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                         if (e.target.value === "0.00" || e.target.value === "0") {
@@ -2958,7 +3017,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.debitFx2 || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2966,7 +3025,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleDetailChangeGL(index, "debitFx2", sanitizedValue);
                         }}}
                   onKeyDown={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                             
@@ -2975,7 +3034,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'debitFx2', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                         if (e.target.value === "0.00" || e.target.value === "0") {
@@ -2991,7 +3050,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[120px] global-tran-td-inputclass-ui text-right"
                   value={row.creditFx2 || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => {   
                         const inputValue = e.target.value;
                         const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
@@ -2999,7 +3058,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleDetailChangeGL(index, "creditFx2", sanitizedValue);
                         }}}
                   onKeyDown={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                           if (e.key === "Enter") {
@@ -3007,7 +3066,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             handleBlurGL(index, 'creditFx2', e.target.value,true);
                           }}}
                   onFocus={(e) => {
-                    if(handleFieldBehavior("reversalInvoice")) {
+                    if(handleFieldBehavior("CWTReversal")) {
                             return;
                           }
                         if (e.target.value === "0.00" || e.target.value === "0") {
@@ -3023,7 +3082,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.slRefNo || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   maxLength={25}
                   onChange={(e) => handleDetailChangeGL(index, 'slRefNo', e.target.value)}
                 />
@@ -3033,7 +3092,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="date"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.slRefDate || ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => handleDetailChangeGL(index, 'slRefDate', e.target.value)}
                 />
 
@@ -3043,7 +3102,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                   type="text"
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.remarks ||  ""}
-                  readOnly={handleFieldBehavior("reversalInvoice")}
+                  readOnly={handleFieldBehavior("CWTReversal")}
                   onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                 />
              </td>
@@ -3149,10 +3208,10 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
 
-{custModalOpen && (
+{payeeModalOpen && (
   <PayeeMastLookupModal
-    isOpen={custModalOpen}
-    onClose={handleCloseCustModal}
+    isOpen={payeeModalOpen}
+    onClose={handleClosePayeeModal}
   />
 )}
 
@@ -3167,15 +3226,15 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
 
-{showARBalanceModal && (
+{showAPBalanceModal && (
   <GlobalLookupModalv1
-    isOpen={showARBalanceModal}
+    isOpen={showAPBalanceModal}
     data={globalLookupRow}
     btnCaption="Get Selected Invoice"
-    title="Open AR Balance"
+    title="Open AP Balance"
     endpoint={globalLookupHeader}
-    onClose={handleCloseARBalance}
-    onCancel={() => updateState({ showARBalanceModal: false })}
+    onClose={handleCloseAPBalance}
+    onCancel={() => updateState({ showAPBalanceModal: false })}
   />
 )}
 
@@ -3235,23 +3294,23 @@ const handleCloseBranchModal = (selectedBranch) => {
 )}
 
 
-{/* Cancellation Modal */}
-{showCancelModal && (
-  <CancelTranModal
-    isOpen={showCancelModal}
-    onClose={handleCloseCancel}
-  />
-)}
+    {/* Cancellation Modal */}
+    {showCancelModal && (
+      <CancelTranModal
+        isOpen={showCancelModal}
+        onClose={handleCloseCancel}
+      />
+    )}
 
 
 
 
- {showPostingModal && (
+ {/* {showPostingModal && (
   <PostAPCM
     isOpen={showPostingModal}
     onClose={() => updateState({ showPostingModal: false })}
   />
-)} 
+)}  */}
 
 
 {showAttachModal && (
@@ -3282,9 +3341,40 @@ const handleCloseBranchModal = (selectedBranch) => {
 
 
 
-{showSpinner && <LoadingSpinner />}
-    </div>
-  );
+
+    {showSpinner && <LoadingSpinner />}
+  </div>
+
+
+  <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getAPCMHistory"
+        cacheKey={`APCM:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="APCM_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+        status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+          historyExportName={`${documentTitle} History`} 
+    />
+  </div>
+
+
+</div>
+);
+// End of Return
+
+
+
 };
 
 export default APCM;

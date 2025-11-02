@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect,useRef,useCallback } from "react";
 import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 
 // UI
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -20,6 +21,7 @@ import CancelTranModal from "../../../Lookup/SearchCancelRef.jsx";
 import PostTranModal from "../../../Lookup/SearchPostRef.jsx";
 import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
+import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
 
 // Configuration
 import {fetchData , postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -78,9 +80,14 @@ import Header from '@/NAYSA Cloud/Components/Header';
 import { faAdd } from "@fortawesome/free-solid-svg-icons/faAdd";
 
 const JV = () => {
-  const { user } = useAuth();
-  const { resetFlag } = useReset();
-  const [state, setState] = useState({
+   const loadedFromUrlRef = useRef(false);
+   const navigate = useNavigate();
+   const [topTab, setTopTab] = useState("details"); // "details" | "history"
+   const { user } = useAuth();
+   const { resetFlag } = useReset();
+   const [state, setState] = useState({
+
+
     // HS Option
     glCurrMode: "M",
     glCurrDefault: "PHP",
@@ -143,7 +150,7 @@ const JV = () => {
     selectedRefDocType: "",
     noReprints:"0",
 
-    userCode: 'NSI', // Default value
+    userCode: user.USER_CODE, 
 
     // Detail 1-2
     detailRows: [],
@@ -918,6 +925,35 @@ const handlePost = async () => {
     }
   };
 
+ 
+ //  ** View Document and Transaction History Retrieval ***
+  const cleanUrl = useCallback(() => {
+     navigate(location.pathname, { replace: true });
+   }, [navigate, location.pathname]);
+ 
+ 
+   const handleHistoryRowPick = useCallback((row) => {
+     const docNo = row?.docNo;
+     const branchCode = row?.branchCode;
+     if (!docNo || !branchCode) return;
+     fetchTranData(docNo, branchCode);
+     setTopTab("details");
+   });
+ 
+ 
+   useEffect(() => {
+     const params = new URLSearchParams(location.search);
+     const docNo = params.get("jvNo");         
+     const branchCode = params.get("branchCode");    
+     
+     if (!loadedFromUrlRef.current && docNo && branchCode) {
+       loadedFromUrlRef.current = true;
+       handleHistoryRowPick({ docNo, branchCode });
+       cleanUrl();
+     }
+   }, [location.search, handleHistoryRowPick, cleanUrl]);
+ 
+
   const printData = {
     jv_no: documentNo,
     branch: branchCode,
@@ -1393,11 +1429,13 @@ return (
   onCancel={handleCancel} 
   onCopy={handleCopy} 
   onAttach={handleAttach}
+  onHistory={() => setTopTab("history")}
   isSaveDisabled={isSaveDisabled} // Pass disabled state
   isResetDisabled={isResetDisabled} // Pass disabled state
 />
       </div>
 
+  <div className={topTab === "details" ? "" : "hidden"}>
       {/* Page title and subheading */} 
 
       {/* Header Section */}
@@ -2432,10 +2470,51 @@ return (
 
 
 
-{showSpinner && <LoadingSpinner />}
-    </div>
+    {showSpinner && <LoadingSpinner />}
+     </div>
+
+
+
+  <div className={topTab === "history" ? "" : "hidden"}>
+      <AllTranHistory
+        showHeader={false}
+        endpoint="/getJVHistory"
+        cacheKey={`JV:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
+        activeTabKey="JV_Summary"
+        branchCode={state.branchCode}
+        startDate={state.fromDate}
+        endDate={state.toDate}
+        status={(() => {
+            const s = (state.status || "").toUpperCase();
+            if (s === "FINALIZED") return "F";
+            if (s === "CANCELLED") return "X";
+            if (s === "CLOSED")    return "C";
+            if (s === "OPEN")      return "";
+            return "All";
+          })()}
+          onRowDoubleClick={handleHistoryRowPick}
+          historyExportName={`${documentTitle} History`} 
+    />
+  </div>
+
+
+</div>
+
+
+
+
+
+
+
+
   );
 };
+
+
+
+
+
+
 
 export default JV;
 
