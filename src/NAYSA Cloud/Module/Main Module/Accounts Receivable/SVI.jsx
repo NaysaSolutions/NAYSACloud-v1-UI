@@ -22,6 +22,7 @@ import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import PostSVI from "../../../Module/Main Module/Accounts Receivable/PostSVI.jsx";
 import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
+import AllTranDocNo from "../../../Lookup/SearchDocNo.jsx";
 
 
 // Configuration
@@ -59,6 +60,8 @@ import {
   useUpdateRowEditEntries,
   useFetchTranData,
   useHandleCancel,
+  useFieldLenghtCheck,
+  useGetFieldLength,
 } from '@/NAYSA Cloud/Global/procedure';
 
 import {
@@ -143,6 +146,7 @@ const SVI = () => {
 
 
     //Other Header Info
+    tblFieldArray :[],
     sviTypes :[],
     refDocNo1: "",
     refDocNo2: "",
@@ -189,6 +193,7 @@ const SVI = () => {
     showAttachModal:false,
     showSignatoryModal:false,
     showPostingModal:false,
+    showAllTranDocNo:false
    });
 
   const updateState = (updates) => {
@@ -256,6 +261,7 @@ const SVI = () => {
 
 
   // Transaction details
+  tblFieldArray,
   detailRows,
   detailRowsGL,
   totalDebit,
@@ -286,7 +292,8 @@ const SVI = () => {
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-  showPostingModal
+  showPostingModal,
+  showAllTranDocNo
 
 } = state;
 
@@ -432,6 +439,21 @@ useEffect(() => {
   }, []);
 
 
+
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "F1") { e.preventDefault(); updateState({showAllTranDocNo:true}); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
+
+
+
+
   
 
 
@@ -463,6 +485,7 @@ useEffect(() => {
 
       custName:"",
       custCode:"",
+      attention:"",
       documentNo: "",
       documentID: "",
       detailRows: [],
@@ -531,6 +554,16 @@ useEffect(() => {
           });
         }
       }
+
+      
+     const tbls = 'svi_hd,svi_dt1,svi_dt2'
+     const hdtblcol_result = await useFieldLenghtCheck(tbls);
+     if (hdtblcol_result){
+       updateState({tblFieldArray :hdtblcol_result })
+     }
+      
+
+
     } catch (err) {
       console.error("Error fetching data:", err);
     }
@@ -561,7 +594,7 @@ const loadCurrencyMode = (
 
 
 
-const fetchTranData = async (documentNo, branchCode) => {
+const fetchTranData = async (documentNo, branchCode,direction='') => {
   const resetState = () => {
     updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
     updateTotals([]);
@@ -570,7 +603,7 @@ const fetchTranData = async (documentNo, branchCode) => {
   updateState({ isLoading: true });
 
   try {
-    const data = await useFetchTranData(documentNo, branchCode,docType,"sviNo");
+    const data = await useFetchTranData(documentNo, branchCode,docType,"sviNo",direction);
 
 
     if (!data?.sviId) {
@@ -616,6 +649,7 @@ const fetchTranData = async (documentNo, branchCode) => {
       selectedSVIType: data.svitranType,
       custCode: data.custCode,
       custName: data.custName,
+      attention:data.attention,
       refDocNo1: data.refDocNo1,
       refDocNo2: data.refDocNo2,
       currCode: data.currCode,
@@ -710,6 +744,7 @@ const handleCurrRateNoBlur = (e) => {
       billtermCode:billtermCode,
       custCode: custCode,
       custName: custName,
+      attention:attention,
       refDocNo1: refDocNo1,
       refDocNo2: refDocNo2,
       fromDate: fromDate,
@@ -1458,6 +1493,20 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
+const handleTranDocNoRetrieval = async (data) => {
+    await fetchTranData(data.docNo, branchCode, data.key);
+    updateState({showAllTranDocNo: data.modalClose});
+};
+
+
+const handleTranDocNoSelection = async (data) => {
+    
+    handleReset();
+    updateState({showAllTranDocNo: false, documentNo:data.docNo });
+};
+
+
+
 
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
@@ -1760,9 +1809,10 @@ return (
                             id="sviNo"
                             value={state.documentNo}
                             onChange={(e) => updateState({ documentNo: e.target.value })}
-                            onBlur={handleSviNoBlur}
+                            // onBlur={handleSviNoBlur}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
+                                handleSviNoBlur();
                                 e.preventDefault(); 
                                 document.getElementById("SVIDate")?.focus();
                               }}}
@@ -1779,12 +1829,8 @@ return (
                                 ? "global-tran-textbox-button-search-disabled-ui"
                                 : "global-tran-textbox-button-search-enabled-ui"
                             } global-tran-textbox-button-search-ui`}
-                            disabled={state.isFetchDisabled || state.isDocNoDisabled}
-                            onClick={() => {
-                                if (!state.isDocNoDisabled) {
-                                    fetchTranData(state.documentNo,state.branchCode);
-                                }
-                            }}
+                            // disabled={state.isFetchDisabled || state.isDocNoDisabled}
+                            onClick={() => {updateState({showAllTranDocNo:true})}}
                         >
                             <FontAwesomeIcon icon={faMagnifyingGlass} />
                         </button>
@@ -1887,7 +1933,7 @@ return (
                     </div>
 
                     <div className="relative">
-                        <input type="text" id="attention" placeholder=" " value={attention} onChange={(e) => updateState({ attention: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                        <input type="text" id="attention" placeholder=" " value={attention} onChange={(e) => updateState({ attention: e.target.value })} className="peer global-tran-textbox-ui" disabled={isFormDisabled} maxLength={useGetFieldLength(tblFieldArray, "attention")} />
                         <label htmlFor="attention" className="global-tran-floating-label">Attention</label>
                     </div>
 
@@ -1955,12 +2001,12 @@ return (
                 {/* Column 3 */}
                 <div className="global-tran-textbox-group-div-ui">
                     <div className="relative">
-                        <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} />
+                        <input type="text" id="refDocNo1"  value={refDocNo1} placeholder=" " onChange={(e) => updateState({ refDocNo1: e.target.value })} className="peer global-tran-textbox-ui " disabled={isFormDisabled} maxLength={useGetFieldLength(tblFieldArray, "refsvi_no1")} />
                         <label htmlFor="refDocNo1" className="global-tran-floating-label">Ref Doc No. 1</label>
                     </div>
 
                     <div className="relative">
-                        <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui" disabled={isFormDisabled} />
+                        <input type="text" id="refDocNo2" value={refDocNo2} placeholder=" " onChange={(e) => updateState({ refDocNo2: e.target.value })}  className="peer global-tran-textbox-ui" disabled={isFormDisabled} maxLength={useGetFieldLength(tblFieldArray, "refsvi_no2")} />
                         <label htmlFor="refDocNo2" className="global-tran-floating-label">Ref Doc No. 2</label>
                     </div>
 
@@ -1994,6 +2040,7 @@ return (
                             value={remarks}
                             onChange={(e) => updateState({ remarks: e.target.value })}
                             disabled={isFormDisabled} 
+                            maxLength={useGetFieldLength(tblFieldArray, "remarks")} 
                         />
                         <label
                             htmlFor="remarks"
@@ -2152,6 +2199,7 @@ return (
                     className="w-[100px] global-tran-td-inputclass-ui"
                     value={row.billName || ""}
                     onChange={(e) => handleDetailChange(index, 'billName', e.target.value)}
+                    maxLength={useGetFieldLength(tblFieldArray, "bill_name")}
                   />
                 </td>
 
@@ -2162,6 +2210,7 @@ return (
                   className="w-[100px] global-tran-td-inputclass-ui"
                   value={row.sviSpecs || ""}
                   onChange={(e) => handleDetailChange(index, "sviSpecs", e.target.value)}
+                  maxLength={useGetFieldLength(tblFieldArray, "svi_specs")}
                 />
               </td>
 
@@ -3083,7 +3132,7 @@ return (
                       type="text"
                       className="w-[100px] global-tran-td-inputclass-ui"
                       value={row.slRefNo || ""}
-                      maxLength={25}
+                      maxLength={useGetFieldLength(tblFieldArray, "slref_no")} 
                       onChange={(e) => handleDetailChangeGL(index, 'slRefNo', e.target.value)}
                     />
                   </td>
@@ -3101,6 +3150,7 @@ return (
                       type="text"
                       className="w-[100px] global-tran-td-inputclass-ui"
                       value={row.remarks || ""}
+                      maxLength={useGetFieldLength(tblFieldArray, "remarks")} 
                       onChange={(e) => handleDetailChangeGL(index, 'remarks', e.target.value)}
                     />
                 </td>
@@ -3352,7 +3402,23 @@ return (
       <PostSVI
         isOpen={showPostingModal}
         userCode={userCode}
+        docType={docType}
+        branchCode={branchCode}
         onClose={() => updateState({ showPostingModal: false })}
+      />
+    )} 
+
+
+
+
+    {showAllTranDocNo && (
+      <AllTranDocNo
+        isOpen={showAllTranDocNo}
+        params={{branchCode,branchName,docType,documentTitle,fieldNo : "sviNo"}}
+        onRetrieve={handleTranDocNoRetrieval}
+        onResponse={{documentNo}}
+        onSelected={handleTranDocNoSelection}
+        onClose={() => updateState({ showAllTranDocNo: false })}
       />
     )} 
    

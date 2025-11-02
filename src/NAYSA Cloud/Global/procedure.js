@@ -286,13 +286,14 @@ export const useUpdateRowEditEntries = async (row, field, value,currCode,currRat
 
 
 // global update of GL Entries per record
-export const useFetchTranData = async (documentNo,branchCode,docType,fieldName) => {
+export const useFetchTranData = async (documentNo,branchCode,docType,fieldName,direction='') => {
+
   
-if (!documentNo || !branchCode) {
+if ((!documentNo || !branchCode) && direction === '') {
     throw new Error("Document No. or Branch Code missing.");
   }
 
-  const response = await fetchData(`get${docType}?${fieldName}=${documentNo}&branchCode=${branchCode}`);
+  const response = await fetchData(`get${docType}?${fieldName}=${documentNo}&branchCode=${branchCode}&direction=${direction}`);
   if (!response?.success || !response.data?.length) {
     return null; // no record
   }
@@ -301,6 +302,44 @@ if (!documentNo || !branchCode) {
   return data;
 
 };
+
+
+
+
+
+
+export const useIsTranExist = async (documentNo, branchCode, docType, fieldName) => {
+  try {
+    const query = `${fieldName}=${encodeURIComponent(documentNo)}&branchCode=${encodeURIComponent(branchCode)}`;
+    const endpoint = `get${docType}?${query}`;
+
+    const response = await fetchData(endpoint);
+
+    // Basic validation
+    if (!response?.success || !Array.isArray(response.data) || response.data.length === 0) {
+      return 0; // not found
+    }
+
+    const result = response.data[0]?.result;
+
+    // Handle stringified null result
+    if (!result || result === '{"result":null}') {
+      return 0; // not found
+    }
+
+    return 1; // exists
+  } catch (error) {
+    console.error("Error checking transaction existence:", error);
+    return 0;
+  }
+};
+
+
+
+
+
+
+
 
 // global update of GL Entries per record
 export const useFetchTranDataReversal = async (documentNo,branchCode,docType,refDocType,fieldName) => {
@@ -467,3 +506,91 @@ export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,se
     setLoading(false);
   }
 };
+
+
+
+
+
+
+
+
+
+export const useFieldLenghtCheck = async (tableName) => {
+
+  try {
+
+    const payload = {tableName}
+    const response = await fetchData("getHSTblColLen",payload );
+    // ✅ Match actual API format
+    if (!response || !response.success ) {
+      console.warn("Invalid API response structure", response);
+      return [];
+    }
+
+    // ✅ Parse the JSON string inside result
+    let parsedData;
+    try {
+      parsedData = JSON.parse(response.data[0]?.result || "[]");
+
+    } catch (parseError) {
+      console.error("Error parsing response data:", parseError);
+      return [];
+    }
+
+    // ✅ Always return array (even if backend sends a single object)
+     return Array.isArray(parsedData) && parsedData.length > 0
+      ? parsedData
+      : null;
+
+  } catch (error) {
+    console.error("Error fetching Table Field lenght:", error);
+    return [];
+  }
+};
+
+
+
+
+
+export const useGetFieldLength = (fieldsArray, fieldName) => {
+  if (!Array.isArray(fieldsArray) || !fieldName) return 0;
+
+  const field = fieldsArray.find(
+    (item) => item.fieldname?.toLowerCase() === fieldName.toLowerCase()
+  );
+
+  return field ? parseInt(field.fieldlength, 10) : 0;
+};
+
+
+
+// export const useFieldLenghtCheck = async (tableName) => {
+//   try {
+//     const payload = { tableName };
+//     const response = await fetchData("getHSTblColLen", payload);
+
+//     // ✅ Validate API response
+//     if (!response || !response.success) {
+//       console.warn("Invalid API response structure:", response);
+//       return [];
+//     }
+
+//     // ✅ Parse safely
+//     let parsedData = [];
+//     try {
+//       const rawResult = response.data?.[0]?.result || "[]";
+//       const json = JSON.parse(rawResult);
+
+//       // Convert to array if backend returns single object
+//       parsedData = Array.isArray(json) ? json : [json];
+//     } catch (parseError) {
+//       console.error("Error parsing response data:", parseError);
+//       return [];
+//     }
+
+//     return parsedData;
+//   } catch (error) {
+//     console.error("Error fetching table field length:", error);
+//     return [];
+//   }
+// };

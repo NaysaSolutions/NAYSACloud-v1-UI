@@ -20,6 +20,7 @@ import AttachDocumentModal from "../../../Lookup/SearchAttachment.jsx";
 import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import PostPCV from "../../../Module/Main Module/Accounts Payable/PostPCV.jsx";
 import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
+import AllTranDocNo from "../../../Lookup/SearchDocNo.jsx";
 
 // Configuration
 import { postRequest} from '../../../Configuration/BaseURL.jsx'
@@ -178,6 +179,7 @@ const PCV = () => {
     showAttachModal:false,
     showSignatoryModal:false,
     showPostingModal:false,
+    showAllTranDocNo:false,
    });
 
   const updateState = (updates) => {
@@ -270,7 +272,8 @@ const PCV = () => {
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-  showPostingModal
+  showPostingModal,
+  showAllTranDocNo
 
 } = state;
 
@@ -407,6 +410,15 @@ useEffect(() => {
 
 
   
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "F1") { e.preventDefault(); updateState({showAllTranDocNo:true}); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
 
 
   const LoadingSpinner = () => (
@@ -532,7 +544,7 @@ const loadCurrencyMode = (
 
 
 
-const fetchTranData = async (documentNo, branchCode) => {
+const fetchTranData = async (documentNo, branchCode,direction="") => {
   const resetState = () => {
     updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
     updateTotals([]);
@@ -541,7 +553,7 @@ const fetchTranData = async (documentNo, branchCode) => {
   updateState({ isLoading: true });
 
   try {
-    const data = await useFetchTranData(documentNo, branchCode,docType,"pcvNo");
+    const data = await useFetchTranData(documentNo, branchCode,docType,"pcvNo",direction);
 
   
     if (!data?.pcvId) {
@@ -1386,6 +1398,20 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
+const handleTranDocNoRetrieval = async (data) => {
+    await fetchTranData(data.docNo, branchCode, data.key);
+    updateState({showAllTranDocNo: data.modalClose});
+};
+
+
+const handleTranDocNoSelection = async (data) => {
+
+    handleReset();
+    updateState({showAllTranDocNo: false, documentNo:data.docNo });
+};
+
+
+
 
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
@@ -1637,9 +1663,9 @@ const handleCloseBranchModal = (selectedBranch) => {
                         id="sviNo"
                         value={state.documentNo}
                         onChange={(e) => updateState({ documentNo: e.target.value })}
-                        onBlur={handlePcvNoBlur}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
+                            handlePcvNoBlur();
                             e.preventDefault(); 
                             document.getElementById("PCVDate")?.focus();
                           }}}
@@ -1656,12 +1682,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                             ? "global-tran-textbox-button-search-disabled-ui"
                             : "global-tran-textbox-button-search-enabled-ui"
                         } global-tran-textbox-button-search-ui`}
-                        disabled={state.isFetchDisabled || state.isDocNoDisabled}
-                        onClick={() => {
-                            if (!state.isDocNoDisabled) {
-                                fetchTranData(state.documentNo,state.branchCode);
-                            }
-                        }}
+                        onClick={() => {updateState({showAllTranDocNo:true})}}
                     >
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </button>
@@ -3027,6 +3048,20 @@ const handleCloseBranchModal = (selectedBranch) => {
     onClose={() => updateState({ showPostingModal: false })}
   />
 )}
+
+
+
+{showAllTranDocNo && (
+      <AllTranDocNo
+        isOpen={showAllTranDocNo}
+        params={{branchCode,branchName,docType,documentTitle,fieldNo : "pcvNo"}}
+        onRetrieve={handleTranDocNoRetrieval}
+        onResponse={{documentNo}}
+        onSelected={handleTranDocNoSelection}
+        onClose={() => updateState({ showAllTranDocNo: false })}
+      />
+    )} 
+   
 
 
 

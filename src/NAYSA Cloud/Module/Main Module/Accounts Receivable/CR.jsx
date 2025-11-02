@@ -22,6 +22,7 @@ import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalLookupv1.jsx";
 import PostCR from "../../../Module/Main Module/Accounts Receivable/PostCR.jsx";
 import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
+import AllTranDocNo from "../../../Lookup/SearchDocNo.jsx";
 
 
 // Configuration
@@ -213,6 +214,7 @@ const CR = () => {
     showAttachModal:false,
     showSignatoryModal:false,
     showBankMastModal:false,
+    showAllTranDocNo:false,
    });
 
   const updateState = (updates) => {
@@ -325,6 +327,7 @@ const CR = () => {
   showSignatoryModal,
   showARBalanceModal,
   showPostingModal,
+  showAllTranDocNo
 
 
 } = state;
@@ -449,6 +452,15 @@ useEffect(() => {
 
 
   
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "F1") { e.preventDefault(); updateState({showAllTranDocNo:true}); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
 
 
   const LoadingSpinner = () => (
@@ -626,7 +638,7 @@ const loadCurrencyMode = (
 
 
 
-const fetchTranData = async (documentNo, branchCode) => {
+const fetchTranData = async (documentNo, branchCode,direction="") => {
   const resetState = () => {
     updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
     updateTotals([]);
@@ -635,7 +647,7 @@ const fetchTranData = async (documentNo, branchCode) => {
   updateState({ isLoading: true });
 
   try {
-    const data = await useFetchTranData(documentNo, branchCode,docType,"crNo");
+    const data = await useFetchTranData(documentNo, branchCode,docType,"crNo",direction);
     console.log(data)
 
     if (!data?.crId) {
@@ -1581,6 +1593,22 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
+const handleTranDocNoRetrieval = async (data) => {
+    await fetchTranData(data.docNo, branchCode, data.key);
+    updateState({showAllTranDocNo: data.modalClose});
+};
+
+
+const handleTranDocNoSelection = async (data) => {
+
+    handleReset();
+    updateState({showAllTranDocNo: false, documentNo:data.docNo });
+};
+
+
+
+
+
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
 
@@ -1968,9 +1996,9 @@ const handleCloseBranchModal = (selectedBranch) => {
                             id="crNo"
                             value={state.documentNo}
                             onChange={(e) => updateState({ documentNo: e.target.value })}
-                            onBlur={handleCrNoBlur}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
+                                handleCrNoBlur();
                                 e.preventDefault(); 
                                 document.getElementById("crDate")?.focus();
                               }}}
@@ -1987,12 +2015,7 @@ const handleCloseBranchModal = (selectedBranch) => {
                                 ? "global-tran-textbox-button-search-disabled-ui"
                                 : "global-tran-textbox-button-search-enabled-ui"
                             } global-tran-textbox-button-search-ui`}
-                            disabled={state.isFetchDisabled || state.isDocNoDisabled}
-                            onClick={() => {
-                                if (!state.isDocNoDisabled) {
-                                    fetchTranData(state.documentNo,state.branchCode);
-                                }
-                            }}
+                            onClick={() => {updateState({showAllTranDocNo:true})}}
                         >
                             <FontAwesomeIcon icon={faMagnifyingGlass} />
                         </button>
@@ -3657,6 +3680,20 @@ const handleCloseBranchModal = (selectedBranch) => {
         onCancel={() => updateState({ showSignatoryModal: false })}
       />
     )}
+
+
+  
+      {showAllTranDocNo && (
+        <AllTranDocNo
+          isOpen={showAllTranDocNo}
+          params={{branchCode,branchName,docType,documentTitle,fieldNo : "crNo"}}
+          onRetrieve={handleTranDocNoRetrieval}
+          onResponse={{documentNo}}
+          onSelected={handleTranDocNoSelection}
+          onClose={() => updateState({ showAllTranDocNo: false })}
+        />
+      )} 
+     
 
 
 

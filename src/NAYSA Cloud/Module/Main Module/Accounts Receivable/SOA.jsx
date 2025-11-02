@@ -23,6 +23,7 @@ import DocumentSignatories from "../../../Lookup/SearchSignatory.jsx";
 import ARReportModal from "../../../Printing/ARReport.jsx";
 import GlobalLookupModalv1 from "../../../Lookup/SearchGlobalGLPostingv1.jsx";
 import AllTranHistory from "../../../Lookup/SearchGlobalTranHistory.jsx";
+import AllTranDocNo from "../../../Lookup/SearchDocNo.jsx";
 
 
 // Configuration
@@ -195,6 +196,7 @@ const SOA = () => {
     showAttachModal:false,
     showSignatoryModal:false,
     showPostingModal:false,
+    showAllTranDocNo:false,
    });
 
   const updateState = (updates) => {
@@ -292,7 +294,8 @@ const SOA = () => {
   showCancelModal,
   showAttachModal,
   showSignatoryModal,
-  showPostingModal
+  showPostingModal,
+  showAllTranDocNo
 
 } = state;
 
@@ -437,6 +440,15 @@ useEffect(() => {
   }, []);
 
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "F1") { e.preventDefault(); updateState({showAllTranDocNo:true}); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+
   
 
 
@@ -566,7 +578,7 @@ const loadCurrencyMode = (
 
 
 
-const fetchTranData = async (documentNo, branchCode) => {
+const fetchTranData = async (documentNo, branchCode,direction='') => {
   const resetState = () => {
     updateState({documentNo:'', documentID: '', isDocNoDisabled: false, isFetchDisabled: false });
     updateTotals([]);
@@ -575,7 +587,7 @@ const fetchTranData = async (documentNo, branchCode) => {
   updateState({ isLoading: true });
 
   try {
-    const data = await useFetchTranData(documentNo, branchCode,docType,"soaNo");
+    const data = await useFetchTranData(documentNo, branchCode,docType,"soaNo",direction);
 
     if (!data?.soaId) {
       Swal.fire({ icon: 'info', title: 'No Records Found', text: 'Transaction does not exist.' });
@@ -1460,6 +1472,20 @@ const handleCloseAccountModal = (selectedAccount) => {
 
 
 
+const handleTranDocNoRetrieval = async (data) => {
+    await fetchTranData(data.docNo, branchCode, data.key);
+    updateState({showAllTranDocNo: data.modalClose});
+};
+
+
+const handleTranDocNoSelection = async (data) => {
+
+    handleReset();
+    updateState({showAllTranDocNo: false, documentNo:data.docNo });
+};
+
+
+
 
 const handleCloseCancel = async (confirmation) => {
     if(confirmation && documentStatus !== "OPEN" && documentID !== null ) {
@@ -1764,9 +1790,9 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                             id="soaNo"
                             value={state.documentNo}
                             onChange={(e) => updateState({ documentNo: e.target.value })}
-                            onBlur={handleSviNoBlur}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
+                                handleSviNoBlur();
                                 e.preventDefault(); 
                                 document.getElementById("SOADate")?.focus();
                               }}}
@@ -1783,12 +1809,7 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
                                 ? "global-tran-textbox-button-search-disabled-ui"
                                 : "global-tran-textbox-button-search-enabled-ui"
                             } global-tran-textbox-button-search-ui`}
-                            disabled={state.isFetchDisabled || state.isDocNoDisabled}
-                            onClick={() => {
-                                if (!state.isDocNoDisabled) {
-                                    fetchTranData(state.documentNo,state.branchCode);
-                                }
-                            }}
+                            onClick={() => {updateState({showAllTranDocNo:true})}}
                         >
                             <FontAwesomeIcon icon={faMagnifyingGlass} />
                         </button>
@@ -3349,21 +3370,18 @@ const handleCloseBillTermModal = async (selectedBillTerm) => {
 
 
 
-    {/* {showPostingModal && (
-      <PostSOA
-        isOpen={showPostingModal}
-        onClose={() => updateState({ showPostingModal: false })}
-      />
-    )} */}
-
-    {/* {showPostingModal && (
-      <ARReportModal
-        isOpen={showPostingModal}
-        userCode ={userCode}
-        onClose={() => updateState({ showPostingModal: false })}
+ 
+    {showAllTranDocNo && (
+      <AllTranDocNo
+        isOpen={showAllTranDocNo}
+        params={{branchCode,branchName,docType,documentTitle,fieldNo : "soaNo"}}
+        onRetrieve={handleTranDocNoRetrieval}
+        onResponse={{documentNo}}
+        onSelected={handleTranDocNoSelection}
+        onClose={() => updateState({ showAllTranDocNo: false })}
       />
     )} 
-    */}
+   
 
 
       {showSpinner && <LoadingSpinner />}
