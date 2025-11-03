@@ -85,6 +85,7 @@ import Header from "@/NAYSA Cloud/Components/Header";
 const APV = () => {
   const { resetFlag } = useReset();
   const { user } = useAuth();
+  const [topTab, setTopTab] = useState("details"); 
   const [state, setState] = useState({
     // HS Option
     glCurrMode: "M",
@@ -285,6 +286,14 @@ const APV = () => {
   const isFormDisabled = ["FINALIZED", "CANCELLED", "CLOSED"].includes(
     displayStatus
   );
+
+  const handleHistoryRowPick = useCallback((row) => {
+       const docNo = row?.docNo;
+       const branchCode = row?.branchCode;
+       if (!docNo || !branchCode) return;
+       fetchTranData(docNo, branchCode);
+       setTopTab("details");
+     });
 
   // Field visibility based on AP type
   useEffect(() => {
@@ -2215,6 +2224,8 @@ const APV = () => {
           onSave={() => handleActivityOption("Upsert")}
           onPost={handlePost} // Add this
           onCancel={handleCancel}
+          onDetails={() => setTopTab("details")}
+          onHistory={() => setTopTab("history")}
           onCopy={handleCopy}
           onAttach={handleAttach}
           isSaveDisabled={isSaveDisabled}
