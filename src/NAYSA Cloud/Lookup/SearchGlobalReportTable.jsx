@@ -1,3 +1,4 @@
+
 import {
   useEffect,
   useMemo,
@@ -12,6 +13,7 @@ import { faSort, faSortUp, faSortDown, faEye, faCircleExclamation } from "@forta
 import { formatNumber, parseFormattedNumber } from "@/NAYSA Cloud/Global/behavior";
 import { useReturnToDate } from "@/NAYSA Cloud/Global/dates";
 
+const ACTION_COL_WIDTH = 64; // <- left action col width
 
 const SearchGlobalReportTable = forwardRef(
   (
@@ -24,20 +26,16 @@ const SearchGlobalReportTable = forwardRef(
       onRowAction,
       onRowDoubleClick,
       className = "",
-      initialState,           // NEW
-      onStateChange,          // NEW
+      initialState,
+      onStateChange,
     },
     ref
   ) => {
-    // Optional “lock once” header if you use that pattern; keep as-is if you already have it.
     const visibleCols = useMemo(() => (columns || []).filter((c) => !c.hidden), [columns]);
-
     const hasActionCol = Boolean(onRowAction || rightActionLabel);
 
-    // Scroll container ref (parent reads this to preserve scroll)
     const scrollRef = useRef(null);
 
-    // State (hydrate once from initialState)
     const [filters, setFilters] = useState(() => initialState?.filters || {});
     const [sortConfig, setSortConfig] = useState(() => initialState?.sortConfig || { key: null, direction: null });
     const [currentPage, setCurrentPage] = useState(() => {
@@ -45,12 +43,10 @@ const SearchGlobalReportTable = forwardRef(
       return p < 1 ? 1 : p;
     });
 
-    // Re-emit state whenever it changes so parent can cache it
     useEffect(() => {
       onStateChange?.({ filters, sortConfig, currentPage });
     }, [filters, sortConfig, currentPage, onStateChange]);
 
-    // --- Common formatting (GLOBAL BEHAVIOR) ---
     const parseNumber = (v) => {
       if (typeof parseFormattedNumber === "function") {
         const n = parseFormattedNumber(v);
@@ -91,9 +87,9 @@ const SearchGlobalReportTable = forwardRef(
       }
     };
 
-    // Sticky columns planning (unchanged)
+    // CHANGED: offset sticky-left columns by the action column width
     const stickyPlan = useMemo(() => {
-      let left = 0;
+      let left = hasActionCol ? ACTION_COL_WIDTH : 0;
       return visibleCols.map((c) => {
         if (c.stickyLeft) {
           const width = Number(c.width) || 120;
@@ -103,9 +99,8 @@ const SearchGlobalReportTable = forwardRef(
         }
         return { sticky: false, left: 0, width: undefined };
       });
-    }, [visibleCols]);
+    }, [visibleCols, hasActionCol]);
 
-    // Filtering + sorting
     const filtered = useMemo(() => {
       const active = Object.entries(filters).filter(([, v]) => String(v || "").trim() !== "");
       let rows = Array.isArray(data) ? data : [];
@@ -142,7 +137,6 @@ const SearchGlobalReportTable = forwardRef(
       return rows;
     }, [data, filters, sortConfig, visibleCols]);
 
-    // Pagination (do NOT auto-reset page anymore)
     const paginationEnabled = itemsPerPage > 0;
     const totalPages = paginationEnabled ? Math.max(1, Math.ceil(filtered.length / itemsPerPage)) : 1;
     const safePage = paginationEnabled ? Math.min(Math.max(1, currentPage), totalPages) : 1;
@@ -180,36 +174,39 @@ const SearchGlobalReportTable = forwardRef(
         ? "text-right tabular-nums"
         : "";
 
-    // Expose API to parent
     useImperativeHandle(ref, () => ({
       getState: () => ({ filters, sortConfig, currentPage: safePage }),
-      scrollRef, // parent can read/write scrollRef.current.scrollTop/Left
+      scrollRef,
       resetFilters: () => setFilters({}),
       clearSort: () => setSortConfig({ key: null, direction: null }),
       goToPage: (p) => setCurrentPage(Math.max(1, Number(p) || 1)),
     }));
 
-
     const scrollContainerClass = useMemo(() => {
-        const baseClasses = "overflow-auto custom-scrollbar overscroll-x-contain";
-        const noRecordsHeight = showFilters ? "max-h-[100px]" : "max-h-[40px]";
-        if (filtered.length === 0) {
-            return `${baseClasses} ${noRecordsHeight}`;
-        }
-        return `${baseClasses} max-h-[calc(100vh-220px)]`;
+      const baseClasses = "overflow-auto custom-scrollbar overscroll-x-contain";
+      const noRecordsHeight = showFilters ? "max-h-[100px]" : "max-h-[40px]";
+      if (filtered.length === 0) {
+        return `${baseClasses} ${noRecordsHeight}`;
+      }
+      return `${baseClasses} max-h-[calc(100vh-220px)]`;
     }, [filtered.length, showFilters]);
-
 
     return (
       <div className={["flex flex-col border rounded-md overflow-hidden", className].join(" ")}>
-        <div
-          ref={scrollRef}
-          // UPDATED: Use the dynamically calculated class
-          className={scrollContainerClass}
-        >
+        <div ref={scrollRef} className={scrollContainerClass}>
           <table className="min-w-full table-fixed">
             <thead className="sticky top-0 z-30">
               <tr className="bg-blue-700 text-white whitespace-nowrap text-[10px] sm:text-[11px]">
+                {/* CHANGED: Action column moved to LEFT and sticky */}
+                {hasActionCol && (
+                  <th
+                    className="sticky left-0 top-0 z-40 px-2 py-1 font-bold text-white text-center border-r border-blue-800 bg-blue-700"
+                    style={{ width: ACTION_COL_WIDTH }}
+                  >
+                    {rightActionLabel ?? ""}
+                  </th>
+                )}
+
                 {visibleCols.map((col, i) => {
                   const meta = stickyPlan[i];
                   const classes = [
@@ -232,18 +229,18 @@ const SearchGlobalReportTable = forwardRef(
                     </th>
                   );
                 })}
-                {hasActionCol && (
-                  <th
-                    className="sticky right-0 top-0 z-40 px-2 py-1 font-bold text-white text-center border-l border-blue-800 bg-blue-800"
-                    style={{ width: 64 }}
-                  >
-                    {rightActionLabel ?? ""}
-                  </th>
-                )}
               </tr>
 
               {showFilters && (
                 <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
+                  {/* CHANGED: Empty filter cell for left action col */}
+                  {hasActionCol && (
+                    <td
+                      className="sticky left-0 z-40 px-2 py-1 border-r border-gray-100 bg-white"
+                      style={{ width: ACTION_COL_WIDTH }}
+                    />
+                  )}
+
                   {visibleCols.map((col, i) => {
                     const meta = stickyPlan[i];
                     const style = meta.sticky ? { left: meta.left, width: meta.width } : undefined;
@@ -258,7 +255,7 @@ const SearchGlobalReportTable = forwardRef(
                           value={filters[col.key] || ""}
                           onChange={(e) => {
                             setFilters((prev) => ({ ...prev, [col.key]: e.target.value }));
-                            setCurrentPage(1); // reset page only when user changes filters
+                            setCurrentPage(1);
                           }}
                           placeholder="Filter ..."
                           className="w-full border rounded px-2 py-1 text-[10px] sm:text-[10px] focus:ring-2 focus:ring-blue-200"
@@ -266,9 +263,6 @@ const SearchGlobalReportTable = forwardRef(
                       </td>
                     );
                   })}
-                  {hasActionCol && (
-                    <td className="sticky right-0 z-40 px-2 py-1 border-l border-gray-100 bg-white" />
-                  )}
                 </tr>
               )}
             </thead>
@@ -283,6 +277,27 @@ const SearchGlobalReportTable = forwardRef(
                     }`}
                     onDoubleClick={() => onRowDoubleClick?.(row)}
                   >
+                    {/* CHANGED: Action cell on LEFT, sticky */}
+                    {hasActionCol && (
+                      <td
+                        className="sticky left-0 z-20 px-2 py-[2px] text-center border-r border-gray-200 bg-inherit"
+                        style={{ width: ACTION_COL_WIDTH }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRowAction?.(row);
+                          }}
+                           className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                          title={rightActionLabel ?? "Open"}
+                          disabled={!onRowAction}
+                        >
+                         <FontAwesomeIcon icon={faEye} className="w-4 h-3" />
+                        </button>
+                      </td>
+                    )}
+
                     {visibleCols.map((col, i) => {
                       const meta = stickyPlan[i];
                       const style = meta.sticky ? { left: meta.left, width: meta.width } : undefined;
@@ -306,25 +321,6 @@ const SearchGlobalReportTable = forwardRef(
                         </td>
                       );
                     })}
-                    {hasActionCol && (
-                     <td
-                          className="sticky right-0 z-20 px-2 py-[2px] text-center border-l border-gray-200 bg-inherit"
-                          style={{ width: 64 }}
-                          >
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRowAction?.(row);
-                            }}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            title={rightActionLabel ?? "Open"}
-                            disabled={!onRowAction}
-                          >
-                            <FontAwesomeIcon icon={faEye} />
-                          </button>
-                      </td>
-                    )}
                   </tr>
                 ))
               ) : (
@@ -344,7 +340,6 @@ const SearchGlobalReportTable = forwardRef(
           </table>
         </div>
 
-        {/* Pager (hidden if itemsPerPage === 0) */}
         {paginationEnabled && (
           <div className="flex items-center justify-end gap-2 p-2 border-t bg-white text-[11px]">
             <span className="mr-2 opacity-70">
@@ -377,8 +372,6 @@ const SearchGlobalReportTable = forwardRef(
         )}
       </div>
     );
-  
-
   }
 );
 

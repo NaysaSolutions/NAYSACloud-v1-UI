@@ -1428,10 +1428,23 @@ return (
   onPost={handlePost} 
   onCancel={handleCancel} 
   onCopy={handleCopy} 
-  onAttach={handleAttach}
-  onHistory={() => setTopTab("history")}
-  isSaveDisabled={isSaveDisabled} // Pass disabled state
-  isResetDisabled={isResetDisabled} // Pass disabled state
+  // onAttach={handleAttach}
+  // onHistory={() => setTopTab("history")}
+  // isSaveDisabled={isSaveDisabled} // Pass disabled state
+  // isResetDisabled={isResetDisabled} // Pass disabled state
+
+          onAttach={handleAttach}
+          activeTopTab={topTab} 
+          showActions={topTab === "details"} 
+          showBIRForm={false}      
+          onDetails={() => setTopTab("details")}
+          onHistory={() => setTopTab("history")}
+          disableRouteNavigation={true}         
+          isSaveDisabled={isSaveDisabled} 
+          isResetDisabled={isResetDisabled} 
+          detailsRoute="/page/SOA"
+
+
 />
       </div>
 

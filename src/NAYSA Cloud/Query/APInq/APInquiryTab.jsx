@@ -2,7 +2,12 @@ import { useEffect, useState, useRef, useCallback, forwardRef } from "react";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import {
+  faMagnifyingGlass,
+  faUser,
+  faCalendarAlt,
+  faChartLine,
+} from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
 import {
   exportToTabbedJson,
@@ -11,7 +16,7 @@ import {
   makeSheet,
 } from "@/NAYSA Cloud/Global/report";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
-import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
+import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import CutoffLookupModal from "@/NAYSA Cloud/Lookup/SearchCutoffRef";
 import {
   useTopCompanyRow,
@@ -22,30 +27,27 @@ import { useSelectedHSColConfig } from "@/NAYSA Cloud/Global/selectedData";
 import { formatNumber, parseFormattedNumber } from "@/NAYSA Cloud/Global/behavior";
 import SearchGlobalReportTable from "@/NAYSA Cloud/Lookup/SearchGlobalReportTable.jsx";
 
-const ENDPOINT = "getARInquiry";
+const ENDPOINT = "getAPInquiry";
 
 /** Light global cache so the tab remembers its UI state across mounts */
 function getGlobalCache() {
   if (typeof window !== "undefined") {
-    if (!window.__NAYSA_ARINQ_CACHE__) window.__NAYSA_ARINQ_CACHE__ = {};
-    return window.__NAYSA_ARINQ_CACHE__;
+    if (!window.__NAYSA_APINQ_CACHE__) window.__NAYSA_APINQ_CACHE__ = {};
+    return window.__NAYSA_APINQ_CACHE__;
   }
   return {};
 }
 
-
-
-
-const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) {
+const APInquiryTab = forwardRef(function APInquiryTab({ registerActions }, ref) {
   const { user } = useAuth();
-  const baseKey = "AR_INQUIRY";
+  const baseKey = "AP_INQUIRY";
   const hydratedRef = useRef(false);
 
   const [state, setState] = useState({
     branchCode: "",
     branchName: "",
-    custCode: "",
-    custName: "",
+    vendCode: "",
+    vendName: "",
     startingCutoff: "",
     startingCutoffName: "",
     endingCutoff: "",
@@ -57,7 +59,7 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
     totalCredit: "0.00",
     endingBalance: "0.00",
     showBranchModal: false,
-    showCustomerModal: false,
+    showPayeeModal: false,
     showCutoffModal: false,
     cutoffModalType: "",
     isLoading: false,
@@ -68,28 +70,24 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
   const updateState = (u) => setState((p) => ({ ...p, ...u }));
 
   const {
-    branchCode, branchName, custCode, custName,
+    branchCode, branchName, vendCode, vendName,
     startingCutoff, startingCutoffName,
     endingCutoff, endingCutoffName,
     arInquiryData, columnConfig,
     beginningBalance, totalDebit, totalCredit, endingBalance,
-    showBranchModal, showCustomerModal, showCutoffModal, cutoffModalType,
+    showBranchModal, showPayeeModal, showCutoffModal, cutoffModalType,
     isLoading, showSpinner,
   } = state;
-
 
   // ---- table refs/state caching (filters/sort/page/scroll) ----
   const tableRef = useRef(null);
   const tableStateRef = useRef({ filters: {}, sortConfig: { key: null, direction: null }, currentPage: 1 });
-
 
   // keep export values in refs (avoid async state race)
   const dataRefs = useRef({ arInquiry: [] });
   const colRefs  = useRef({ arInquiry: [] });
   useEffect(() => { dataRefs.current.arInquiry = arInquiryData; }, [arInquiryData]);
   useEffect(() => { colRefs.current.arInquiry = columnConfig; }, [columnConfig]);
-
-
 
   // smooth spinner
   useEffect(() => {
@@ -121,12 +119,8 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
     return () => { alive = false; };
   }, []);
 
-
-
-
-
   // defaults (company/user/branch)
-  const loadARInqDefault = useCallback(async () => {
+  const loadAPInqDefault = useCallback(async () => {
     updateState({ showSpinner: true });
     try {
       const [hsCompany, hsUser] = await Promise.all([
@@ -155,13 +149,10 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
     }
   }, [user?.USER_CODE]);
 
-
-
-
   const handleReset = useCallback(async () => {
     updateState({
-      custCode: "",
-      custName: "",
+      vendCode: "",
+      vendName: "",
       arInquiryData: [],
       beginningBalance: "0.00",
       totalDebit: "0.00",
@@ -169,10 +160,6 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
       endingBalance: "0.00",
     });
   }, []);
-
-
-
-
 
   // totals
   const calculateTotals = useCallback((rows = []) => {
@@ -201,17 +188,13 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
     });
   }, [beginningBalance]);
 
-
-
-
-
   // find (rows only)
   const fetchRecord = useCallback(async () => {
     updateState({ isLoading: true });
     try {
-      // ✅ correct payload (no double json_data wrap)
+      // keeping payload structure as-is to avoid breaking your API
       const response = await fetchData(ENDPOINT, {
-        json_data: { json_data :{ branchCode, custCode, startingCutoff, endingCutoff} },
+        json_data: { json_data: { branchCode, vendCode, startingCutoff, endingCutoff } },
       });
 
       const custData = response?.data?.[0]?.result
@@ -226,10 +209,7 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
     } finally {
       updateState({ isLoading: false });
     }
-  }, [branchCode, custCode, startingCutoff, endingCutoff, calculateTotals]);
-
-
-
+  }, [branchCode, vendCode, startingCutoff, endingCutoff, calculateTotals]);
 
   // -------- hydrate from cache or load defaults once --------
   useEffect(() => {
@@ -252,8 +232,8 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
             ...prev,
             branchCode: snap.branchCode ?? prev.branchCode,
             branchName: snap.branchName ?? prev.branchName,
-            custCode: snap.custCode ?? prev.custCode,
-            custName: snap.custName ?? prev.custName,
+            vendCode: snap.vendCode ?? prev.vendCode,
+            vendName: snap.vendName ?? prev.vendName,
             startingCutoff: snap.startingCutoff ?? prev.startingCutoff,
             startingCutoffName: snap.startingCutoffName ?? prev.startingCutoffName,
             endingCutoff: snap.endingCutoff ?? prev.endingCutoff,
@@ -274,18 +254,13 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
 
       // wait for user, then load defaults once
       if (!user?.USER_CODE) return;
-      await loadARInqDefault();
+      await loadAPInqDefault();
       await handleReset();
       hydratedRef.current = true;
     };
     run();
     return () => { cancelled = true; };
-  }, [user?.USER_CODE, loadARInqDefault, handleReset]);
-
-
-
-
-
+  }, [user?.USER_CODE, loadAPInqDefault, handleReset]);
 
   // -------- snapshot into cache whenever important things change --------
   useEffect(() => {
@@ -296,8 +271,8 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
       ...prev,
       branchCode,
       branchName,
-      custCode,
-      custName,
+      vendCode,
+      vendName,
       startingCutoff,
       startingCutoffName,
       endingCutoff,
@@ -313,68 +288,59 @@ const ARInquiryTab = forwardRef(function ARInquiryTab({ registerActions }, ref) 
       scroll: prev.scroll || { top: 0, left: 0 },
     };
   }, [
-    branchCode, branchName, custCode, custName,
+    branchCode, branchName, vendCode, vendName,
     startingCutoff, startingCutoffName, endingCutoff, endingCutoffName,
     arInquiryData, columnConfig, beginningBalance, totalDebit, totalCredit, endingBalance,
   ]);
 
-
-
-
-
   // -------- restore & persist scroll position of the table --------
-  // -------- robust scroll restore + save --------
-useEffect(() => {
-  const cache = getGlobalCache();
-  const snap = cache[baseKey] || {};
-  const targetTop = Number(snap?.scroll?.top) || 0;
-  const targetLeft = Number(snap?.scroll?.left) || 0;
+  useEffect(() => {
+    const cache = getGlobalCache();
+    const snap = cache[baseKey] || {};
+    const targetTop = Number(snap?.scroll?.top) || 0;
+    const targetLeft = Number(snap?.scroll?.left) || 0;
 
-  let tries = 0;
-  const maxTries = 8;
+    let tries = 0;
+    const maxTries = 8;
 
-  const tryRestore = () => {
-    const scroller = tableRef.current?.scrollRef?.current;
-    if (!scroller) {
-      if (tries++ < maxTries) requestAnimationFrame(tryRestore);
-      return;
-    }
+    const tryRestore = () => {
+      const scroller = tableRef.current?.scrollRef?.current;
+      if (!scroller) {
+        if (tries++ < maxTries) requestAnimationFrame(tryRestore);
+        return;
+      }
 
-    // wait until content is measurable
-    const ready =
-      scroller.scrollHeight > scroller.clientHeight ||
-      scroller.scrollWidth > scroller.clientWidth;
+      // wait until content is measurable
+      const ready =
+        scroller.scrollHeight > scroller.clientHeight ||
+        scroller.scrollWidth > scroller.clientWidth;
 
-    if (!ready && tries++ < maxTries) {
-      requestAnimationFrame(tryRestore);
-      return;
-    }
+      if (!ready && tries++ < maxTries) {
+        requestAnimationFrame(tryRestore);
+        return;
+      }
 
-    scroller.scrollTop = targetTop;
-    scroller.scrollLeft = targetLeft;
-  };
-
-  // run twice to ensure DOM paint done
-  requestAnimationFrame(() => requestAnimationFrame(tryRestore));
-
-  // save on scroll
-  const scroller = tableRef.current?.scrollRef?.current;
-  if (!scroller) return;
-  const onScroll = () => {
-    const cacheNow = getGlobalCache();
-    const prev = cacheNow[baseKey] || {};
-    cacheNow[baseKey] = {
-      ...prev,
-      scroll: { top: scroller.scrollTop, left: scroller.scrollLeft },
+      scroller.scrollTop = targetTop;
+      scroller.scrollLeft = targetLeft;
     };
-  };
-  scroller.addEventListener("scroll", onScroll, { passive: true });
-  return () => scroller.removeEventListener("scroll", onScroll);
-}, [arInquiryData.length, columnConfig.length]);
 
+    // run twice to ensure DOM paint done
+    requestAnimationFrame(() => requestAnimationFrame(tryRestore));
 
-
-
+    // save on scroll
+    const scroller = tableRef.current?.scrollRef?.current;
+    if (!scroller) return;
+    const onScroll = () => {
+      const cacheNow = getGlobalCache();
+      const prev = cacheNow[baseKey] || {};
+      cacheNow[baseKey] = {
+        ...prev,
+        scroll: { top: scroller.scrollTop, left: scroller.scrollLeft },
+      };
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, [arInquiryData.length, columnConfig.length]);
 
   // export
   const handleExport = useCallback(async () => {
@@ -384,7 +350,7 @@ useEffect(() => {
 
     setExporting(true);
     try {
-      const sheetConfigs = [makeSheet("AR Inquiry Report", rows, colsInq)];
+      const sheetConfigs = [makeSheet("AP Inquiry Report", rows, colsInq)];
       const sheets = exportBuildJsonSheets(sheetConfigs);
       const jsonResult = exportToTabbedJson(sheets);
       const payload = {
@@ -401,227 +367,216 @@ useEffect(() => {
     }
   }, [branchCode, user]);
 
-
-
-
-
   // register action bar handlers
   useEffect(() => {
     registerActions?.({
       onFind: fetchRecord,
       onReset: handleReset,
       onPrint: () => window.print(),
-      onExportSummary: handleExport,
+      onExport: handleExport,
       onViewDoc: undefined,
     });
   }, [registerActions, fetchRecord, handleReset, handleExport]);
-
-
-
 
   const handleViewRow = useCallback((row) => {
     const url = `${window.location.origin}${row.pathUrl}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }, []);
 
-
-
-
   // initial table UI state from cache (if any)
   const initialTableState = getGlobalCache()[baseKey]?.table || undefined;
-
-
-
 
   return (
     <div>
       {(showSpinner || exporting) && <LoadingSpinner />}
 
-      <div id="summary" className="global-tran-tab-div-ui">      
+      {/* === Filters + Summary (Redesigned) === */}
+      <div id="summary" className="global-tran-tab-div-ui">
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          {/* 3 columns with subtle dividers; stack on mobile */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+            {/* Payee Details */}
+            <section className="p-5">
+              <h3 className="flex items-center gap-2 text-gray-800 font-semibold mb-4">
+                <FontAwesomeIcon className="text-blue-600" icon={faUser} />
+                Payee Details
+              </h3>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 rounded-lg relative p-4">
-        {/* Branch */}
-        <div className="global-tran-textbox-group-div-ui">
-          <div className="relative">
-            <input
-              type="text"
-              id="branchName"
-              placeholder=" "
-              value={branchName}
-              readOnly
-              className="peer global-tran-textbox-ui cursor-pointer"
-            />
-            <label htmlFor="branchName" className="global-tran-floating-label">Branch</label>
-            <button
-              type="button"
-              className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-              onClick={() => updateState({ showBranchModal: true })}
-              disabled={isLoading}
-            >
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </button>
-          </div>
+              {/* Branch */}
+              <div className="global-tran-textbox-group-div-ui">
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="branchName"
+                    placeholder=" "
+                    value={branchName}
+                    readOnly
+                    className="peer global-tran-textbox-ui cursor-pointer"
+                  />
+                  <label htmlFor="branchName" className="global-tran-floating-label">Branch</label>
+                  <button
+                    type="button"
+                    className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
+                    onClick={() => updateState({ showBranchModal: true })}
+                    disabled={isLoading}
+                    aria-label="Find Branch"
+                    title="Find Branch"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
 
-          {/* Starting Cut-off */}
-          <div className="relative">
-            <input
-              type="text"
-              id="startingCutoffName"
-              placeholder=" "
-              value={startingCutoffName}
-              readOnly
-              className="peer global-tran-textbox-ui cursor-pointer"
-            />
-            <label htmlFor="startingCutoffName" className="global-tran-floating-label">Starting Cut-off</label>
-            <button
-              type="button"
-              className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-              onClick={() => updateState({ showCutoffModal: true, cutoffModalType: "starting" })}
-              disabled={isLoading}
-            >
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </button>
-          </div>
+              {/* Payee Code */}
+              <div className="global-tran-textbox-group-div-ui">
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="vendCode"
+                    placeholder=" "
+                    value={vendCode}
+                    onChange={(e) => updateState({ vendCode: e.target.value })}
+                    className="peer global-tran-textbox-ui"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="vendCode" className="global-tran-floating-label">Payee Code</label>
+                  <button
+                    type="button"
+                    className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
+                    onClick={() => updateState({ showPayeeModal: true })}
+                    disabled={isLoading}
+                    aria-label="Find Payee"
+                    title="Find Payee"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
 
-          {/* Ending Cut-off */}
-          <div className="relative">
-            <input
-              type="text"
-              id="endingCutoffName"
-              placeholder=" "
-              value={endingCutoffName}
-              readOnly
-              className="peer global-tran-textbox-ui cursor-pointer"
-            />
-            <label htmlFor="endingCutoffName" className="global-tran-floating-label">Ending Cut-off</label>
-            <button
-              type="button"
-              className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-              onClick={() => updateState({ showCutoffModal: true, cutoffModalType: "ending" })}
-              disabled={isLoading}
-            >
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </button>
-          </div>
-        </div>
+              {/* Payee Name */}
+              <div className="global-tran-textbox-group-div-ui">
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="vendName"
+                    placeholder=" "
+                    value={vendName}
+                    readOnly
+                    className="peer global-tran-textbox-ui"
+                  />
+                  <label htmlFor="vendName" className="global-tran-floating-label">Payee Name</label>
+                </div>
+              </div>
+            </section>
 
-        {/* Customer */}
-        <div className="global-tran-textbox-group-div-ui">
-          <div className="relative">
-            <input
-              type="text"
-              id="custCode"
-              placeholder=" "
-              value={custCode}
-              onChange={(e) => updateState({ custCode: e.target.value })}
-              className="peer global-tran-textbox-ui"
-              disabled={isLoading}
-            />
-            <label htmlFor="custCode" className="global-tran-floating-label">Customer Code</label>
-            <button
-              type="button"
-              className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-              onClick={() => updateState({ showCustomerModal: true })}
-              disabled={isLoading}
-            >
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </button>
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              id="custName"
-              placeholder=" "
-              value={custName}
-              readOnly
-              className="peer global-tran-textbox-ui"
-            />
-            <label htmlFor="custName" className="global-tran-floating-label">Customer Name</label>
-          </div>
-        </div>
+            {/* Date Range */}
+            <section className="p-5">
+              <h3 className="flex items-center gap-2 text-gray-800 font-semibold mb-4">
+                <FontAwesomeIcon className="text-blue-600" icon={faCalendarAlt} />
+                Date Range
+              </h3>
 
+              {/* Starting Cut-off */}
+              <div className="global-tran-textbox-group-div-ui">
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="startingCutoffName"
+                    placeholder=" "
+                    value={startingCutoffName}
+                    readOnly
+                    className="peer global-tran-textbox-ui cursor-pointer"
+                  />
+                  <label htmlFor="startingCutoffName" className="global-tran-floating-label">Starting Cut-off</label>
+                  <button
+                    type="button"
+                    className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
+                    onClick={() => updateState({ showCutoffModal: true, cutoffModalType: "starting" })}
+                    disabled={isLoading}
+                    aria-label="Find Starting Cut-off"
+                    title="Find Starting Cut-off"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
 
+              {/* Ending Cut-off */}
+              <div className="global-tran-textbox-group-div-ui">
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="endingCutoffName"
+                    placeholder=" "
+                    value={endingCutoffName}
+                    readOnly
+                    className="peer global-tran-textbox-ui cursor-pointer"
+                  />
+                  <label htmlFor="endingCutoffName" className="global-tran-floating-label">Ending Cut-off</label>
+                  <button
+                    type="button"
+                    className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
+                    onClick={() => updateState({ showCutoffModal: true, cutoffModalType: "ending" })}
+                    disabled={isLoading}
+                    aria-label="Find Ending Cut-off"
+                    title="Find Ending Cut-off"
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                </div>
+              </div>
+            </section>
 
+            {/* Financial Summary */}
+            <aside className="p-5 bg-gray-50">
+              <h3 className="flex items-center gap-2 text-gray-800 font-semibold mb-4">
+                <FontAwesomeIcon className="text-blue-600" icon={faChartLine} />
+                AP Balance Summary
+              </h3>
 
-        <div className="global-tran-textbox-group-div-ui">
-
-        </div>
-
-
-
-        {/* Balances */}
-        <div className="global-tran-textbox-group-div-ui">
-          <div className="relative">
-            <input
-              type="text"
-              id="beginningBalance"
-              placeholder=" "
-              value={beginningBalance}
-              readOnly
-              className="peer global-tran-textbox-ui text-right"
-            />
-            <label htmlFor="beginningBalance" className="global-tran-floating-label">Beginning Balance</label>
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              id="totalDebit"
-              placeholder=" "
-              value={totalDebit}
-              readOnly
-              className="peer global-tran-textbox-ui text-right"
-            />
-            <label htmlFor="totalDebit" className="global-tran-floating-label">Total Debit</label>
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              id="totalCredit"
-              placeholder=" "
-              value={totalCredit}
-              readOnly
-              className="peer global-tran-textbox-ui text-right"
-            />
-            <label htmlFor="totalCredit" className="global-tran-floating-label">Total Credit</label>
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              id="endingBalance"
-              placeholder=" "
-              value={endingBalance}
-              readOnly
-              className="peer global-tran-textbox-ui text-right"
-            />
-            <label htmlFor="endingBalance" className="global-tran-floating-label">Ending Balance</label>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Beginning Balance:</span>
+                  <span className="font-semibold text-gray-800">{beginningBalance}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Total Debit:</span>
+                  <span className="font-semibold text-red-600">{totalDebit}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Total Credit:</span>
+                  <span className="font-semibold text-green-600">{totalCredit}</span>
+                </div>
+                <div className="border-t pt-3 flex items-center justify-between">
+                  <span className="text-gray-700">Ending Balance:</span>
+                  <span className="font-bold text-blue-600">{endingBalance}</span>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
 
-    </div>
-
-
-
-    <div id="summary" className="global-tran-tab-div-ui">
-            <div className="global-tran-tab-nav-ui">
-            <div className="flex flex-row sm:flex-row">
-              <button
-                className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">Transaction Details</button>
-            </div>
+      {/* === Table Section (unchanged layout, minor tidy) === */}
+      <div id="summary" className="global-tran-tab-div-ui">
+        <div className="global-tran-tab-nav-ui">
+          <div className="flex flex-row sm:flex-row">
+            <button className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">
+              Transaction Details
+            </button>
           </div>
+        </div>
 
-      <div className="global-tran-table-main-div-ui">
-        <div className="max-h-[600px] overflow-y-auto relative"> 
-
-       <SearchGlobalReportTable
+        <div className="global-tran-table-main-div-ui">
+          <div className="max-h-[600px] overflow-y-auto relative">
+            <SearchGlobalReportTable
               ref={tableRef}
               columns={columnConfig}
               data={arInquiryData}
               itemsPerPage={50}
               showFilters={true}
               rightActionLabel="View"
-              onRowAction={handleViewRow}  
+              onRowAction={handleViewRow}
               className="mt-2"
               initialState={initialTableState}
               onStateChange={(tbl) => {
@@ -629,17 +584,13 @@ useEffect(() => {
                 const cache = getGlobalCache();
                 const prev = cache[baseKey] || {};
                 cache[baseKey] = { ...prev, table: tbl };
-              }}                            
+              }}
             />
+          </div>
         </div>
       </div>
-    </div>
 
-
-
- 
-
-      {/* Modals */}
+      {/* === Modals (unchanged) === */}
       {showBranchModal && (
         <BranchLookupModal
           isOpen={showBranchModal}
@@ -655,14 +606,14 @@ useEffect(() => {
         />
       )}
 
-      {showCustomerModal && (
-        <CustomerMastLookupModal
-          isOpen={showCustomerModal}
-          onClose={(selectedCustomer) => {
-            if (selectedCustomer) {
+      {showPayeeModal && (
+        <PayeeMastLookupModal
+          isOpen={showPayeeModal}
+          onClose={(selectedPayee) => {
+            if (selectedPayee) {
               updateState({
-                custCode: selectedCustomer.custCode,
-                custName: selectedCustomer.custName,
+                vendCode: selectedPayee.vendCode,
+                vendName: selectedPayee.vendName,
                 arInquiryData: [],
                 beginningBalance: "0.00",
                 totalDebit: "0.00",
@@ -670,7 +621,7 @@ useEffect(() => {
                 endingBalance: "0.00",
               });
             }
-            updateState({ showCustomerModal: false });
+            updateState({ showPayeeModal: false });
           }}
         />
       )}
@@ -700,4 +651,4 @@ useEffect(() => {
   );
 });
 
-export default ARInquiryTab;
+export default APInquiryTab;

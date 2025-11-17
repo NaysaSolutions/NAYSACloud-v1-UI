@@ -47,10 +47,10 @@ import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
 import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
 
 
-import ARINQ from "./NAYSA Cloud/Query/ARINQ.jsx";
-
-
-
+import ARINQ from "./NAYSA Cloud/Query/ARInq/ARINQ.jsx";
+import APINQ from "./NAYSA Cloud/Query/APInq/APINQ.jsx";
+import EWTINQ from "./NAYSA Cloud/Query/EWTInq/EWTINQ.jsx";
+import INTAXINQ from "./NAYSA Cloud/Query/INTAXInq/INTAXINQ.jsx";
 
 // Add more imports as you create pages…
 
@@ -76,7 +76,7 @@ export const pageRegistry = {
 
 
   //Global
-  AllTranHistory,ARINQ,
+  AllTranHistory,ARINQ,APINQ,EWTINQ,INTAXINQ,
 
   // Global Reference
   BranchRef,

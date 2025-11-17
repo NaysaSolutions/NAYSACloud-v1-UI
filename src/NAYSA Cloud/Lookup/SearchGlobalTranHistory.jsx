@@ -617,214 +617,208 @@ const AllTranHistory = (props) => {
 
   const [granularity, setGranularity] = useState("day"); // "day" | "month" | "year"
 
-  /* ---------------- JSX ---------------- */
   return (
-    <>
+  <>
+    {showHeader && (
+      <>
+        <Header
+          activeTopTab="history"
+          detailsRoute={backToPath}
+          historyRoute="/page/AllTranHistory"
+          showActions={false}
+        />
+        <HeaderSpacer />
+      </>
+    )}
+
+    {/* Sticky top toolbar to mirror CVHistory feel */}
+    <div className="fixed top-[55px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">
+      {/* Header Tabs (CVHistory style) */}
       {showHeader && (
-        <>
-          <Header
-            activeTopTab="history"
-            detailsRoute={backToPath}
-            historyRoute="/page/AllTranHistory"
-            showActions={false}
-          />
-          <HeaderSpacer />
-        </>
+        <div className="flex flex-col md:flex-row items-center justify-between px-4 py-2 gap-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-wrap justify-center md:justify-start gap-1 lg:gap-2 w-full md:w-auto">
+            <button
+              className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group ${
+                location.pathname === "/"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
+              }`}
+              onClick={() => navigate(backToPath)}
+            >
+              <FontAwesomeIcon icon={faPen} className="w-4 h-3 mr-2" />
+              <span className="group-hover:block">Transaction Details</span>
+            </button>
+            <button
+              className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group ${
+                location.pathname === "/"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
+              }`}
+              onClick={() => navigate(backToPath)}
+            >
+              <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
+              <span className="group-hover:block">Transaction History</span>
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Sticky top toolbar to mirror CVHistory feel */}
-      <div className="fixed top-[55px] left-0 w-full z-30 bg-white shadow-md dark:bg-gray-800">
-        {/* Header Tabs (CVHistory style) */}
-        {showHeader && (
-          <div className="flex flex-col md:flex-row items-center justify-between px-4 py-2 gap-2 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-wrap justify-center md:justify-start gap-1 lg:gap-2 w-full md:w-auto">
-              <button
-                className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group ${
-                  location.pathname === "/"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
-                }`}
-                onClick={() => navigate(backToPath)}
-              >
-                <FontAwesomeIcon icon={faPen} className="w-4 h-3 mr-2" />
-                <span className="group-hover:block">Transaction Details</span>
-              </button>
-              <button
-                className={`flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-colors duration-200 group ${
-                  location.pathname === "/"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"
-                }`}
-                onClick={() => navigate(backToPath)}
-              >
-                <FontAwesomeIcon icon={faList} className="w-4 h-4 mr-2" />
-                <span className="group-hover:block">Transaction History</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Tailwind CSS Animations (same helper as CVHistory) */}
-        <style jsx="true">{`
-          @keyframes fade-in-down {
-            from {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+      {/* Tailwind CSS Animations (same helper as CVHistory) */}
+      <style jsx="true">{`
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
           }
-          .animate-fade-in-down {
-            animation: fade-in-down 0.2s ease-out forwards;
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
-        `}</style>
+        }
+        .animate-fade-in-down {
+          animation: fade-in-down 0.2s ease-out forwards;
+        }
+      `}</style>
 
-        {/* Filters — re-styled to match CVHistory proportions */}
-        <div className="flex flex-col md:flex-row flex-wrap items-end gap-2 overflow-x-auto p-6 mt-8">
-          {/* Date Range */}
-          <div className="flex-shrink-0 sm:min-w-[200px]"> {/* add min-w-0 */}
-            <label className="block text-sm font-semibold text-gray-600 mb-1">
-              Date Range:
-            </label>
+      {/* Filters — re-styled to match CVHistory proportions */}
+      <div className="flex flex-col md:flex-row flex-wrap items-end gap-2 overflow-x-auto p-6 mt-8">
+        {/* Date Range */}
+        <div className="flex-shrink-0 sm:min-w-[200px]">
+          <label className="block text-sm font-semibold text-gray-600 mb-1">
+            Date Range:
+          </label>
 
-            <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
-              <select
-                className="border-none focus:ring-0 text-sm bg-transparent pr-2"
-                value={dateRangeType}
-                onChange={(e) => setDateRangeType(e.target.value)}
-              >
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Custom Range</option>
-              </select>
-
-              {/* make this flex child shrinkable */}
-              <div className="flex items-center border-l border-gray-300 pl-2 min-w-[200px]">
-                <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mr-2 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={formatDateRange(dates[0], dates[1])}
-                  onClick={() => {
-                    if (dateRangeType === "Custom Range") setModalIsOpen(true);
-                  }}
-                  className="w-full min-w-0 h-[25px] border-none focus:ring-0 text-sm bg-transparent 
-                            text-gray-700 tabular-nums whitespace-nowrap pr-2"  /* pr-2 keeps last digit visible */
-                  placeholder="Select date range"
-                  readOnly
-                  title={formatDateRange(dates[0], dates[1])}  /* tooltip shows full range just in case */
-                />
-              </div>
-            </div>
-          </div>
-
-
-          {/* Status */}
-          <div className="flex-shrink-0 min-w-[200px]">
-            <label className="block text-sm font-semibold text-gray-600 mb-1">
-              Status:
-            </label>
-            <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
-              <FontAwesomeIcon icon={faFilter} className="text-gray-400 mr-2" />
-              <select
-                className="w-full h-[25px] border-none focus:ring-0 text-sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                {statusOptions.map((opt) => (
-                  <option key={String(opt.value)} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Apply Filter */}
-          <div className="flex-shrink-0 w-full md:w-auto mt-auto">
-            <button
-              className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full"
-              onClick={fetchHistory}
-              disabled={loading}
+          <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
+            <select
+              className="border-none focus:ring-0 text-sm bg-transparent pr-2"
+              value={dateRangeType}
+              onChange={(e) => setDateRangeType(e.target.value)}
             >
-              <FontAwesomeIcon icon={faFilter} className="mr-2" />
-              {loading ? "Loading..." : "Filter"}
-            </button>
-          </div>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Custom Range</option>
+            </select>
 
-          {/* Export / Reset */}
-          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto ml-auto">
-            <button
-              className="flex items-center justify-center bg-green-600 text-white px-6 py-2 rounded-md text-sm font-semibold hover:bg-green-700 shadow-md w-full"
-              onClick={handleExport}
-              disabled={loading || exporting || filteredData.length === 0}
-            >
-              <FontAwesomeIcon icon={faDownload} className="mr-2" />
-              <span className="truncate">{exporting ? "Exporting..." : "Export"}</span>
-            </button>
-            <button
-              className="flex items-center justify-center bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full"
-              onClick={handleResetUI}
-              disabled={loading || exporting}
-            >
-              <FontAwesomeIcon icon={faRedo} className="mr-2" />
-              <span className="truncate">Reset</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic tabs (visual chips like before, consistent with CVHistory spacing) */}
-        {/* Dynamic tabs (embossed active style) */}
-        <div className="overflow-x-auto px-4">
-          {Object.keys(tabData).map((tabKey) => {
-            const isActive = activeTab === tabKey;
-            return (
-              <button
-                key={tabKey}
-                className={`py-2 px-10 text-sm border rounded-t-lg transition-all duration-200
-                  ${
-                    isActive
-                      ? // 🔹 Active tab: embossed effect
-                        "bg-blue-100 text-blue-700 font-semibold " +
-                        "shadow-lg shadow-blue-300 " + // inner embossed feel
-                        "relative before:absolute before:inset-x-0 before:bottom-0 before:h-[3px] before:bg-blue-700 before:rounded-t-md"
-                      : // 🔸 Inactive tab
-                        "bg-white shadow-lg shadow-blue-50 text-gray-600 font-semibold hover:text-blue-700 hover:bg-blue-50"
-                  }`}
+            <div className="flex items-center border-l border-gray-300 pl-2 min-w-[200px]">
+              <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mr-2 flex-shrink-0" />
+              <input
+                type="text"
+                value={formatDateRange(dates[0], dates[1])}
                 onClick={() => {
-                  setActiveTab(tabKey);
-                  setSortConfig({ key: null, direction: "asc", tabKey });
+                  if (dateRangeType === "Custom Range") setModalIsOpen(true);
                 }}
-              >
-                {tabKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-              </button>
-            );
-          })}
+                className="w-full min-w-0 h-[25px] border-none focus:ring-0 text-sm bg-transparent 
+                            text-gray-700 tabular-nums whitespace-nowrap pr-2"
+                placeholder="Select date range"
+                readOnly
+                title={formatDateRange(dates[0], dates[1])}
+              />
+            </div>
+          </div>
         </div>
 
+        {/* Status */}
+        <div className="flex-shrink-0 min-w-[200px]">
+          <label className="block text-sm font-semibold text-gray-600 mb-1">
+            Status:
+          </label>
+          <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-white">
+            <FontAwesomeIcon icon={faFilter} className="text-gray-400 mr-2" />
+            <select
+              className="w-full h-[25px] border-none focus:ring-0 text-sm"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              {statusOptions.map((opt) => (
+                <option key={String(opt.value)} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-        {/* Table */}
-        <div className="bg-white shadow-md rounded-md overflow-hidden p-4">
-          <div className="overflow-x-auto bg-white rounded-md max-h-[55vh]">
-            {loading ? (
-              <div className="text-center py-6 text-gray-500">Loading data and configurations...</div>
-            ) : !activeTab || currentColumns.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                Select a date range and click ‘Filter’ to load history.
-              </div>
-            ) : (
-              <table className="min-w-[1200px] text-[12px] text-center border-collapse border border-gray-300">
-                <thead className="text-[12px] font-medium">
-                  {/* Header row */}
-                  <tr className="bg-blue-700 text-white sticky top-0 z-30">
-                    {currentColumns.map((col) => (
+        {/* Apply Filter */}
+        <div className="flex-shrink-0 w-full md:w-auto mt-auto">
+          <button
+            className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full"
+            onClick={fetchHistory}
+            disabled={loading}
+          >
+            <FontAwesomeIcon icon={faFilter} className="mr-2" />
+            {loading ? "Loading..." : "Filter"}
+          </button>
+        </div>
+
+        {/* Export / Reset */}
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto ml-auto">
+          <button
+            className="flex items-center justify-center bg-green-600 text-white px-6 py-2 rounded-md text-sm font-semibold hover:bg-green-700 shadow-md w-full"
+            onClick={handleExport}
+            disabled={loading || exporting || filteredData.length === 0}
+          >
+            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+            <span className="truncate">{exporting ? "Exporting..." : "Export"}</span>
+          </button>
+          <button
+            className="flex items-center justify-center bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md w-full"
+            onClick={handleResetUI}
+            disabled={loading || exporting}
+          >
+            <FontAwesomeIcon icon={faRedo} className="mr-2" />
+            <span className="truncate">Reset</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Dynamic tabs */}
+      <div className="overflow-x-auto px-4">
+        {Object.keys(tabData).map((tabKey) => {
+          const isActive = activeTab === tabKey;
+          return (
+            <button
+              key={tabKey}
+              className={`py-2 px-10 text-sm border rounded-t-lg transition-all duration-200
+                ${
+                  isActive
+                    ? "bg-blue-100 text-blue-700 font-semibold shadow-lg shadow-blue-300 relative before:absolute before:inset-x-0 before:bottom-0 before:h-[3px] before:bg-blue-700 before:rounded-t-md"
+                    : "bg-white shadow-lg shadow-blue-50 text-gray-600 font-semibold hover:text-blue-700 hover:bg-blue-50"
+                }`}
+              onClick={() => {
+                setActiveTab(tabKey);
+                setSortConfig({ key: null, direction: "asc", tabKey });
+              }}
+            >
+              {tabKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white shadow-md rounded-md overflow-hidden p-4">
+        <div className="overflow-x-auto bg-white rounded-md max-h-[55vh]">
+          {loading ? (
+            <div className="text-center py-6 text-gray-500">Loading data and configurations...</div>
+          ) : !activeTab || currentColumns.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              Select a date range and click ‘Filter’ to load history.
+            </div>
+          ) : (
+            <table className="min-w-[1200px] text-[12px] text-center border-collapse border border-gray-300">
+              <thead className="text-[12px] font-medium">
+                {/* Header row (first col sticky) */}
+                <tr className="bg-blue-700 text-white sticky top-0 z-30">
+                  {currentColumns.map((col, cidx) => {
+                    const isSticky = cidx === 0; // first column
+                    return (
                       <th
                         key={col.key}
                         onClick={() => col.sortable !== false && handleSort(col.key)}
                         className={`px-3 py-2 border whitespace-nowrap ${
                           col.sortable !== false ? "cursor-pointer" : ""
-                        }`}
+                        } ${isSticky ? "sticky left-0 z-50" : ""} ${isSticky ? "bg-blue-700" : ""}`}
+                        style={isSticky ? { minWidth: 72, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
                       >
                         <div className="flex items-center justify-center gap-1">
                           {col.label}
@@ -838,13 +832,22 @@ const AllTranHistory = (props) => {
                             )}
                         </div>
                       </th>
-                    ))}
-                  </tr>
+                    );
+                  })}
+                </tr>
 
-                  {/* Filter row — match CVHistory spacing */}
-                  <tr className="bg-gray-100 sticky top-[36px] z-20">
-                    {currentColumns.map((col) => (
-                      <td key={col.key} className="px-2 py-1 border whitespace-nowrap">
+                {/* Filter row (first col sticky) */}
+                <tr className="bg-gray-100 sticky top-[36px] z-20">
+                  {currentColumns.map((col, cidx) => {
+                    const isSticky = cidx === 0;
+                    return (
+                      <td
+                        key={col.key}
+                        className={`px-2 py-1 border whitespace-nowrap ${
+                          isSticky ? "sticky left-0 z-40 bg-gray-100" : ""
+                        }`}
+                        style={isSticky ? { minWidth: 72, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
+                      >
                         {col.key !== "__actions" && (
                           <input
                             type="text"
@@ -855,305 +858,309 @@ const AllTranHistory = (props) => {
                           />
                         )}
                       </td>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 text-[11px]">
-                  {filteredData.length > 0 ? (
-                    filteredData.map((row, idx) => {
-                      const rowClass = getRowClassByStatus(row);
-                      return (
-                        <tr
-                          key={idx}
-                          className={`hover:bg-blue-50 transition cursor-pointer ${rowClass}`}
-                          onDoubleClick={() => handleRowDoubleClick(row)}
-                        >
-                          {currentColumns.map((col) => {
-                            if (col.key === "__actions") {
-                              return (
-                                <td key="__actions" className="px-2 py-1 border whitespace-nowrap text-center">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRowDoubleClick(row);
-                                    }}
-                                    className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                                    title="View"
-                                  >
-                                    <FontAwesomeIcon icon={faEye} className="w-4 h-3" />
-                                  </button>
-                                </td>
-                              );
-                            }
-                            const alignRight =
-                              col.classNames?.includes("text-right") ||
-                              ["number", "currency"].includes(col.renderType);
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 text-[11px]">
+                {filteredData.length > 0 ? (
+                  filteredData.map((row, idx) => {
+                    const rowClass = getRowClassByStatus(row);
+                    return (
+                      <tr
+                        key={idx}
+                        className={`hover:bg-blue-50 transition cursor-pointer ${rowClass}`}
+                        onDoubleClick={() => handleRowDoubleClick(row)}
+                      >
+                        {currentColumns.map((col, cidx) => {
+                          const isSticky = cidx === 0;
 
+                          if (col.key === "__actions") {
                             return (
                               <td
-                                key={col.key}
-                                className={`px-2 py-1 border whitespace-nowrap ${
-                                  alignRight ? "text-right" : col.classNames || "text-left"
+                                key="__actions"
+                                className={`px-2 py-1 border whitespace-nowrap text-center ${
+                                  isSticky ? "sticky left-0 z-10 bg-white" : ""
                                 }`}
-                                title={String(row?.[col.key] ?? "")}
+                                style={isSticky ? { minWidth: 72, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
                               >
-                                {formatCellValue(row?.[col.key], col)}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRowDoubleClick(row);
+                                  }}
+                                  className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                  title="View"
+                                >
+                                  <FontAwesomeIcon icon={faEye} className="w-4 h-3" />
+                                </button>
                               </td>
                             );
-                          })}
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={currentColumns.length} className="text-center text-gray-500 py-4 border">
-                        No records found matching the filter criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                          }
+
+                          const alignRight =
+                            col.classNames?.includes("text-right") ||
+                            ["number", "currency"].includes(col.renderType);
+
+                          return (
+                            <td
+                              key={col.key}
+                              className={`px-2 py-1 border whitespace-nowrap ${
+                                alignRight ? "text-right" : col.classNames || "text-left"
+                              } ${isSticky ? "sticky left-0 z-10 bg-white" : ""}`}
+                              style={isSticky ? { minWidth: 120, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
+                              title={String(row?.[col.key] ?? "")}
+                            >
+                              {formatCellValue(row?.[col.key], col)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={currentColumns.length} className="text-center text-gray-500 py-4 border">
+                      No records found matching the filter criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Date Picker Modal */}
+    <Modal
+      isOpen={modalIsOpen}
+      onRequestClose={() => setModalIsOpen(false)}
+      closeTimeoutMS={150}
+      className="w-[min(100vw,500px)] sm:w-[min(100vw,500px)] h:[90vh] sm:h-auto sm:max-h-[80vh] mx-auto sm:mt-4 rounded-none sm:rounded-2xl shadow-2xl bg-white overflow-hidden outline-none"
+      overlayClassName="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
+    >
+      {/* Header */}
+      <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
+        <h2 className="text-base font-semibold">Select Custom Date Range</h2>
+        <p className="text-xs/relaxed text-white/80">
+          Choose a range or use quick presets. Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded">Esc</kbd> to
+          cancel.
+        </p>
+        <button
+          onClick={() => setModalIsOpen(false)}
+          className="absolute right-3 top-3 grid place-items-center w-8 h-8 rounded-full hover:bg-white/15 focus:ring-2 focus:ring-white/60"
+          aria-label="Close"
+          title="Close"
+        >
+          <svg viewBox="0 0 20 20" className="w-4 h-4">
+            <path
+              fill="currentColor"
+              d="M11.41 10l4.3-4.29a1 1 0 10-1.42-1.42L10 8.59 5.71 4.29a1 1 0 10-1.42 1.42L8.59 10l-4.3 4.29a1 1 0 101.42 1.42L10 11.41l4.29 4.3a1 1 0 001.42-1.42z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="p-2 sm:p-2 grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2 h-[calc(90vh-120px)] sm:h-auto overflow-auto">
+        {/* Quick presets */}
+        <div className="space-y-1 mt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([t,t]); }}>Today</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); const y=new Date(t); y.setDate(t.getDate()-1); setDates([y,y]); }}>Yesterday</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([subDays(t,6),t]); }}>Last 7 Days</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([subDays(t,29),t]); }}>Last 30 Days</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([startOfMonth(t),endOfMonth(t)]); }}>This Month</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); const last=addMonths(t,-1); setDates([startOfMonth(last),endOfMonth(last)]); }}>Last Month</button>
+            <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([startOfYear(t),endOfYear(t)]); }}>YTD</button>
+            <button className="btn-ghost text-sm hover:bg-blue-100" onClick={() => setDates([null,null])} title="Clear selection">Clear</button>
+          </div>
+
+          {/* Selection summary */}
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
+            <div className="font-semibold text-slate-700 mb-1">Selected Range</div>
+            {dates?.[0] && dates?.[1] ? (
+              <div>{format(dates[0], "MMM dd, yyyy")} — {format(dates[1], "MMM dd, yyyy")}</div>
+            ) : (
+              <div className="italic text-slate-400">No range selected</div>
+            )}
+            {granularity !== "day" && (
+              <div className="mt-1 text-[11px] text-slate-500">
+                Mode: <span className="uppercase">{granularity}</span> (one tap selects entire {granularity})
+              </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Date Picker Modal (mobile-first, 2 calendars in a row) */}
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={() => setModalIsOpen(false)}
-        closeTimeoutMS={150}
-        className="w-[min(100vw,500px)] sm:w-[min(100vw,500px)] h-[90vh] sm:h-auto sm:max-h-[80vh] mx-auto sm:mt-4 rounded-none sm:rounded-2xl shadow-2xl bg-white overflow-hidden outline-none"
-        overlayClassName="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
-      >
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
-          <h2 className="text-base font-semibold">Select Custom Date Range</h2>
-          <p className="text-xs/relaxed text-white/80">
-            Choose a range or use quick presets. Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded">Esc</kbd> to cancel.
-          </p>
-          <button
-            onClick={() => setModalIsOpen(false)}
-            className="absolute right-3 top-3 grid place-items-center w-8 h-8 rounded-full hover:bg-white/15 focus:ring-2 focus:ring-white/60"
-            aria-label="Close"
-            title="Close"
-          >
-            <svg viewBox="0 0 20 20" className="w-4 h-4"><path fill="currentColor" d="M11.41 10l4.3-4.29a1 1 0 10-1.42-1.42L10 8.59 5.71 4.29a1 1 0 10-1.42 1.42L8.59 10l-4.3 4.29a1 1 0 101.42 1.42L10 11.41l4.29 4.3a1 1 0 001.42-1.42z"/></svg>
-          </button>
-        </div>
-
-        {/* Body */}
-        {/* <div className="p-2 sm:p-2 grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2 h-[calc(90vh-120px)] sm:h-auto overflow-auto"> */}
-        <div className="p-2 sm:p-2 grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2 h-[calc(90vh-120px)] sm:h-auto overflow-auto">
-          {/* Quick presets */}
-          
-          <div className="space-y-1 mt-2">
-            <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([t,t]); }}>Today</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); const y=new Date(t); y.setDate(t.getDate()-1); setDates([y,y]); }}>Yesterday</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([subDays(t,6),t]); }}>Last 7 Days</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([subDays(t,29),t]); }}>Last 30 Days</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([startOfMonth(t),endOfMonth(t)]); }}>This Month</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); const last=addMonths(t,-1); setDates([startOfMonth(last),endOfMonth(last)]); }}>Last Month</button>
-              <button className="btn-outline text-sm hover:bg-blue-100" onClick={() => { const t=new Date(); setDates([startOfYear(t),endOfYear(t)]); }}>YTD</button>
-              <button className="btn-ghost text-sm hover:bg-blue-100" onClick={() => setDates([null,null])} title="Clear selection">Clear</button>
+        {/* Calendar (single) with Month/Year quick selection */}
+        <div className="rounded-xl border border-slate-200 p-2 sm:p-2">
+          {/* Granularity toggle */}
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-xs text-slate-500 mr-1">Select by:</span>
+            <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
+              {["day", "month", "year"].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGranularity(g)}
+                  className={`px-3 py-1.5 text-xs capitalize ${
+                    granularity === g ? "bg-blue-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
             </div>
-
-            
-            {/* Selection summary */}
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
-              <div className="font-semibold text-slate-700 mb-1">Selected Range</div>
-              {dates?.[0] && dates?.[1] ? (
-                <div>{format(dates[0], "MMM dd, yyyy")} — {format(dates[1], "MMM dd, yyyy")}</div>
-              ) : (
-                <div className="italic text-slate-400">No range selected</div>
-              )}
-              {granularity !== "day" && (
-                <div className="mt-1 text-[11px] text-slate-500">
-                  Mode: <span className="uppercase">{granularity}</span> (one tap selects entire {granularity})
-                </div>
-              )}
-            </div>
-
           </div>
 
-          {/* Calendar (single) with Month/Year quick selection */}
-          <div className="rounded-xl border border-slate-200 p-2 sm:p-2">
-            {/* Granularity toggle */}
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-xs text-slate-500 mr-1">Select by:</span>
-              <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
-                {["day", "month", "year"].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGranularity(g)}
-                    className={`px-3 py-1.5 text-xs capitalize ${
-                      granularity === g
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="reactdp-one">
+            <DatePicker
+              inline
+              fixedHeight
+              monthsShown={1}
+              shouldCloseOnSelect={false}
+              selectsRange={granularity === "day"}
+              startDate={dates[0]}
+              endDate={dates[1]}
+              onChange={(update) => {
+                if (granularity === "day") {
+                  setDates(update);
+                }
+              }}
+              onSelect={(d) => {
+                if (!d) return;
+                if (granularity === "month") {
+                  setDates([startOfMonth(d), endOfMonth(d)]);
+                } else if (granularity === "year") {
+                  setDates([startOfYear(d), endOfYear(d)]);
+                }
+              }}
+              openToDate={dates?.[1] ?? dates?.[0] ?? new Date()}
+              renderCustomHeader={({
+                date,
+                decreaseMonth,
+                increaseMonth,
+                prevMonthButtonDisabled,
+                nextMonthButtonDisabled,
+                changeYear,
+                changeMonth,
+              }) => {
+                const months = [
+                  "January","February","March","April","May","June",
+                  "July","August","September","October","November","December"
+                ];
+                const currentYear = new Date().getFullYear();
+                const years = Array.from({ length: 16 }, (_, i) => currentYear + 1 - i);
 
-            <div className="reactdp-one">
-              <DatePicker
-                inline
-                fixedHeight
-                monthsShown={1}
-                shouldCloseOnSelect={false}
-                // Keep your range state; Day mode uses native range picking
-                selectsRange={granularity === "day"}
-                startDate={dates[0]}
-                endDate={dates[1]}
-                onChange={(update) => {
-                  if (granularity === "day") {
-                    setDates(update);
-                  }
-                }}
-                onSelect={(d) => {
-                  if (!d) return;
-                  if (granularity === "month") {
-                    setDates([startOfMonth(d), endOfMonth(d)]);
-                  } else if (granularity === "year") {
-                    setDates([startOfYear(d), endOfYear(d)]);
-                  }
-                }}
-                openToDate={dates?.[1] ?? dates?.[0] ?? new Date()}
-                // Custom header with Month + Year dropdowns
-                renderCustomHeader={({
-                  date,
-                  decreaseMonth,
-                  increaseMonth,
-                  prevMonthButtonDisabled,
-                  nextMonthButtonDisabled,
-                  changeYear,
-                  changeMonth,
-                }) => {
-                  const months = [
-                    "January","February","March","April","May","June",
-                    "July","August","September","October","November","December"
-                  ];
-                  const currentYear = new Date().getFullYear();
-                  const years = Array.from({ length: 16 }, (_, i) => currentYear + 1 - i); // next year .. 15 yrs back
-
-                  return (
-                    <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={decreaseMonth}
-                          disabled={prevMonthButtonDisabled}
-                          className="px-2 py-1 rounded-md hover:bg-slate-100 disabled:opacity-40"
-                          title="Previous month"
-                          type="button"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          onClick={increaseMonth}
-                          disabled={nextMonthButtonDisabled}
-                          className="px-2 py-1 rounded-md hover:bg-slate-100 disabled:opacity-40"
-                          title="Next month"
-                          type="button"
-                        >
-                          ›
-                        </button>
-                      </div>
-
-                      {/* Month / Year dropdowns for quick jump */}
-                      <div className="flex items-center gap-2">
-                        <select
-                          className="text-sm border border-slate-300 rounded-md px-2 py-1 bg-white"
-                          value={date.getMonth()}
-                          onChange={(e) => changeMonth(Number(e.target.value))}
-                        >
-                          {months.map((m, idx) => (
-                            <option key={m} value={idx}>{m}</option>
-                          ))}
-                        </select>
-
-                        <select
-                          className="text-sm border border-slate-300 rounded-md px-2 py-1 bg-white"
-                          value={date.getFullYear()}
-                          onChange={(e) => changeYear(Number(e.target.value))}
-                        >
-                          {years.map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                      </div>
+                return (
+                  <div className="flex items-center justify-between gap-2 px-2 py-1">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={decreaseMonth}
+                        disabled={prevMonthButtonDisabled}
+                        className="px-2 py-1 rounded-md hover:bg-slate-100 disabled:opacity-40"
+                        title="Previous month"
+                        type="button"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={increaseMonth}
+                        disabled={nextMonthButtonDisabled}
+                        className="px-2 py-1 rounded-md hover:bg-slate-100 disabled:opacity-40"
+                        title="Next month"
+                        type="button"
+                      >
+                        ›
+                      </button>
                     </div>
-                  );
-                }}
-              />
-            </div>
 
-          </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="text-sm border border-slate-300 rounded-md px-2 py-1 bg-white"
+                        value={date.getMonth()}
+                        onChange={(e) => changeMonth(Number(e.target.value))}
+                      >
+                        {months.map((m, idx) => (
+                          <option key={m} value={idx}>{m}</option>
+                        ))}
+                      </select>
 
-          {/* local styles (optional tweak) */}
-          <style jsx="true">{`
-            .reactdp-one .react-datepicker__header {
-              padding-top: 6px;
-            }
-          `}</style>
-
-        </div>
-
-        {/* Footer */}
-        <div className="sticky bottom-0 flex items-center justify-between gap-2 px-4 sm:px-5 py-3 bg-white/95 border-t border-slate-200">
-          <div className="text-[11px] text-slate-500">
-            Tip: Press <kbd className="px-1 py-0.5 bg-slate-100 rounded">Enter</kbd> to apply.
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setModalIsOpen(false)} className="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Cancel</button>
-            <button
-              onClick={() => { if (dates?.[0] && dates?.[1]) setModalIsOpen(false); }}
-              disabled={!dates?.[0] || !dates?.[1]}
-              className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium enabled:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Apply
-            </button>
+                      <select
+                        className="text-sm border border-slate-300 rounded-md px-2 py-1 bg-white"
+                        value={date.getFullYear()}
+                        onChange={(e) => changeYear(Number(e.target.value))}
+                      >
+                        {years.map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                );
+              }}
+            />
           </div>
         </div>
 
-        {/* Local styles for buttons + react-datepicker row layout */}
         <style jsx="true">{`
-          .btn-outline { 
-            @apply text-slate-700 border border-slate-300 rounded-md px-1 py-1 text-xs sm:text-xs hover:bg-slate-100 text-left;
-            min-height: 30px;
-          }
-          .btn-ghost { 
-            @apply text-slate-600 rounded-md px-1 py-1 text-xs sm:text-xs hover:bg-slate-100 text-left;
-            min-height: 30px;
-          }
-          /* Force two calendars in a HORIZONTAL row and keep them readable on small screens */
-          .reactdp-row .react-datepicker {
-            display: flex !important;
-            flex-wrap: nowrap;
-            gap: 8px;
-          }
-          .reactdp-row .react-datepicker__month-container {
-            flex: 0 0 auto;
-            width: 290px;       /* ensures two full calendars sit side-by-side */
-          }
-          .reactdp-row .react-datepicker__header {
+          .reactdp-one .react-datepicker__header {
             padding-top: 6px;
           }
-          @media (min-width: 640px) {
-            .reactdp-row .react-datepicker__month-container { width: 300px; }
-          }
         `}</style>
-      </Modal>
+      </div>
+
+      {/* Footer */}
+      <div className="sticky bottom-0 flex items-center justify-between gap-2 px-4 sm:px-5 py-3 bg-white/95 border-t border-slate-200">
+        <div className="text-[11px] text-slate-500">
+          Tip: Press <kbd className="px-1 py-0.5 bg-slate-100 rounded">Enter</kbd> to apply.
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setModalIsOpen(false)} className="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Cancel</button>
+          <button
+            onClick={() => { if (dates?.[0] && dates?.[1]) setModalIsOpen(false); }}
+            disabled={!dates?.[0] || !dates?.[1]}
+            className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium enabled:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+
+      {/* Local styles for buttons + react-datepicker row layout */}
+      <style jsx="true">{`
+        .btn-outline { 
+          @apply text-slate-700 border border-slate-300 rounded-md px-1 py-1 text-xs sm:text-xs hover:bg-slate-100 text-left;
+          min-height: 30px;
+        }
+        .btn-ghost { 
+          @apply text-slate-600 rounded-md px-1 py-1 text-xs sm:text-xs hover:bg-slate-100 text-left;
+          min-height: 30px;
+        }
+        .reactdp-row .react-datepicker {
+          display: flex !important;
+          flex-wrap: nowrap;
+          gap: 8px;
+        }
+        .reactdp-row .react-datepicker__month-container {
+          flex: 0 0 auto;
+          width: 290px;
+        }
+        .reactdp-row .react-datepicker__header {
+          padding-top: 6px;
+        }
+        @media (min-width: 640px) {
+          .reactdp-row .react-datepicker__month-container { width: 300px; }
+        }
+      `}</style>
+    </Modal>
+
+    {(loading || exporting) && <LoadingSpinner />}
+  </>
+);
 
 
-
-      {(loading || exporting) && <LoadingSpinner />}
-    </>
-  );
 };
 
 export default AllTranHistory;

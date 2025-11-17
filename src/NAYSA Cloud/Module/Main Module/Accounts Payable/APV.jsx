@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef,useCallback } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 
@@ -1773,8 +1773,8 @@ const APV = () => {
   };
 
   const handleCloseSignatory = async (mode) => {
-  console.log("🔄 handleCloseSignatory called with mode:", mode);
-  console.log("📄 Current document state:", {
+  console.log("ðŸ”„ handleCloseSignatory called with mode:", mode);
+  console.log("ðŸ“„ Current document state:", {
     documentID,
     documentNo,
     docType,
@@ -1782,7 +1782,7 @@ const APV = () => {
   });
 
   if (!documentID) {
-    console.error("❌ Cannot print: documentID is undefined!");
+    console.error("âŒ Cannot print: documentID is undefined!");
     Swal.fire({
       icon: "error",
       title: "Cannot Print",
@@ -1799,7 +1799,7 @@ const APV = () => {
   });
   
   try {
-    console.log("🖨️ Calling useHandlePrint with:", { 
+    console.log("ðŸ–¨ï¸ Calling useHandlePrint with:", { 
       documentID, 
       docType, 
       mode,
@@ -1808,9 +1808,9 @@ const APV = () => {
     
     await useHandlePrint(documentID, docType, mode);
     
-    console.log("✅ Printing completed successfully");
+    console.log("âœ… Printing completed successfully");
   } catch (error) {
-    console.error("❌ Printing failed:", error);
+    console.error("âŒ Printing failed:", error);
     Swal.fire({
       icon: "error",
       title: "Print Failed",
@@ -2214,24 +2214,32 @@ const APV = () => {
       {showSpinner && <LoadingSpinner />}
 
       <div className="global-tran-headerToolbar-ui">
-        <Header
-          docType={docType}
-          pdfLink={pdfLink}
-          videoLink={videoLink}
-          onPrint={handlePrint}
-          printData={printData}
-          onReset={handleReset}
-          onSave={() => handleActivityOption("Upsert")}
-          onPost={handlePost} // Add this
-          onCancel={handleCancel}
-          onDetails={() => setTopTab("details")}
-          onHistory={() => setTopTab("history")}
-          onCopy={handleCopy}
-          onAttach={handleAttach}
-          isSaveDisabled={isSaveDisabled}
-          isResetDisabled={isResetDisabled}
+        <Header 
+              docType={docType} 
+              pdfLink={pdfLink} 
+              videoLink={videoLink}
+              onPrint={handlePrint} 
+              onPost={handlePost} 
+              printData={printData} 
+              onReset={handleReset}
+              onSave={() => handleActivityOption("Upsert")}
+              onCancel={handleCancel} 
+              onCopy={handleCopy} 
+              onAttach={handleAttach}
+              activeTopTab={topTab} 
+              showActions={topTab === "details"} 
+              showBIRForm={false}      
+              onDetails={() => setTopTab("details")}
+              onHistory={() => setTopTab("history")}
+              disableRouteNavigation={true}         
+              isSaveDisabled={isSaveDisabled} // Pass disabled state
+              isResetDisabled={isResetDisabled} // Pass disabled state
+              detailsRoute="/page/APV"
         />
+
       </div>
+
+      <div className={topTab === "details" ? "" : "hidden"}></div>
 
       {/* Page title and subheading */}
       {/* Header Section */}
@@ -4072,21 +4080,33 @@ const APV = () => {
   <DocumentSignatories
     isOpen={showSignatoryModal}
     params={{
-      documentID: documentID,        // ✅ Pass the actual document ID
-      noReprints: 0,                 // ✅ Add this if needed
-      docType: docType               // ✅ Add this if needed
+      documentID: documentID,        // âœ… Pass the actual document ID
+      noReprints: 0,                 // âœ… Add this if needed
+      docType: docType               // âœ… Add this if needed
     }}
     onClose={handleCloseSignatory}
     onCancel={() => updateState({ showSignatoryModal: false })}
   />
 )}
 
-<div className={topTab === "history" ? "" : "hidden"}>
+
+
+      {/* Post Modal */}
+       {showPostingModal && (
+    <PostAPV
+      isOpen={showPostingModal}
+      userCode={userCode} // This should now work
+      onClose={() => updateState({ showPostingModal: false })}
+    />
+  )}
+      {showSpinner && <LoadingSpinner />}
+
+      <div className={topTab === "history" ? "" : "hidden"}>
         <AllTranHistory
           showHeader={false}
-          endpoint="/getSVIHistory"
-          cacheKey={`SVI:${state.branchCode || ""}:${state.docNo || ""}`}  // ✅ per-transaction
-          activeTabKey="SVI_Summary"
+          endpoint="/getAPVHistory"
+          cacheKey={`APV:${state.branchCode || ""}:${state.docNo || ""}`}  // âœ… per-transaction
+          activeTabKey="APV_Summary"
           branchCode={state.branchCode}
           startDate={state.fromDate}
           endDate={state.toDate}
@@ -4102,16 +4122,6 @@ const APV = () => {
             historyExportName={`${documentTitle} History`} 
       />
     </div>
-
-      {/* Post Modal */}
-       {showPostingModal && (
-    <PostAPV
-      isOpen={showPostingModal}
-      userCode={userCode} // This should now work
-      onClose={() => updateState({ showPostingModal: false })}
-    />
-  )}
-      {showSpinner && <LoadingSpinner />}
     </div>
   );
 

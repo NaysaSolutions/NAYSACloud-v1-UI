@@ -559,3 +559,79 @@ export async function exportHistoryExcel(endPoint,payload,setExporting,reportNam
 
 
 
+export function useDownloadTextFile(filename, text) {
+   try {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary hidden <a> tag
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+
+    // In some browsers, setting rel="noopener" and target="_self"
+    // ensures same-name overwriting behavior instead of appending (1)
+    a.rel = "noopener";
+    a.target = "_self";
+    a.style.display = "none";
+
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Download failed:", err);
+  }
+}
+
+
+
+
+
+export const useNormalizeDat = (src) => {
+  if (src == null) return "";
+
+  // If it's already a string, normalize CRLF and return
+  if (typeof src === "string") {
+    return src.replace(/\r?\n/g, "\r\n");
+  }
+
+  // If it's a flat array (strings/numbers), join as lines
+  if (Array.isArray(src) && src.every(v => typeof v !== "object" || v === null)) {
+    return src.map(v => String(v ?? "")).join("\r\n").replace(/\r?\n/g, "\r\n");
+  }
+
+  // If it's an array of objects, pick a sensible line for each object
+  if (Array.isArray(src) && src.some(v => v && typeof v === "object")) {
+    const preferredKeys = ["line", "LINE", "dat", "DAT", "text", "TEXT", "value", "VALUE", "data", "DATA"];
+
+    const objToLine = (obj) => {
+      if (obj == null) return "";
+
+      // 1) If there's a single obvious text field, use it
+      for (const k of preferredKeys) {
+        if (Object.prototype.hasOwnProperty.call(obj, k) && obj[k] != null) {
+          return String(obj[k]);
+        }
+      }
+
+      // 2) Otherwise, build a pipe-delimited line from values (stable key order)
+      const keys = Object.keys(obj); // JS preserves insertion order
+      const vals = keys.map((k) => {
+        const v = obj[k];
+        if (v == null) return "";
+        if (typeof v === "object") return JSON.stringify(v); // last resort
+        return String(v);
+      });
+      return vals.join("|");
+    };
+
+    const text = src.map(objToLine).join("\r\n");
+    return text.replace(/\r?\n/g, "\r\n");
+  }
+
+  // Last resort: stringify
+  return String(src).replace(/\r?\n/g, "\r\n");
+};
