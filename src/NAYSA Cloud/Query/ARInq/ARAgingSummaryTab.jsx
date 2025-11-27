@@ -11,12 +11,7 @@ import {
   faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
-import {
-  exportToTabbedJson,
-  exportBuildJsonSheets,
-  exportHistoryExcel,
-  makeSheet,
-} from "@/NAYSA Cloud/Global/report";
+import {exportGenericHistoryExcel} from "@/NAYSA Cloud/Global/report";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
 import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
 import COAMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCOAMast.jsx";
@@ -98,7 +93,7 @@ function useRequestCoalescer() {
 }
 
 const ARAgingSummaryTab = forwardRef(function ARAgingSummaryTab({ registerActions }, ref) {
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
   const baseKey = "AR_AGING";
   const hydratedRef = useRef(false);
 
@@ -398,19 +393,35 @@ const ARAgingSummaryTab = forwardRef(function ARAgingSummaryTab({ registerAction
   const handleExport = useCallback(async () => {
     try {
       updateState({ isLoading: true });
-      const sheetConfigs = [
-        makeSheet("AR Aging Detailed", arAgingDataUnfiltered, columnConfig),
-        makeSheet("AR Aging Summary",  arAgingDataS,          columnConfigS),
-      ];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
-      const payload = {
-        Branch: branchCode,
-        ReportName: `AR Aging Report as of ${refDate || ""}`,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
-      };
-      await exportHistoryExcel("/exportHistoryReport", JSON.stringify(payload), () => {}, "AR Aging Report");
+    
+
+        const exportData = {
+              "Data" : {
+                "AR Aging Summary" : arAgingDataS,
+                "AR Aging Detailed" : arAgingDataUnfiltered,
+              }
+            }
+      
+        const columnConfigsMap = {
+                "AR Aging Summary" : columnConfigS,
+                "AR Aging Detailed" : columnConfig,
+              }
+            
+        const payload = {
+              ReportName: "AR Aging Report",
+              UserCode: currentUserRow?.userName,
+              Branch: branchCode || "",
+              JsonData: exportData,
+              companyName:companyInfo?.compName,
+              companyAddress:companyInfo?.compAddr,
+              companyTelNo:companyInfo?.telNo
+            };
+          
+      
+        await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
     } catch (e) {
       console.error("❌ Export failed:", e);
     } finally {

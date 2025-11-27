@@ -9,12 +9,7 @@ import {
   faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
-import {
-  exportToTabbedJson,
-  exportBuildJsonSheets,
-  exportHistoryExcel,
-  makeSheet,
-} from "@/NAYSA Cloud/Global/report";
+import {exportGenericHistoryExcel} from "@/NAYSA Cloud/Global/report";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
 import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import CutoffLookupModal from "@/NAYSA Cloud/Lookup/SearchCutoffRef";
@@ -39,7 +34,7 @@ function getGlobalCache() {
 }
 
 const APInquiryTab = forwardRef(function APInquiryTab({ registerActions }, ref) {
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
   const baseKey = "AP_INQUIRY";
   const hydratedRef = useRef(false);
 
@@ -342,24 +337,45 @@ const APInquiryTab = forwardRef(function APInquiryTab({ registerActions }, ref) 
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [arInquiryData.length, columnConfig.length]);
 
-  // export
+
+
+
+
+  
   const handleExport = useCallback(async () => {
     const rows = dataRefs.current.arInquiry;
     const colsInq = colRefs.current.arInquiry;
     if (!Array.isArray(rows) || rows.length === 0) return;
-
     setExporting(true);
+
     try {
-      const sheetConfigs = [makeSheet("AP Inquiry Report", rows, colsInq)];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
-      const payload = {
-        Branch: branchCode,
-        ReportName: sheetConfigs[0].sheetName,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
+  
+      const exportData = {
+        "Data" : {
+          "AP Query Detailed" : rows
+        }
+      }
+
+      const columnConfigsMap = {
+          "AP Query Detailed": colsInq 
       };
-      await exportHistoryExcel("/exportHistoryReport", JSON.stringify(payload), setExporting, payload.ReportName);
+
+
+      const payload = {
+        ReportName: "AP Inquiry Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
+      };
+    
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
     } catch (e) {
       console.error("❌ Export failed:", e);
     } finally {

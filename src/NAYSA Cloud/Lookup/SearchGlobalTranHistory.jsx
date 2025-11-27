@@ -1,7 +1,11 @@
-// SearchGlobalTranHistory.jsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { postRequest } from "@/NAYSA Cloud/Configuration/BaseURL";
-import { exportHistoryExcel } from "@/NAYSA Cloud/Global/report";
+// ---------------------------------------------------------------------
+// REVISION: Changed import to your new generic exporter
+// Make sure you created this file as discussed!
+
+import { exportGenericHistoryExcel } from "@/NAYSA Cloud/Global/report";
+// ---------------------------------------------------------------------
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
 import { format, subDays, addMonths, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import DatePicker from "react-datepicker";
@@ -122,7 +126,7 @@ const AllTranHistory = (props) => {
   const navState = location.state || {};
   const didInitRef = useRef(false);
   const hydratedFromCacheRef = useRef(false);
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
 
   const {
     endpoint: endpointProp,
@@ -525,46 +529,15 @@ const AllTranHistory = (props) => {
   };
 
   /* ---------------- Export helpers ---------------- */
-  const tabToSheet = (tabKey) => {
-    const cols = getColumnsForTab(tabKey);
-    const headers = cols.map((c) => c.label || c.key);
-
-    const rows = (tabData[tabKey] || []).map((row) => {
-      const obj = {};
-      cols.forEach((col) => {
-        const header = col.label || col.key;
-        const val = formatCellValue(row[col.key], col);
-        obj[header] = React.isValidElement(val) ? val.props?.children ?? "" : val;
-      });
-      return obj;
-    });
-    const sheetName = tabKey
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .slice(0, 31);
-
-    return { sheetName, headers, rows };
-  };
-
-  const buildJsonSheets = () =>
-    Object.keys(tabData || {}).map((tabKey) => tabToSheet(tabKey));
-
-  function toTabbedJson(jsonSheets) {
-    const data = {};
-    for (const tab of jsonSheets || []) {
-      const key = tab.sheetName || "Sheet";
-      data[key] = Array.isArray(tab.rows) ? tab.rows : [];
-    }
-    return {
-      Data: data
-    };
-  }
-
+  
   const exportName =
     historyExportNameProp ??
     (location.state && location.state.historyExportName) ??
     "Transaction History";
 
+  // ---------------------------------------------------------------------------------
+  // REVISION: Updated handleExport to use exportGenericHistoryExcel + config passing
+  // ---------------------------------------------------------------------------------
   const handleExport = async () => {
     const tabKeys = Object.keys(tabData || {});
     if (!tabKeys.length) {
@@ -573,29 +546,48 @@ const AllTranHistory = (props) => {
     }
     setExporting(true);
 
-    const reportName = exportName;
-    const start = dates?.[0] ? format(dates[0], "yyyy-MM-dd") : null;
-    const end = dates?.[1] ? format(dates[1], "yyyy-MM-dd") : null;
+    try {
+      const reportName = exportName;
+      const start = dates?.[0] ? format(dates[0], "yyyy-MM-dd") : null;
+      const end = dates?.[1] ? format(dates[1], "yyyy-MM-dd") : null;
 
-    const sheets = buildJsonSheets();
-    const jsonData = toTabbedJson(sheets);
+      // 1. Prepare Raw Data (We send the Raw Tab Data, not pre-formatted sheets)
+      const jsonData = {
+        Data: tabData // This contains { TabName: [Row Objects...] }
+      };
 
-    const payload = {
-      ReportName: reportName,
-      UserCode: user?.USER_CODE,
-      Branch: branchCode || "",
-      StartDate: start,
-      EndDate: end,
-      JsonData: jsonData
-    };
+      // 2. Prepare Column Configurations (The Source of Truth for Headers)
+      // This ensures Excel knows "doc_no" = "Document Number"
+      const columnConfigsMap = {};
+      tabKeys.forEach((key) => {
+        columnConfigsMap[key] = getColumnsForTab(key);
+      });
 
-    await exportHistoryExcel(
-      "/exportHistoryReport",
-      JSON.stringify(payload),
-      setExporting,
-      reportName
-    );
+  
+      const payload = {
+        ReportName: reportName,
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        StartDate: start,
+        EndDate: end,
+        JsonData: jsonData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
+      };
+    
+  
+      // 3. Call the new generic exporter
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+    } catch (error) {
+      console.error("Export Error:", error);
+      alert("Failed to export Excel file.");
+    } finally {
+      setExporting(false);
+    }
   };
+  // ---------------------------------------------------------------------------------
 
   const handleRowDoubleClick = useCallback(
     (row) => {
@@ -616,6 +608,7 @@ const AllTranHistory = (props) => {
   );
 
   const [granularity, setGranularity] = useState("day"); // "day" | "month" | "year"
+
 
   return (
   <>
@@ -677,6 +670,12 @@ const AllTranHistory = (props) => {
         }
         .animate-fade-in-down {
           animation: fade-in-down 0.2s ease-out forwards;
+        }
+      `}</style>
+
+      <style jsx="true">{`
+        .max-w-xl-custom {
+          max-width: 420px;
         }
       `}</style>
 
@@ -843,7 +842,7 @@ const AllTranHistory = (props) => {
                     return (
                       <td
                         key={col.key}
-                        className={`px-2 py-1 border whitespace-nowrap ${
+                        className={`px-2 py-1 border whitespace-nowrap max-w-xl-custom break-words ${ 
                           isSticky ? "sticky left-0 z-40 bg-gray-100" : ""
                         }`}
                         style={isSticky ? { minWidth: 72, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
@@ -905,10 +904,13 @@ const AllTranHistory = (props) => {
                           return (
                             <td
                               key={col.key}
-                              className={`px-2 py-1 border whitespace-nowrap ${
+                              className={`px-2 py-1 border  whitespace-nowrap overflow-hidden text-ellipsis ${
                                 alignRight ? "text-right" : col.classNames || "text-left"
                               } ${isSticky ? "sticky left-0 z-10 bg-white" : ""}`}
-                              style={isSticky ? { minWidth: 120, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : undefined}
+                              style={{
+                                    ...(isSticky ? { minWidth: 120, boxShadow: "2px 0 0 rgba(0,0,0,0.06)" } : {}),
+                                    maxWidth: 360
+                                  }}
                               title={String(row?.[col.key] ?? "")}
                             >
                               {formatCellValue(row?.[col.key], col)}

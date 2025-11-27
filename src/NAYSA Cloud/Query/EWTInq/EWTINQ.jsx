@@ -11,19 +11,14 @@ import {
   faChevronDown,
   faFileExcel,
   faNoteSticky,
+  faUndo,
+  faDatabase,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 import { fetchData } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
-import {
-  exportToTabbedJson,
-  exportBuildJsonSheets,
-  exportHistoryExcel,
-  makeSheet,
-  useDownloadTextFile,
-  useNormalizeDat,
-} from "@/NAYSA Cloud/Global/report";
+import {exportGenericHistoryExcel} from "@/NAYSA Cloud/Global/report";
 import {
   useTopCompanyRow,
   useTopUserRow,
@@ -38,9 +33,10 @@ import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import CutoffLookupModal from "@/NAYSA Cloud/Lookup/SearchCutoffRef";
 
 const ENDPOINT = "getEWTInquiry";
+const ENDPOINT_Att = "getEWTAtt";
 
 export default function EWTINQ() {
-  const { user } = useAuth();
+   const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
 
   // ----- Layout (fixed header bar) -----
   const barRef = useRef(null);
@@ -89,7 +85,10 @@ export default function EWTINQ() {
     endingCutoff: "",
     endingCutoffName: "",
     rows: [],
+    originalRows: [], 
+    rows_Att: [],
     cols: [],
+    cols_Att: [],
     tbl1601EQ_dat: [],
     tbl1604E_dat: [],
     tbl1601EQ_att: [],
@@ -122,7 +121,10 @@ export default function EWTINQ() {
     endingCutoff,
     endingCutoffName,
     rows,
+    originalRows,
+    rows_Att,
     cols,
+    cols_Att,
     tbl1601EQ_dat,
     tbl1604E_dat,
     tbl1601EQ_att,
@@ -185,8 +187,11 @@ export default function EWTINQ() {
     (async () => {
       try {
         const result = await useSelectedHSColConfig(ENDPOINT);
+        const resultAtt = await useSelectedHSColConfig(ENDPOINT_Att);
+
         if (!alive || !Array.isArray(result)) return;
         setState((prev) => ({ ...prev, cols: result.map((c) => ({ ...c })) }));
+        setState((prev) => ({ ...prev, cols_Att: resultAtt.map((c) => ({ ...c })) }));
         loadedColsRef.current = true;
       } catch (e) {
         console.error("Load column config failed:", e);
@@ -234,6 +239,8 @@ export default function EWTINQ() {
       vendCode: "",
       vendName: "",
       rows: [],
+      originalRows: [], 
+      rows_Att:[],
       tbl1601EQ_dat: [],
       tbl1604E_dat: [],
       tbl1601EQ_att: [],
@@ -285,9 +292,14 @@ export default function EWTINQ() {
       const dtF1604E = parsed?.[0]?.dtF1604E ?? [];
       const dtF1601EQ_att = parsed?.[0]?.f1601EQ_att ?? [];
       const dtF1604E_att = parsed?.[0]?.f1604E_att ?? [];
+      const rowsAttData = Array.isArray(dtF1601EQ_att) && dtF1601EQ_att.length > 0
+            ? dtF1601EQ_att[0].data
+            : [];
 
       updateState({
         rows: Array.isArray(dt1) ? dt1 : [],
+        originalRows: Array.isArray(dt1) ? dt1 : [], // <-- Save the original data
+        rows_Att: rowsAttData,
         tbl1601EQ_dat: Array.isArray(dtF1601EQ) ? dtF1601EQ : [],
         tbl1604E_dat: Array.isArray(dtF1604E) ? dtF1604E : [],
         tbl1601EQ_att: Array.isArray(dtF1601EQ_att) ? dtF1601EQ_att : [],
@@ -319,6 +331,18 @@ export default function EWTINQ() {
 
 
 
+const handleViewTop = useCallback((row) => {
+      const filteredRows = originalRows.filter(
+        (r) => r.vendCode === row.vendCode
+      );
+    updateState({ 
+      vendName: row.corpName, 
+      vendCode: row.vendCode, 
+      rows: filteredRows 
+    });  
+     computeTotals(filteredRows); 
+  }, [originalRows, computeTotals]);
+
 
 
   // Export (base "Export Query")
@@ -326,21 +350,39 @@ export default function EWTINQ() {
     if (!Array.isArray(rows) || rows.length === 0) return;
     try {
       updateState({ isLoading: true });
-      const sheetConfigs = [makeSheet("EWT Inquiry Report", rows, cols)];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
+     
+     
+
+        const exportData = {
+        "Data" : {
+          "EWT Inquiry Detailed" : rows,
+          "EWT Inquiry Summary" : rows_Att
+        }
+      }
+
+      const columnConfigsMap = {
+          "EWT Inquiry Detailed" : cols,
+          "EWT Inquiry Summary" : cols_Att
+        }
+      
       const payload = {
-        Branch: branchCode,
-        ReportName: sheetConfigs[0].sheetName,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
+        ReportName: "EWT Inquiry Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
       };
-      await exportHistoryExcel(
-        "/exportHistoryReport",
-        JSON.stringify(payload),
-        () => {},
-        payload.ReportName
-      );
+    
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
+
+
+
     } catch (e) {
       console.error("Export failed:", e);
     } finally {
@@ -478,8 +520,8 @@ export default function EWTINQ() {
           {/* Single "tab" label */}
           <div className="flex flex-row gap-2">
             <span className="flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-              <FontAwesomeIcon icon={faFileLines} className="w-4 h-4 mr-2" />
-              EWT Query
+              <FontAwesomeIcon icon={faDatabase } className="w-4 h-4 mr-2" />
+              Expanded Witholding Tax Query
             </span>
           </div>
 
@@ -497,7 +539,7 @@ export default function EWTINQ() {
               onClick={() => onAction("reset")}
               className="px-3 py-2 text-xs font-medium rounded-md text-white bg-blue-600 hover:opacity-90"
             >
-              <FontAwesomeIcon icon={faMagnifyingGlass} />{" "}
+              <FontAwesomeIcon icon={faUndo} />{" "}
               <span className="hidden lg:inline ml-2">Reset</span>
             </button>
 
@@ -793,21 +835,56 @@ export default function EWTINQ() {
         </div>
       </div>
 
-      {/* Detail Table */}
-      <div className="global-tran-tab-div-ui">
-        <SearchGlobalReportTable
-          ref={tableRef}
-          columns={cols}
-          data={rows}
-          itemsPerPage={50}
-          rightActionLabel="View"
-          onRowAction={(row) => {
-            const url = `${window.location.origin}${row.pathUrl}`;
-            window.open(url, "_blank", "noopener,noreferrer");
-          }}
-        />
+
+
+       <div className="global-tran-tab-div-ui">
+        <div className="global-tran-tab-nav-ui">
+          <div className="flex flex-row sm:flex-row">
+            <button className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">Summary</button>
+          </div>
+        </div>
+
+        <div className="global-tran-table-main-div-ui">
+          <div className="max-h-[600px] overflow-y-auto relative">
+            <SearchGlobalReportTable
+              ref={tableRef}
+              columns={cols_Att}
+              data={rows_Att}
+              itemsPerPage={50}
+              rightActionLabel="View"
+              onRowAction={handleViewTop} // This action now filters the top table
+            />
+          </div>
+        </div>
       </div>
 
+
+
+
+         <div className="global-tran-tab-div-ui">
+        <div className="global-tran-tab-nav-ui">
+          <div className="flex flex-row sm:flex-row">
+            <button className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">Detailed</button>
+          </div>
+        </div>
+
+        <div className="global-tran-table-main-div-ui">
+          <div className="max-h-[600px] overflow-y-auto relative">
+            <SearchGlobalReportTable
+              ref={tableRef}
+              columns={cols}
+              data={rows}
+              itemsPerPage={50}
+              rightActionLabel="View"
+              onRowAction={(row) => {
+                const url = `${window.location.origin}${row.pathUrl}`;
+                window.open(url, "_blank", "noopener,noreferrer");
+              }}
+            />
+          </div>
+        </div>
+      </div>
+             
 
 
 

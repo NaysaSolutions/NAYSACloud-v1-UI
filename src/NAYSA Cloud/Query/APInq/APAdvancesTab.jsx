@@ -99,7 +99,7 @@ function useRequestCoalescer() {
 }
 
 const APAdvancesTab = forwardRef(function APAdvancesTab({ registerActions }, ref) {
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
   const baseKey = "AP_ADVANCES";
   const hydratedRef = useRef(false);
 
@@ -478,24 +478,35 @@ const APAdvancesTab = forwardRef(function APAdvancesTab({ registerActions }, ref
     try {
       updateState({ isLoading: true });
 
-      const sheetConfigs = [
-        makeSheet("AP Advances Summary",apAdvancesDataS, columnConfigS),
-        makeSheet("AP Advances Application",apAdvancesDataUnfiltered, columnConfig),
-      ];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
+       const exportData = {
+        "Data" : {
+          "AP Advances Summary" : apAdvancesDataS,
+          "AP Advances Application" : apAdvancesDataUnfiltered,
+        }
+      }
+
+      const columnConfigsMap = {
+          "AP Advances Summary" : columnConfigS,
+          "AP Advances Application" : columnConfig,
+        }
+      
+
+
       const payload = {
-        Branch: branchCode,
-        ReportName: `AP Advances Report as of ${useGetCurrentDay() || ""}`,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
+        ReportName: "AP Advances Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
       };
-      await exportHistoryExcel(
-        "/exportHistoryReport",
-        JSON.stringify(payload),
-        () => {},
-        "AP Advances Report"
-      );
+    
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
     } catch (e) {
       console.error("❌ Export failed:", e);
     } finally {

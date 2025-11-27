@@ -23,22 +23,22 @@ export default function ARINQActionBar({ activeTab, onAction, help = {}, busy = 
     const BUTTONS = {
         inquiry: [
             { id: "find", label: "Find", icon: faMagnifyingGlass, color: "bg-blue-600" },
-            { id: "reset", label: "Reset", icon: faRedo, color: "bg-blue-600" },
+            { id: "reset", label: "Reset", icon: faUndo, color: "bg-blue-600" },
             { id: "print", label: "Print", icon: faPrint, color: "bg-blue-600" },
-            { id: "export", label: "Export", icon: faFileExport, color: "bg-emerald-600" },
+            { id: "export", label: "Export", icon: faFileExport, color: "bg-blue-600" },
         ],
         advances: [
             { id: "find", label: "Find", icon: faMagnifyingGlass, color: "bg-blue-600" },
-            { id: "reset", label: "Reset", icon: faRedo, color: "bg-blue-600" },
+            { id: "reset", label: "Reset", icon: faUndo, color: "bg-blue-600" },
             { id: "print", label: "Print", icon: faPrint, color: "bg-blue-600" },
-            { id: "export", label: "Export", icon: faFileExport, color: "bg-emerald-600" },
+            { id: "export", label: "Export", icon: faFileExport, color: "bg-blue-600" },
         ],
 
         aging: [
             { id: "reprocess", label: "Find", icon: faMagnifyingGlass, color: "bg-blue-600" },
-            { id: "reset", label: "Reset", icon: faRedo, color: "bg-blue-600" },
+            { id: "reset", label: "Reset", icon: faUndo, color: "bg-blue-600" },
             { id: "print", label: "Print", icon: faPrint, color: "bg-blue-600" },
-            { id: "export", label: "Export", icon: faFileExport, color: "bg-emerald-600" },
+            { id: "export", label: "Export", icon: faFileExport, color: "bg-blue-600" },
         ],
         
     };

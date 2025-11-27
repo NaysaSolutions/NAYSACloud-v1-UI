@@ -12,7 +12,7 @@ import {
   faFileExcel,
   faNoteSticky,
   faUndo,
-  faDatabase,
+  faDatabase
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
@@ -24,18 +24,18 @@ import {
   useTopUserRow,
   useTopBranchRow,
 } from "@/NAYSA Cloud/Global/top1RefTable";
-import { exportFSLPReportExcel } from "@/NAYSA Cloud/Global/birReport";
+import { exportFSLSReportExcel } from "@/NAYSA Cloud/Global/birReport";
 import { useSelectedHSColConfig } from "@/NAYSA Cloud/Global/selectedData";
 import { formatNumber, parseFormattedNumber } from "@/NAYSA Cloud/Global/behavior";
 import SearchGlobalReportTable from "@/NAYSA Cloud/Lookup/SearchGlobalReportTable.jsx";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
-import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
+import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
 import CutoffLookupModal from "@/NAYSA Cloud/Lookup/SearchCutoffRef";
 
-const ENDPOINT = "getINTAXInquiry";
-const ENDPOINT_Att = "getINTAXAtt";
+const ENDPOINT = "getOUTAXInquiry";
+const ENDPOINT_Att = "getOUTAXAtt";
 
-export default function INTAXINQ() {
+export default function OUTAXINQ() {
   const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
 
   // ----- Layout (fixed header bar) -----
@@ -78,8 +78,8 @@ export default function INTAXINQ() {
   const [state, setState] = useState({
     branchCode: "",
     branchName: "",
-    vendCode: "",
-    vendName: "",
+    custCode: "",
+    custName: "",
     startingCutoff: "",
     startingCutoffName: "",
     endingCutoff: "",
@@ -89,13 +89,13 @@ export default function INTAXINQ() {
     rows_Att: [],
     cols: [],
     cols_Att: [],
-    tblFSLP_dat: [],
-    tblFSLP_att: [],
-    tblFSLP_fileName: "",
+    tblFSLS_dat: [],
+    tblFSLS_att: [],
+    tblFSLS_fileName: "",
     baseAmount: "0.00",
     vatAmount: "0.00",
     showBranchModal: false,
-    showPayeeModal: false,
+    ShowCustomerModal: false,
     showCutoffModal: false,
     cutoffModalType: "",
     isLoading: false,
@@ -111,8 +111,8 @@ export default function INTAXINQ() {
   const {
     branchCode,
     branchName,
-    vendCode,
-    vendName,
+    custCode,
+    custName,
     startingCutoff,
     startingCutoffName,
     endingCutoff,
@@ -122,13 +122,13 @@ export default function INTAXINQ() {
     rows_Att,
     cols,
     cols_Att,
-    tblFSLP_dat,
-    tblFSLP_att,
-    tblFSLP_fileName,
+    tblFSLS_dat,
+    tblFSLS_att,
+    tblFSLS_fileName,
     baseAmount,
     vatAmount,
     showBranchModal,
-    showPayeeModal,
+    ShowCustomerModal,
     showCutoffModal,
     cutoffModalType,
     isLoading,
@@ -230,13 +230,13 @@ export default function INTAXINQ() {
   // REVISED: Clear originalRows on reset
   const handleReset = useCallback(() => {
     updateState({
-      vendCode: "",
-      vendName: "",
+      custCode: "",
+      custName: "",
       rows: [],
       originalRows: [], 
       rows_Att:[],
-      tblFSLP_dat: [],
-      tblFSLP_att: [],
+      tblFSLS_dat: [],
+      tblFSLS_att: [],
       baseAmount: "0.00",
       vatAmount: "0.00",
     });
@@ -272,24 +272,24 @@ export default function INTAXINQ() {
     updateState({ isLoading: true });
     try {
       const resp = await fetchData(ENDPOINT, {
-        json_data: { json_data: { branchCode, vendCode, startingCutoff, endingCutoff } },
+        json_data: { json_data: { branchCode, custCode, startingCutoff, endingCutoff } },
       });
 
       const parsed = resp?.data?.[0]?.result ? JSON.parse(resp.data[0].result) : [];
       const dt1 = parsed?.[0]?.dt1 ?? [];
-      const dtFSLP = parsed?.[0]?.dtFSLP ?? [];
-      const dtFSLP_att = parsed?.[0]?.fFSLP_att ?? [];
-      const rowsAttData = Array.isArray(dtFSLP_att) && dtFSLP_att.length > 0
-            ? dtFSLP_att[0].data
+      const dtFSLS = parsed?.[0]?.dtFSLS ?? [];
+      const dtFSLS_att = parsed?.[0]?.fFSLS_att ?? [];
+      const rowsAttData = Array.isArray(dtFSLS_att) && dtFSLS_att.length > 0
+            ? dtFSLS_att[0].data
             : [];
 
       updateState({
         rows: Array.isArray(dt1) ? dt1 : [],
         originalRows: Array.isArray(dt1) ? dt1 : [], // <-- Save the original data
         rows_Att: rowsAttData,
-        tblFSLP_dat: Array.isArray(dtFSLP) ? dtFSLP : [],
-        tblFSLP_att: Array.isArray(dtFSLP_att) ? dtFSLP_att : [],
-        tblFSLP_fileName: parsed?.[0]?.fFSLP_name || "",
+        tblFSLS_dat: Array.isArray(dtFSLS) ? dtFSLS : [],
+        tblFSLS_att: Array.isArray(dtFSLS_att) ? dtFSLS_att : [],
+        tblFSLS_fileName: parsed?.[0]?.fFSLS_name || "",
       });
 
 
@@ -306,7 +306,7 @@ export default function INTAXINQ() {
     } finally {
       updateState({ isLoading: false });
     }
-  }, [branchCode, vendCode, startingCutoff, endingCutoff, computeTotals]);
+  }, [branchCode, custCode, startingCutoff, endingCutoff, computeTotals]);
 
 
   // Initial defaults (no persisted state)
@@ -319,17 +319,17 @@ export default function INTAXINQ() {
   }, [user?.USER_CODE, loadDefaults, handleReset]);
 
 
-  // REVISED: Filters the 'rows' state based on the selected 'vendCode'
+  // REVISED: Filters the 'rows' state based on the selected 'custCode'
   const handleViewTop = useCallback((row) => {
     // 1. Filter the original dataset
     const filteredRows = originalRows.filter(
-      (r) => r.vendCode === row.vendCode
+      (r) => r.custCode === row.custCode
     );
 
     // 2. Update the display rows and the payee filter fields
     updateState({ 
-      vendName: row.corpName, 
-      vendCode: row.vendCode, 
+      custName: row.corpName, 
+      custCode: row.custCode, 
       rows: filteredRows // Update the table data with the filtered results
     });
     
@@ -345,22 +345,20 @@ export default function INTAXINQ() {
     try {
       updateState({ isLoading: true });
 
-
-
         const exportData = {
               "Data" : {
-                "VAT Input Detailed" : rows,
-                "VAT Input Summary" : rows_Att
+                "Output VAT Detailed" : rows,
+                "Output VAT Summary" : rows_Att
               }
             }
       
             const columnConfigsMap = {
-                "VAT Input Detailed"  : cols,
-                "VAT Input Summary": cols_Att
+                "Output VAT Detailed"  : cols,
+                "Output VAT Summary": cols_Att
               }
             
             const payload = {
-              ReportName: "VAT Input Inquiry Report",
+              ReportName: "VAT Output Inquiry Report",
               UserCode: currentUserRow?.userName,
               Branch: branchCode || "",
               JsonData: exportData,
@@ -372,8 +370,6 @@ export default function INTAXINQ() {
       
             await exportGenericHistoryExcel(payload, columnConfigsMap);
       
-      
-    
 
     } catch (e) {
       console.error("Export failed:", e);
@@ -384,13 +380,13 @@ export default function INTAXINQ() {
 
   // Export attachments
   const doExportAttachment = useCallback(
-    async (kind /* 'FSLP' */) => {
+    async (kind /* 'FSLS' */) => {
       if (!Array.isArray(rows) || rows.length === 0) return;
 
       try {
         updateState({ isLoading: true });
 
-        const tblAtt = kind === "FSLP" ? tblFSLP_att : tblFSLP_att;
+        const tblAtt = kind === "FSLS" ? tblFSLS_att : tblFSLS_att;
         if (!tblAtt || tblAtt.length === 0) {
           console.warn(`No attachment data for ${kind}`);
           return;
@@ -406,7 +402,7 @@ export default function INTAXINQ() {
           data: first.data,
         };
 
-        exportFSLPReportExcel("FSLP", payload, { slice8to11: false });
+        exportFSLSReportExcel("FSLS", payload, { slice8to11: false });
 
 
       } catch (e) {
@@ -415,19 +411,19 @@ export default function INTAXINQ() {
         updateState({ isLoading: false, showExportMenu: false });
       }
     },
-    [rows, tblFSLP_att]
+    [rows, tblFSLS_att]
   );
 
 
   const doGenerate = useCallback(
-    (kind /* 'FSLP' */) => {
+    (kind /* 'FSLS' */) => {
       if (!Array.isArray(rows) || rows.length === 0) return;
 
       try {
         updateState({ isLoading: true });
 
-        const src = kind === "FSLP" ? tblFSLP_dat : tblFSLP_dat;
-        const filename = kind === "FSLP" ? tblFSLP_fileName : tblFSLP_fileName;
+        const src = kind === "FSLS" ? tblFSLS_dat : tblFSLS_dat;
+        const filename = kind === "FSLS" ? tblFSLS_fileName : tblFSLS_fileName;
         const datText = useNormalizeDat(src).trim();
 
         if (typeof useDownloadTextFile === "function") {
@@ -451,7 +447,7 @@ export default function INTAXINQ() {
         updateState({ isLoading: false, showGenerateMenu: false });
       }
     },
-    [rows, tblFSLP_dat, tblFSLP_fileName]
+    [rows, tblFSLS_dat, tblFSLS_fileName]
   );
 
   // ----- Action handlers (inline ActionBar) -----
@@ -465,10 +461,10 @@ export default function INTAXINQ() {
         return window.print();
       case "export-query":
         return doExport();
-      case "export-FSLP-att":
-        return doExportAttachment("FSLP");
-      case "gen-FSLP":
-        return doGenerate("FSLP");
+      case "export-FSLS-att":
+        return doExportAttachment("FSLS");
+      case "gen-FSLS":
+        return doGenerate("FSLS");
       case "guide":
         return updateState({
           guideOpen: !guideOpen,
@@ -476,7 +472,7 @@ export default function INTAXINQ() {
           showGenerateMenu: false,
         });
       case "pdf":
-        return window.open("/public/NAYSA Input VAT Inquiry.pdf", "_blank");
+        return window.open("/public/NAYSA Output VAT Inquiry.pdf", "_blank");
       default:
         return;
     }
@@ -506,7 +502,7 @@ export default function INTAXINQ() {
           <div className="flex flex-row gap-2">
             <span className="flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
               <FontAwesomeIcon icon={faDatabase} className="w-4 h-4 mr-2" />
-              Input VAT Query
+              Output VAT Query
             </span>
           </div>
 
@@ -563,7 +559,7 @@ export default function INTAXINQ() {
                     <span>Export Query</span>
                   </button>
                   <button
-                    onClick={() => onAction("export-FSLP-att")}
+                    onClick={() => onAction("export-FSLS-att")}
                     className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faFileExcel} className="text-green-600" />
@@ -593,7 +589,7 @@ export default function INTAXINQ() {
               {showGenerateMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-700 dark:ring-gray-600 z-50">
                   <button
-                    onClick={() => onAction("gen-FSLP")}
+                    onClick={() => onAction("gen-FSLS")}
                     className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faNoteSticky} className="text-yellow-600" />
@@ -672,23 +668,23 @@ export default function INTAXINQ() {
                 <div className="relative">
                   <input
                     type="text"
-                    id="vendCode"
+                    id="custCode"
                     placeholder=" "
-                    value={vendCode}
-                    onChange={(e) => updateState({ vendCode: e.target.value })}
+                    value={custCode}
+                    onChange={(e) => updateState({ custCode: e.target.value })}
                     className="peer global-tran-textbox-ui"
                     disabled={isLoading}
                   />
-                  <label htmlFor="vendCode" className="global-tran-floating-label">
-                    Payee Code
+                  <label htmlFor="custCode" className="global-tran-floating-label">
+                    Customer Code
                   </label>
                   <button
                     type="button"
                     className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-                    onClick={() => updateState({ showPayeeModal: true })}
+                    onClick={() => updateState({ ShowCustomerModal: true })}
                     disabled={isLoading}
-                    aria-label="Find Payee"
-                    title="Find Payee"
+                    aria-label="Find Customer"
+                    title="Find Customer"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
@@ -700,14 +696,14 @@ export default function INTAXINQ() {
                 <div className="relative">
                   <input
                     type="text"
-                    id="vendName"
+                    id="custName"
                     placeholder=" "
-                    value={vendName}
+                    value={custName}
                     readOnly
                     className="peer global-tran-textbox-ui"
                   />
-                  <label htmlFor="vendName" className="global-tran-floating-label">
-                    Payee Name
+                  <label htmlFor="custName" className="global-tran-floating-label">
+                    Customer Name
                   </label>
                 </div>
               </div>
@@ -873,19 +869,19 @@ export default function INTAXINQ() {
           }}
         />
       )}
-      {showPayeeModal && (
-        <PayeeMastLookupModal
-          isOpen={showPayeeModal}
-          onClose={(selectedPayee) => {
-            if (selectedPayee) {
+      {ShowCustomerModal && (
+        <CustomerMastLookupModal
+          isOpen={ShowCustomerModal}
+          onClose={(selectedCustomer) => {
+            if (selectedCustomer) {
               updateState({
-                vendCode: selectedPayee.vendCode,
-                vendName: selectedPayee.vendName,
+                custCode: selectedCustomer.custCode,
+                custName: selectedCustomer.custName,
                 baseAmount: "0.00",
                 vatAmount: "0.00",
               });
             }
-            updateState({ showPayeeModal: false });
+            updateState({ ShowCustomerModal: false });
           }}
         />
       )}

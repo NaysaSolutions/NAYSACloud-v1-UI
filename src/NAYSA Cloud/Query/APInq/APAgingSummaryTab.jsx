@@ -11,12 +11,7 @@ import {
   faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
-import {
-  exportToTabbedJson,
-  exportBuildJsonSheets,
-  exportHistoryExcel,
-  makeSheet,
-} from "@/NAYSA Cloud/Global/report";
+import {exportGenericHistoryExcel} from "@/NAYSA Cloud/Global/report";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
 import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import COAMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCOAMast.jsx";
@@ -98,7 +93,7 @@ function useRequestCoalescer() {
 }
 
 const APAgingSummaryTab = forwardRef(function APAgingSummaryTab({ registerActions }, ref) {
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
   const baseKey = "AP_AGING";
   const hydratedRef = useRef(false);
 
@@ -398,19 +393,34 @@ const APAgingSummaryTab = forwardRef(function APAgingSummaryTab({ registerAction
   const handleExport = useCallback(async () => {
     try {
       updateState({ isLoading: true });
-      const sheetConfigs = [
-        makeSheet("AP Aging Detailed", apAgingDataUnfiltered, columnConfig),
-        makeSheet("AP Aging Summary",  apAgingDataS,          columnConfigS),
-      ];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
+    
+   
+        const exportData = {
+        "Data" : {
+          "AP Aging Summary" : apAgingDataS,
+          "AP Aging Detailed" : apAgingDataUnfiltered,
+        }
+      }
+
+      const columnConfigsMap = {
+          "AP Aging Summary" : columnConfigS,
+          "AP Aging Detailed" : columnConfig,
+        }
+      
       const payload = {
-        Branch: branchCode,
-        ReportName: `AP Aging Report as of ${refDate || ""}`,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
+        ReportName: "AP Aging Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
       };
-      await exportHistoryExcel("/exportHistoryReport", JSON.stringify(payload), () => {}, "AP Aging Report");
+    
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
     } catch (e) {
       console.error("❌ Export failed:", e);
     } finally {

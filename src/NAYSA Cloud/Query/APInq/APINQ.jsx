@@ -4,7 +4,7 @@ import APInquiryTab from "./APInquiryTab";
 import APAdvancesTab from "./APAdvancesTab";
 import APAgingSummaryTab from "./APAgingSummaryTab";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {faFileLines} from "@fortawesome/free-solid-svg-icons";
+import {faFileLines,faDatabase} from "@fortawesome/free-solid-svg-icons";
 
 
 const TABS = [
@@ -144,7 +144,7 @@ export default function APINQ() {
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                     : "text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-300"}`}
                   >
-                <FontAwesomeIcon icon={faFileLines} className="w-4 h-4 mr-2" />
+                <FontAwesomeIcon icon={faDatabase} className="w-4 h-4 mr-2" />
                 {tab.label}
               </button>
             ))}

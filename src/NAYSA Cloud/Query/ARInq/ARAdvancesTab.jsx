@@ -11,12 +11,7 @@ import {
   faTableList,
 } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "@/NAYSA Cloud/Global/utilities.jsx";
-import {
-  exportToTabbedJson,
-  exportBuildJsonSheets,
-  exportHistoryExcel,
-  makeSheet,
-} from "@/NAYSA Cloud/Global/report";
+import {exportGenericHistoryExcel} from "@/NAYSA Cloud/Global/report";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
 import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
 import { useTopUserRow, useTopBranchRow } from "@/NAYSA Cloud/Global/top1RefTable";
@@ -99,7 +94,7 @@ function useRequestCoalescer() {
 }
 
 const ARAdvancesTab = forwardRef(function ARAdvancesTab({ registerActions }, ref) {
-  const { user } = useAuth();
+  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
   const baseKey = "AR_ADVANCES";
   const hydratedRef = useRef(false);
 
@@ -478,24 +473,37 @@ const ARAdvancesTab = forwardRef(function ARAdvancesTab({ registerActions }, ref
     try {
       updateState({ isLoading: true });
 
-      const sheetConfigs = [
-        makeSheet("AR Advances Summary", arAdvancesDataS, columnConfigS),
-        makeSheet("AR Advances Application", arAdvancesDataUnfiltered, columnConfig),
-      ];
-      const sheets = exportBuildJsonSheets(sheetConfigs);
-      const jsonResult = exportToTabbedJson(sheets);
+
+        const exportData = {
+        "Data" : {
+          "AR Advances Summary" : arAdvancesDataS,
+          "AR Advances Application" : arAdvancesDataUnfiltered,
+        }
+      }
+
+      const columnConfigsMap = {
+          "AR Advances Summary" : columnConfigS,
+          "AR Advances Application" : columnConfig,
+        }
+      
+
+
       const payload = {
-        Branch: branchCode,
-        ReportName: `AR Advances Report as of ${useGetCurrentDay() || ""}`,
-        UserCode: user?.USER_CODE,
-        JsonData: jsonResult,
+        ReportName: "AR Advances Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
       };
-      await exportHistoryExcel(
-        "/exportHistoryReport",
-        JSON.stringify(payload),
-        () => {},
-        "AR Advances Report"
-      );
+    
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
+
     } catch (e) {
       console.error("❌ Export failed:", e);
     } finally {

@@ -12,7 +12,7 @@ import {
   faFileExcel,
   faNoteSticky,
   faUndo,
-  faDatabase,
+  faDatabase
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
@@ -24,19 +24,19 @@ import {
   useTopUserRow,
   useTopBranchRow,
 } from "@/NAYSA Cloud/Global/top1RefTable";
-import { exportFSLPReportExcel } from "@/NAYSA Cloud/Global/birReport";
+import { export1702QReportExcel, export1702ReportExcel } from "@/NAYSA Cloud/Global/birReport";
 import { useSelectedHSColConfig } from "@/NAYSA Cloud/Global/selectedData";
 import { formatNumber, parseFormattedNumber } from "@/NAYSA Cloud/Global/behavior";
 import SearchGlobalReportTable from "@/NAYSA Cloud/Lookup/SearchGlobalReportTable.jsx";
-import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
+import CustomerMastLookupModal from "@/NAYSA Cloud/Lookup/SearchCustMast";
 import PayeeMastLookupModal from "@/NAYSA Cloud/Lookup/SearchVendMast";
 import CutoffLookupModal from "@/NAYSA Cloud/Lookup/SearchCutoffRef";
 
-const ENDPOINT = "getINTAXInquiry";
-const ENDPOINT_Att = "getINTAXAtt";
+const ENDPOINT = "getCWTInquiry";
+const ENDPOINT_Att = "getCWTAtt";
 
-export default function INTAXINQ() {
-  const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
+export default function CWTINQ() {
+   const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
 
   // ----- Layout (fixed header bar) -----
   const barRef = useRef(null);
@@ -78,8 +78,8 @@ export default function INTAXINQ() {
   const [state, setState] = useState({
     branchCode: "",
     branchName: "",
-    vendCode: "",
-    vendName: "",
+    custCode: "",
+    custName: "",
     startingCutoff: "",
     startingCutoffName: "",
     endingCutoff: "",
@@ -89,13 +89,16 @@ export default function INTAXINQ() {
     rows_Att: [],
     cols: [],
     cols_Att: [],
-    tblFSLP_dat: [],
-    tblFSLP_att: [],
-    tblFSLP_fileName: "",
+    tbl1702Q_dat: [],
+    tbl1702_dat: [],
+    tbl1702Q_att: [],
+    tbl1702_att: [],
+    tbl1702Q_fileName: "",
+    tbl1702_fileName: "",
     baseAmount: "0.00",
-    vatAmount: "0.00",
+    atcAmount: "0.00",
     showBranchModal: false,
-    showPayeeModal: false,
+    showCustomerModal: false,
     showCutoffModal: false,
     cutoffModalType: "",
     isLoading: false,
@@ -111,24 +114,27 @@ export default function INTAXINQ() {
   const {
     branchCode,
     branchName,
-    vendCode,
-    vendName,
+    custCode,
+    custName,
     startingCutoff,
     startingCutoffName,
     endingCutoff,
     endingCutoffName,
     rows,
-    originalRows, // DESTRUCTURED: The original data store
+    originalRows,
     rows_Att,
     cols,
     cols_Att,
-    tblFSLP_dat,
-    tblFSLP_att,
-    tblFSLP_fileName,
+    tbl1702Q_dat,
+    tbl1702_dat,
+    tbl1702Q_att,
+    tbl1702_att,
+    tbl1702Q_fileName,
+    tbl1702_fileName,
     baseAmount,
-    vatAmount,
+    atcAmount,
     showBranchModal,
-    showPayeeModal,
+    showCustomerModal,
     showCutoffModal,
     cutoffModalType,
     isLoading,
@@ -182,8 +188,8 @@ export default function INTAXINQ() {
       try {
         const result = await useSelectedHSColConfig(ENDPOINT);
         const resultAtt = await useSelectedHSColConfig(ENDPOINT_Att);
-        if (!alive || !Array.isArray(result)) return;
 
+        if (!alive || !Array.isArray(result)) return;
         setState((prev) => ({ ...prev, cols: result.map((c) => ({ ...c })) }));
         setState((prev) => ({ ...prev, cols_Att: resultAtt.map((c) => ({ ...c })) }));
         loadedColsRef.current = true;
@@ -227,78 +233,80 @@ export default function INTAXINQ() {
   }, [user?.USER_CODE]);
 
 
-  // REVISED: Clear originalRows on reset
+
   const handleReset = useCallback(() => {
     updateState({
-      vendCode: "",
-      vendName: "",
+      custCode: "",
+      custName: "",
       rows: [],
       originalRows: [], 
       rows_Att:[],
-      tblFSLP_dat: [],
-      tblFSLP_att: [],
+      tbl1702Q_dat: [],
+      tbl1702_dat: [],
+      tbl1702Q_att: [],
+      tbl1702_att: [],
       baseAmount: "0.00",
-      vatAmount: "0.00",
+      atcAmount: "0.00",
     });
   }, []);
+
 
 
   // Compute summary totals
   const computeTotals = useCallback((list = []) => {
     if (!Array.isArray(list) || list.length === 0) {
       updateState({
-        vatAmount: "0.00",
+        atcAmount: "0.00",
         baseAmount: "0.00",
       });
       return;
     }
     const acc = list.reduce(
       (a, r) => {
-        a.vatAmount += parseFormattedNumber(r.vatAmt) || 0;
+        a.atcAmount += parseFormattedNumber(r.atcAmt) || 0;
         a.baseAmount += parseFormattedNumber(r.baseAmt) || 0;
         return a;
       },
-      { vatAmount: 0, baseAmount: 0 }
+      { atcAmount: 0, baseAmount: 0 }
     );
     updateState({
-      vatAmount: formatNumber(acc.vatAmount),
+      atcAmount: formatNumber(acc.atcAmount),
       baseAmount: formatNumber(acc.baseAmount),
     });
   }, []);
 
 
-  // REVISED: Save dt1 to both rows (display) and originalRows (source for filtering)
+
+
+  // Find: load rows
   const doFind = useCallback(async () => {
     updateState({ isLoading: true });
     try {
       const resp = await fetchData(ENDPOINT, {
-        json_data: { json_data: { branchCode, vendCode, startingCutoff, endingCutoff } },
+        json_data: { json_data: { branchCode, custCode, startingCutoff, endingCutoff } },
       });
 
       const parsed = resp?.data?.[0]?.result ? JSON.parse(resp.data[0].result) : [];
       const dt1 = parsed?.[0]?.dt1 ?? [];
-      const dtFSLP = parsed?.[0]?.dtFSLP ?? [];
-      const dtFSLP_att = parsed?.[0]?.fFSLP_att ?? [];
-      const rowsAttData = Array.isArray(dtFSLP_att) && dtFSLP_att.length > 0
-            ? dtFSLP_att[0].data
+      const dtF1702Q = parsed?.[0]?.dtF1702Q ?? [];
+      const dtF1702 = parsed?.[0]?.dtF1702 ?? [];
+      const dtF1702Q_att = parsed?.[0]?.f1702Q_att ?? [];
+      const dtF1702_att = parsed?.[0]?.f1702_att ?? [];
+      const rowsAttData = Array.isArray(dtF1702Q_att) && dtF1702Q_att.length > 0
+            ? dtF1702Q_att[0].data
             : [];
 
       updateState({
         rows: Array.isArray(dt1) ? dt1 : [],
         originalRows: Array.isArray(dt1) ? dt1 : [], // <-- Save the original data
         rows_Att: rowsAttData,
-        tblFSLP_dat: Array.isArray(dtFSLP) ? dtFSLP : [],
-        tblFSLP_att: Array.isArray(dtFSLP_att) ? dtFSLP_att : [],
-        tblFSLP_fileName: parsed?.[0]?.fFSLP_name || "",
+        tbl1702Q_dat: Array.isArray(dtF1702Q) ? dtF1702Q : [],
+        tbl1702_dat: Array.isArray(dtF1702) ? dtF1702 : [],
+        tbl1702Q_att: Array.isArray(dtF1702Q_att) ? dtF1702Q_att : [],
+        tbl1702_att: Array.isArray(dtF1702_att) ? dtF1702_att : [],
+        tbl1702Q_fileName: parsed?.[0]?.f1702Q_name || "",
+        tbl1702_fileName: parsed?.[0]?.f1702_name || "",
       });
-
-
-
-
-
-
-
-
 
       computeTotals(dt1);
     } catch (e) {
@@ -306,7 +314,9 @@ export default function INTAXINQ() {
     } finally {
       updateState({ isLoading: false });
     }
-  }, [branchCode, vendCode, startingCutoff, endingCutoff, computeTotals]);
+  }, [branchCode, custCode, startingCutoff, endingCutoff, computeTotals]);
+
+
 
 
   // Initial defaults (no persisted state)
@@ -319,24 +329,20 @@ export default function INTAXINQ() {
   }, [user?.USER_CODE, loadDefaults, handleReset]);
 
 
-  // REVISED: Filters the 'rows' state based on the selected 'vendCode'
-  const handleViewTop = useCallback((row) => {
-    // 1. Filter the original dataset
-    const filteredRows = originalRows.filter(
-      (r) => r.vendCode === row.vendCode
-    );
 
-    // 2. Update the display rows and the payee filter fields
+
+const handleViewTop = useCallback((row) => {
+      const filteredRows = originalRows.filter(
+        (r) => r.custCode === row.custCode
+      );
     updateState({ 
-      vendName: row.corpName, 
-      vendCode: row.vendCode, 
-      rows: filteredRows // Update the table data with the filtered results
-    });
-    
-    // 3. Recompute summary totals based on the filtered data
-    computeTotals(filteredRows); 
-
+      custName: row.corpName, 
+      custCode: row.custCode, 
+      rows: filteredRows 
+    });  
+     computeTotals(filteredRows); 
   }, [originalRows, computeTotals]);
+
 
 
   // Export (base "Export Query")
@@ -344,36 +350,38 @@ export default function INTAXINQ() {
     if (!Array.isArray(rows) || rows.length === 0) return;
     try {
       updateState({ isLoading: true });
-
-
+     
+     
 
         const exportData = {
-              "Data" : {
-                "VAT Input Detailed" : rows,
-                "VAT Input Summary" : rows_Att
-              }
-            }
+        "Data" : {
+          "CWT Inquiry Detailed" : rows,
+          "CWT Inquiry Summary" : rows_Att
+        }
+      }
+
+      const columnConfigsMap = {
+          "CWT Inquiry Detailed" : cols,
+          "CWT Inquiry Summary" : cols_Att
+        }
       
-            const columnConfigsMap = {
-                "VAT Input Detailed"  : cols,
-                "VAT Input Summary": cols_Att
-              }
-            
-            const payload = {
-              ReportName: "VAT Input Inquiry Report",
-              UserCode: currentUserRow?.userName,
-              Branch: branchCode || "",
-              JsonData: exportData,
-              companyName:companyInfo?.compName,
-              companyAddress:companyInfo?.compAddr,
-              companyTelNo:companyInfo?.telNo
-            };
-          
-      
-            await exportGenericHistoryExcel(payload, columnConfigsMap);
-      
-      
+      const payload = {
+        ReportName: "CWT Inquiry Report",
+        UserCode: currentUserRow?.userName,
+        Branch: branchCode || "",
+        JsonData: exportData,
+        companyName:companyInfo?.compName,
+        companyAddress:companyInfo?.compAddr,
+        companyTelNo:companyInfo?.telNo
+      };
     
+
+      await exportGenericHistoryExcel(payload, columnConfigsMap);
+
+
+
+
+
 
     } catch (e) {
       console.error("Export failed:", e);
@@ -384,13 +392,13 @@ export default function INTAXINQ() {
 
   // Export attachments
   const doExportAttachment = useCallback(
-    async (kind /* 'FSLP' */) => {
+    async (kind /* '1702Q' | '1702' */) => {
       if (!Array.isArray(rows) || rows.length === 0) return;
 
       try {
         updateState({ isLoading: true });
 
-        const tblAtt = kind === "FSLP" ? tblFSLP_att : tblFSLP_att;
+        const tblAtt = kind === "1702Q" ? tbl1702Q_att : tbl1702_att;
         if (!tblAtt || tblAtt.length === 0) {
           console.warn(`No attachment data for ${kind}`);
           return;
@@ -399,35 +407,39 @@ export default function INTAXINQ() {
         const first = tblAtt[0];
         const payload = {
           title: first.title,
+          periodText: first.periodText,
           tin: first.tin,
           agentName: first.agentName,
           fileName: first.fileName,
-          addr:first.addr,
           data: first.data,
         };
 
-        exportFSLPReportExcel("FSLP", payload, { slice8to11: false });
-
-
+        if (kind === "1702Q") {
+          export1702QReportExcel("1702Q", payload, { slice8to11: false });
+        } else {
+          export1702ReportExcel("1702", payload, { slice8to11: false });
+        }
       } catch (e) {
         console.error(`Export ${kind} attachment failed:`, e);
       } finally {
         updateState({ isLoading: false, showExportMenu: false });
       }
     },
-    [rows, tblFSLP_att]
+    [rows, tbl1702Q_att, tbl1702_att]
   );
 
 
+
+
   const doGenerate = useCallback(
-    (kind /* 'FSLP' */) => {
+    (kind /* '1702Q' | '1702' */) => {
       if (!Array.isArray(rows) || rows.length === 0) return;
 
       try {
         updateState({ isLoading: true });
 
-        const src = kind === "FSLP" ? tblFSLP_dat : tblFSLP_dat;
-        const filename = kind === "FSLP" ? tblFSLP_fileName : tblFSLP_fileName;
+        const src = kind === "1702Q" ? tbl1702Q_dat : tbl1702_dat;
+        const filename = kind === "1702Q" ? tbl1702Q_fileName : tbl1702_fileName;
         const datText = useNormalizeDat(src).trim();
 
         if (typeof useDownloadTextFile === "function") {
@@ -436,12 +448,11 @@ export default function INTAXINQ() {
           const blob = new Blob([datText], { type: "text/plain;charset=utf-8" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
-          const a_tag = document.createElement("a");
-          a_tag.href = url;
-          a_tag.download = filename;
-          document.body.appendChild(a_tag);
-          a_tag.click();
-          a_tag.remove();
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
           URL.revokeObjectURL(url);
         }
       } catch (err) {
@@ -451,7 +462,7 @@ export default function INTAXINQ() {
         updateState({ isLoading: false, showGenerateMenu: false });
       }
     },
-    [rows, tblFSLP_dat, tblFSLP_fileName]
+    [rows, tbl1702Q_dat, tbl1702_dat, tbl1702Q_fileName, tbl1702_fileName]
   );
 
   // ----- Action handlers (inline ActionBar) -----
@@ -465,10 +476,14 @@ export default function INTAXINQ() {
         return window.print();
       case "export-query":
         return doExport();
-      case "export-FSLP-att":
-        return doExportAttachment("FSLP");
-      case "gen-FSLP":
-        return doGenerate("FSLP");
+      case "export-1601eq-att":
+        return doExportAttachment("1702Q");
+      case "export-1604e-att":
+        return doExportAttachment("1702");
+      case "gen-1601eq":
+        return doGenerate("1702Q");
+      case "gen-1604e":
+        return doGenerate("1702");
       case "guide":
         return updateState({
           guideOpen: !guideOpen,
@@ -476,7 +491,7 @@ export default function INTAXINQ() {
           showGenerateMenu: false,
         });
       case "pdf":
-        return window.open("/public/NAYSA Input VAT Inquiry.pdf", "_blank");
+        return window.open("/public/NAYSA CWT Inquiry.pdf", "_blank");
       default:
         return;
     }
@@ -506,7 +521,7 @@ export default function INTAXINQ() {
           <div className="flex flex-row gap-2">
             <span className="flex items-center px-3 py-2 rounded-md text-xs md:text-sm font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
               <FontAwesomeIcon icon={faDatabase} className="w-4 h-4 mr-2" />
-              Input VAT Query
+              Creditable Witholding Tax Query
             </span>
           </div>
 
@@ -563,11 +578,18 @@ export default function INTAXINQ() {
                     <span>Export Query</span>
                   </button>
                   <button
-                    onClick={() => onAction("export-FSLP-att")}
+                    onClick={() => onAction("export-1601eq-att")}
                     className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faFileExcel} className="text-green-600" />
-                    <span>Export SLP Attachment</span>
+                    <span>Export 1702Q Attachment</span>
+                  </button>
+                  <button
+                    onClick={() => onAction("export-1604e-att")}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faFileExcel} className="text-green-600" />
+                    <span>Export 1702 Attachment</span>
                   </button>
                 </div>
               )}
@@ -593,11 +615,18 @@ export default function INTAXINQ() {
               {showGenerateMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-700 dark:ring-gray-600 z-50">
                   <button
-                    onClick={() => onAction("gen-FSLP")}
+                    onClick={() => onAction("gen-1601eq")}
                     className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faNoteSticky} className="text-yellow-600" />
-                    <span>Generate SLP</span>
+                    <span>Generate 1702Q</span>
+                  </button>
+                  <button
+                    onClick={() => onAction("gen-1604e")}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faNoteSticky} className="text-yellow-600" />
+                    <span>Generate 1702</span>
                   </button>
                 </div>
               )}
@@ -628,7 +657,6 @@ export default function INTAXINQ() {
         </div>
       </div>
 
-
       {/* Filters + Summary */}
       <div id="summary" className="global-tran-tab-div-ui">
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
@@ -637,7 +665,7 @@ export default function INTAXINQ() {
             <section className="p-5">
               <h3 className="flex items-center gap-2 text-gray-800 font-semibold mb-4">
                 <FontAwesomeIcon className="text-blue-600" icon={faUser} />
-                Payee Details
+                Customer Details
               </h3>
 
               {/* Branch */}
@@ -672,23 +700,23 @@ export default function INTAXINQ() {
                 <div className="relative">
                   <input
                     type="text"
-                    id="vendCode"
+                    id="custCode"
                     placeholder=" "
-                    value={vendCode}
-                    onChange={(e) => updateState({ vendCode: e.target.value })}
+                    value={custCode}
+                    onChange={(e) => updateState({ custCode: e.target.value })}
                     className="peer global-tran-textbox-ui"
                     disabled={isLoading}
                   />
-                  <label htmlFor="vendCode" className="global-tran-floating-label">
-                    Payee Code
+                  <label htmlFor="custCode" className="global-tran-floating-label">
+                    Customer Code
                   </label>
                   <button
                     type="button"
                     className="global-tran-textbox-button-search-padding-ui global-tran-textbox-button-search-enabled-ui global-tran-textbox-button-search-ui"
-                    onClick={() => updateState({ showPayeeModal: true })}
+                    onClick={() => updateState({ showCustomerModal: true })}
                     disabled={isLoading}
-                    aria-label="Find Payee"
-                    title="Find Payee"
+                    aria-label="Find Customer"
+                    title="Find Customer"
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
@@ -700,14 +728,14 @@ export default function INTAXINQ() {
                 <div className="relative">
                   <input
                     type="text"
-                    id="vendName"
+                    id="custName"
                     placeholder=" "
-                    value={vendName}
+                    value={custName}
                     readOnly
                     className="peer global-tran-textbox-ui"
                   />
-                  <label htmlFor="vendName" className="global-tran-floating-label">
-                    Payee Name
+                  <label htmlFor="custName" className="global-tran-floating-label">
+                    Customer Name
                   </label>
                 </div>
               </div>
@@ -798,8 +826,8 @@ export default function INTAXINQ() {
                   <div className="font-semibold">{baseAmount}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">VAT Amount</div>
-                  <div className="font-semibold">{vatAmount}</div>
+                  <div className="text-xs text-gray-500">ATC Amount</div>
+                  <div className="font-semibold">{atcAmount}</div>
                 </div>
               </div>
             </section>
@@ -808,8 +836,8 @@ export default function INTAXINQ() {
       </div>
 
 
-      {/* Detailed (BOTTOM) */}
-      <div className="global-tran-tab-div-ui">
+
+       <div className="global-tran-tab-div-ui">
         <div className="global-tran-tab-nav-ui">
           <div className="flex flex-row sm:flex-row">
             <button className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">Summary</button>
@@ -832,8 +860,8 @@ export default function INTAXINQ() {
 
 
 
-      {/* Summary (TOP) */}
-      <div className="global-tran-tab-div-ui">
+
+         <div className="global-tran-tab-div-ui">
         <div className="global-tran-tab-nav-ui">
           <div className="flex flex-row sm:flex-row">
             <button className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">Detailed</button>
@@ -845,7 +873,7 @@ export default function INTAXINQ() {
             <SearchGlobalReportTable
               ref={tableRef}
               columns={cols}
-              data={rows} // This data is now filtered by handleViewTop
+              data={rows}
               itemsPerPage={50}
               rightActionLabel="View"
               onRowAction={(row) => {
@@ -856,6 +884,8 @@ export default function INTAXINQ() {
           </div>
         </div>
       </div>
+             
+
 
 
       {/* Modals */}
@@ -873,19 +903,19 @@ export default function INTAXINQ() {
           }}
         />
       )}
-      {showPayeeModal && (
-        <PayeeMastLookupModal
-          isOpen={showPayeeModal}
-          onClose={(selectedPayee) => {
-            if (selectedPayee) {
+      {showCustomerModal && (
+        <CustomerMastLookupModal
+          isOpen={showCustomerModal}
+          onClose={(selectedCustomer) => {
+            if (selectedCustomer) {
               updateState({
-                vendCode: selectedPayee.vendCode,
-                vendName: selectedPayee.vendName,
+                custCode: selectedCustomer.custCode,
+                custName: selectedCustomer.custName,
                 baseAmount: "0.00",
-                vatAmount: "0.00",
+                atcAmount: "0.00",
               });
             }
-            updateState({ showPayeeModal: false });
+            updateState({ showCustomerModal: false });
           }}
         />
       )}
