@@ -243,6 +243,13 @@ export default function INTAXINQ() {
   }, []);
 
 
+  function useNormalizeDat(data) {
+  return data
+    .map(row => Object.values(row).join(""))
+    .join("\r\n");
+}
+
+
   // Compute summary totals
   const computeTotals = useCallback((list = []) => {
     if (!Array.isArray(list) || list.length === 0) {

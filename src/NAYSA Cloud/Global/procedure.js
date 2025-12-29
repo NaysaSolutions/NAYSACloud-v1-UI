@@ -453,7 +453,6 @@ export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,se
         })),
       },
     };
-    console.log(JSON.stringify(payload))
 
     const { data: res } = await apiClient.post("/finalize"+docCode, payload);
 
@@ -477,6 +476,7 @@ export const useHandlePostTran = async (selectedData, userPw,docCode,userCode,se
     const code   = data.error || "";
     const msg    = data.message || "Something went wrong.";
 
+   
 
     // --- Soft/business validation (do NOT logout) ---
     if (status === 422) {

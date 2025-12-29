@@ -1,5 +1,4 @@
-
-// import { useState, useEffect, useMemo, useRef } from 'react';
+// import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // import {
 //   faTimes, faSort, faSortUp, faSortDown, faSpinner,
@@ -19,15 +18,6 @@
 
 // /**
 //  * GlobalGLPostingModalv1
-//  * @param {Object[]} data - rows to render
-//  * @param {Object[]} colConfigData - column configs
-//  * @param {string} title - header title
-//  * @param {string} btnCaption - caption for main action button
-//  * @param {Function} onClose
-//  * @param {Function} onPost(payloadArray, userPassword)
-//  * @param {Function} onViewDocument(payload) - called with { docNo, branchCode, row }
-//  * @param {string} keyDocNo - (optional) field name for doc no (default 'docNo')
-//  * @param {string} keyBranch - (optional) field name for branch code (default 'branchCode')
 //  */
 // const GlobalGLPostingModalv1 = ({
 //   data,
@@ -37,23 +27,30 @@
 //   onClose,
 //   onPost,
 //   onViewDocument,
-//   keyDocNo = 'docNo',
-//   keyBranch = 'branchCode',
+//   remoteLoading = false,
 // }) => {
 //   const [records, setRecords] = useState([]);
 //   const [filtered, setFiltered] = useState([]);
 //   const [selected, setSelected] = useState([]);
 //   const [filters, setFilters] = useState({});
 //   const [columnConfig, setColumnConfig] = useState([]);
-//   const [loading, setLoading] = useState(false);
 //   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 //   const [currentPage, setCurrentPage] = useState(1);
 //   const [showFilters, setShowFilters] = useState(true);
 //   const [globalQuery, setGlobalQuery] = useState('');
 //   const [showPassword, setShowPassword] = useState(false);
 //   const [userPassword, setUserPassword] = useState(null);
+
 //   const itemsPerPage = 50;
 //   const firstFocusableRef = useRef(null);
+
+//   // Sticky columns: Select + 4 data columns
+//   const STICKY_COUNT = 5; // index 0 = Select, 1–4 = first 4 visible data columns
+
+//   const selectHeaderRef = useRef(null);
+//   const columnHeaderRefs = useRef({});
+//   const [stickyLefts, setStickyLefts] = useState([]); // left offsets for sticky columns
+//   const [resizeTick, setResizeTick] = useState(0);
 
 //   // focus first control, allow ESC to close
 //   useEffect(() => {
@@ -63,32 +60,31 @@
 //     return () => window.removeEventListener('keydown', onKey);
 //   }, [onClose]);
 
+//   // Listen for window resize to recompute sticky positions
 //   useEffect(() => {
-//     // reset on new data
-//     setRecords([]);
+//     const handleResize = () => setResizeTick(t => t + 1);
+//     window.addEventListener('resize', handleResize);
+//     return () => window.removeEventListener('resize', handleResize);
+//   }, []);
+
+//   // map incoming props -> local state
+//   useEffect(() => {
 //     setSelected([]);
-//     setColumnConfig([]);
 //     setSortConfig({ key: null, direction: null });
 //     setCurrentPage(1);
-//     fetchData();
-//     setFiltered([]);
 //     setFilters({});
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [data]);
+//     setGlobalQuery('');
 
-//   const fetchData = async () => {
-//     setLoading(true);
-//     try {
-//       if (colConfigData) setColumnConfig(colConfigData);
-//       if (data) setRecords(data.map((row, i) => ({ ...row, __idx: i }))); // preserve API order
-//     } catch (error) {
-//       console.error('Failed to fetch record:', error);
-//       setRecords([]);
-//       setColumnConfig([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+//     setColumnConfig(Array.isArray(colConfigData) ? colConfigData : []);
+//     const rows = Array.isArray(data) ? data.map((row, i) => ({ ...row, __idx: i })) : [];
+//     setRecords(rows);
+//     setFiltered([]);
+//   }, [data, colConfigData]);
+
+//   const visibleCols = useMemo(
+//     () => columnConfig.filter((c) => !c.hidden),
+//     [columnConfig]
+//   );
 
 //   const renderValue = (column, value, decimal = 2) => {
 //     if (!value && value !== 0) return '';
@@ -128,10 +124,10 @@
 //   useEffect(() => {
 //     let current = records.slice();
 
-//     // global search (simple contains across visible cols)
+//     // global search
 //     if (debouncedGlobal?.trim()) {
 //       const q = debouncedGlobal.trim().toLowerCase();
-//       const visibleKeys = columnConfig.filter(c => !c.hidden).map(c => c.key);
+//       const visibleKeys = visibleCols.map(c => c.key);
 //       current = current.filter(row =>
 //         visibleKeys.some(k => String(row[k] ?? '').toLowerCase().includes(q))
 //       );
@@ -163,11 +159,37 @@
 //     }
 
 //     setFiltered(current);
-//   }, [records, debouncedFilters, sortConfig, columnConfig, debouncedGlobal]);
+//   }, [records, debouncedFilters, sortConfig, columnConfig, debouncedGlobal, visibleCols]);
 
 //   useEffect(() => {
 //     setCurrentPage(1);
 //   }, [debouncedFilters, debouncedGlobal]);
+
+//   // Compute sticky left offsets based on real DOM widths
+//   useLayoutEffect(() => {
+//     const lefts = [];
+//     let accumulated = 0;
+
+//     // Select column (index 0)
+//     if (selectHeaderRef.current) {
+//       lefts[0] = 0;
+//       accumulated = selectHeaderRef.current.offsetWidth;
+//     }
+
+//     // First 4 visible data columns (indexes 1–4 overall)
+//     visibleCols.forEach((col, idx) => {
+//       if (idx < STICKY_COUNT - 1) {
+//         const overallIndex = idx + 1; // because 0 is Select
+//         lefts[overallIndex] = accumulated;
+//         const hdr = columnHeaderRefs.current[col.key];
+//         if (hdr) {
+//           accumulated += hdr.offsetWidth;
+//         }
+//       }
+//     });
+
+//     setStickyLefts(lefts);
+//   }, [visibleCols, showFilters, resizeTick, filtered.length]);
 
 //   const handleFilterChange = (e, key) => {
 //     const v = e.target.value;
@@ -225,22 +247,39 @@
 
 //   const activeFilterChips = Object.entries(filters).filter(([, v]) => v);
 
-//   // ---- Right-sticky "View" column helpers ----
+//   // Right-sticky "View" column
 //   const ACTION_COL_W = 90; // px
 //   const actionHeaderStyle = { right: 0, width: ACTION_COL_W };
 //   const actionCellStyle = { right: 0, width: ACTION_COL_W };
 
 //   const handleViewRow = (row) => {
-//     const docNo = row?.[keyDocNo];
-//     const branchCode = row?.[keyBranch];
-//     if (!row) {
-//       console.warn(
-//         `[GlobalGLPostingModalv1] Missing doc or branch on row. ` +
-//         `Got docNo='${docNo}', branchCode='${branchCode}'. ` +
-//         `Override with props keyDocNo/keyBranch if needed.`
-//       );
-//     }
 //     onViewDocument?.(row);
+//   };
+
+//   const isLoading = !!remoteLoading || (Array.isArray(data) && data.length === 0 && !!remoteLoading);
+
+//   const numberAlignClass = (col) =>
+//     col?.renderType === 'number' ? 'text-right tabular-nums' : '';
+
+//   const remarksCellClass = (col) => {
+//     const key = String(col?.key ?? '');
+//     const label = String(col?.label ?? '');
+//     const isRemarks = /remarks/i.test(key) || /remarks/i.test(label);
+//     return isRemarks ? 'max-w-[400px] truncate md:whitespace-nowrap' : '';
+//   };
+
+//   // Helper: meta for sticky columns (index 0 = Select, 1–4 = first 4 visible data cols)
+//   const stickyMeta = (overallIndex) => {
+//     if (overallIndex < STICKY_COUNT) {
+//       const left = stickyLefts[overallIndex] ?? 0;
+//       return {
+//         sticky: true,
+//         left,
+//         // For data sticky cols (1–4), cap width at 200px but still let it be based on content
+//         maxWidth: overallIndex === 0 ? undefined : 200,
+//       };
+//     }
+//     return { sticky: false, left: 0, maxWidth: undefined };
 //   };
 
 //   return (
@@ -259,15 +298,12 @@
 //         <div className="border-b border-gray-100 bg-white/95 sticky top-0 z-20">
 //           <div className="flex items-center gap-3 px-4 py-3">
 //             <h2 className="text-sm font-semibold text-blue-900 truncate">{title}</h2>
-
-//             {/* Selection badge */}
 //             <span className="ml-auto inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
 //               <FontAwesomeIcon icon={faListCheck} />
 //               {selected.length} selected
 //             </span>
 //           </div>
 
-//           {/* Toolbar */}
 //           <div className="px-4 pb-3 flex flex-wrap items-center gap-2">
 //             <div className="relative">
 //               <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2 top-2.5 text-gray-400 text-xs" />
@@ -315,224 +351,248 @@
 
 //         {/* ===== Table area ===== */}
 //         <div className="flex-grow overflow-hidden">
-//           {loading ? (
+//           {isLoading ? (
 //             <div className="flex flex-col items-center justify-center h-full min-h-[240px] text-blue-500">
 //               <FontAwesomeIcon icon={faSpinner} spin size="2x" className="mb-3" />
 //               <span className="text-sm">Loading records…</span>
 //             </div>
 //           ) : (
 //             <div className="overflow-auto max-h-[calc(92vh-220px)] custom-scrollbar overscroll-x-contain">
-//               <table className="min-w-full table-fixed">
-//                 {(() => {
-//                   const visibleCols = columnConfig.filter((c) => !c.hidden);
+//               {/* no table-fixed so widths can be natural */}
+//               <table className="min-w-full">
+//                 <thead className="sticky top-0 z-30">
+//                   <tr className="bg-gray-100/90 backdrop-blur border-b border-gray-200 whitespace-nowrap text-[10px] sm:text[11px]">
+//                     {/* Select header (sticky col index 0) */}
+//                     {(() => {
+//                       const m = stickyMeta(0);
+//                       const stickyStyle = {};
+//                       if (m.sticky) {
+//                         stickyStyle.left = m.left;
+//                         // Narrow select col fixed width
+//                         stickyStyle.width = 50;
+//                         stickyStyle.minWidth = 50;
+//                         stickyStyle.maxWidth = 50;
+//                       }
+//                       return (
+//                         <th
+//                           ref={selectHeaderRef}
+//                           className="sticky bg-gray-100 z-[70] px-2 py-2 text-center font-bold text-blue-900"
+//                           style={stickyStyle}
+//                         >
+//                           Select
+//                         </th>
+//                       );
+//                     })()}
 
-//                   // Freeze first 5 columns: [Select, C1, C2, C3, C4]
-//                   const FROZEN_COUNT = 5;
+//                     {/* Dynamic headers */}
+//                     {visibleCols.map((column, vIdx) => {
+//                       const overallIndex = vIdx + 1; // account for Select col
+//                       const m = stickyMeta(overallIndex);
+//                       const stickyHeaderClasses = m.sticky
+//                         ? 'sticky bg-gray-100 z-[60]'
+//                         : '';
+//                       const stickyStyle = {};
+//                       if (m.sticky) {
+//                         stickyStyle.left = m.left;
+//                         if (m.maxWidth) {
+//                           stickyStyle.maxWidth = m.maxWidth; // cap at 200 for sticky data cols
+//                         }
+//                       }
 
-//                   // Pixel widths for frozen columns (tweak to your data)
-//                   const COL_WIDTHS = [50, 70, 100, 80, 200];
+//                       return (
+//                         <th
+//                           key={column.key}
+//                           ref={el => {
+//                             if (overallIndex < STICKY_COUNT) {
+//                               columnHeaderRefs.current[column.key] = el;
+//                             }
+//                           }}
+//                           onClick={() => column.sortable && handleSort(column.key)}
+//                           className={[
+//                             'px-3 py-2 font-bold text-blue-900 select-none',
+//                             column.sortable ? 'cursor-pointer hover:bg-gray-200/50' : '',
+//                             numberAlignClass(column),
+//                             remarksCellClass(column),
+//                             stickyHeaderClasses,
+//                           ].join(' ')}
+//                           style={stickyStyle}
+//                         >
+//                           <span className="inline-flex items-center">
+//                             {column.label} {renderSortIcon(column.key)}
+//                           </span>
+//                         </th>
+//                       );
+//                     })}
 
-//                   // cumulative left offsets for 0..4 (including Select at 0)
-//                   const cumulativeLeft = COL_WIDTHS.map((_, i) =>
-//                     COL_WIDTHS.slice(0, i).reduce((sum, w) => sum + w, 0)
-//                   );
+//                     {/* Right-frozen View column header */}
+//                     <th
+//                       className="sticky bg-gray-100 z-[70] px-3 py-2 font-bold text-blue-900 text-center border-l border-gray-200"
+//                       style={actionHeaderStyle}
+//                     >
+//                       View
+//                     </th>
+//                   </tr>
 
-//                   // visibleIdx: 0 = Select, 1..4 = next frozen cols
-//                   const stickyMeta = (visibleIdx) => {
-//                     if (visibleIdx < FROZEN_COUNT) {
-//                       return {
-//                         sticky: true,
-//                         left: cumulativeLeft[visibleIdx],
-//                         width: COL_WIDTHS[visibleIdx],
-//                       };
-//                     }
-//                     return { sticky: false, left: 0, width: undefined };
-//                   };
+//                   {/* Header filter row */}
+//                   {showFilters && (
+//                     <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
+//                       {/* Select filter cell */}
+//                       {(() => {
+//                         const m = stickyMeta(0);
+//                         const stickyStyle = {};
+//                         if (m.sticky) {
+//                           stickyStyle.left = m.left;
+//                           stickyStyle.width = 50;
+//                           stickyStyle.minWidth = 50;
+//                           stickyStyle.maxWidth = 50;
+//                         }
+//                         return (
+//                           <td
+//                             className="sticky bg-white z-[70] px-2 py-1"
+//                             style={stickyStyle}
+//                           />
+//                         );
+//                       })()}
 
-//                   const numberAlignClass = (col) =>
-//                     col?.renderType === 'number' ? 'text-right tabular-nums' : '';
+//                       {/* Dynamic filter inputs */}
+//                       {visibleCols.map((column, vIdx) => {
+//                         const overallIndex = vIdx + 1;
+//                         const m = stickyMeta(overallIndex);
+//                         const stickyFilterClasses = m.sticky
+//                           ? 'sticky bg-white z-[60]'
+//                           : '';
+//                         const stickyStyle = {};
+//                         if (m.sticky) {
+//                           stickyStyle.left = m.left;
+//                           if (m.maxWidth) {
+//                             stickyStyle.maxWidth = m.maxWidth;
+//                           }
+//                         }
 
-//                   const remarksCellClass = (col) => {
-//                     const key = String(col?.key ?? '');
-//                     const label = String(col?.label ?? '');
-//                     const isRemarks = /remarks/i.test(key) || /remarks/i.test(label);
-//                     return isRemarks ? 'max-w-[400px] truncate md:whitespace-nowrap' : '';
-//                   };
+//                         return (
+//                           <td
+//                             key={column.key}
+//                             className={['px-2 py-1', stickyFilterClasses].join(' ')}
+//                             style={stickyStyle}
+//                           >
+//                             <input
+//                               type="text"
+//                               value={filters[column.key] || ''}
+//                               onChange={(e) => handleFilterChange(e, column.key)}
+//                               placeholder="Filter ..."
+//                               className="w-full border rounded px-2 py-1 text-[10px] sm:text-[11px] focus:ring-2 focus:ring-blue-200"
+//                             />
+//                           </td>
+//                         );
+//                       })}
 
-//                   return (
-//                     <>
-//                       <thead className="sticky top-0 z-30">
-//                         {/* Header labels */}
-//                         <tr className="bg-gray-100/90 backdrop-blur border-b border-gray-200 whitespace-nowrap text-[10px] sm:text[11px]">
-//                           {/* Select header (frozen 0) */}
+//                       {/* Right-frozen empty filter cell */}
+//                       <td
+//                         className="sticky bg-white z-[70] px-2 py-1 border-l border-gray-100"
+//                         style={actionCellStyle}
+//                       />
+//                     </tr>
+//                   )}
+//                 </thead>
+
+//                 <tbody className="bg-white whitespace-nowrap">
+//                   {paginatedData.length > 0 ? (
+//                     paginatedData.map((row, rIdx) => {
+//                       const rowBgClass = rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+//                       return (
+//                         <tr
+//                           key={row.__idx ?? rIdx}
+//                           className={`text-[10px] sm:text-[11px] hover:bg-blue-50 ${rowBgClass}`}
+//                           onDoubleClick={() => handleViewRow(row)}
+//                         >
+//                           {/* Select data cell (sticky index 0) */}
 //                           {(() => {
 //                             const m = stickyMeta(0);
+//                             const stickyStyle = {};
+//                             if (m.sticky) {
+//                               stickyStyle.left = m.left;
+//                               stickyStyle.width = 50;
+//                               stickyStyle.minWidth = 50;
+//                               stickyStyle.maxWidth = 50;
+//                             }
 //                             return (
-//                               <th
-//                                 className="sticky bg-gray-100 z-40 px-2 py-2 text-center font-bold text-blue-900"
-//                                 style={{ left: m.left, width: m.width }}
+//                               <td
+//                                 className="sticky z-[70] text-center bg-white"
+//                                 style={stickyStyle}
 //                               >
-//                                 Select
-//                               </th>
+//                                 <input
+//                                   type="checkbox"
+//                                   checked={selected.some((s) => s.groupId === row.groupId)}
+//                                   onChange={() => toggleSelect(row)}
+//                                   className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+//                                 />
+//                               </td>
 //                             );
 //                           })()}
 
-//                           {/* Dynamic headers */}
+//                           {/* Dynamic data cells */}
 //                           {visibleCols.map((column, vIdx) => {
-//                             const m = stickyMeta(vIdx + 1);
+//                             const overallIndex = vIdx + 1;
+//                             const m = stickyMeta(overallIndex);
+//                             const stickyBodyClasses = m.sticky
+//                               ? 'sticky z-[60] bg-white'
+//                               : '';
+//                             const stickyStyle = {};
+//                             if (m.sticky) {
+//                               stickyStyle.left = m.left;
+//                               if (m.maxWidth) {
+//                                 stickyStyle.maxWidth = m.maxWidth; // cap at 200 for sticky data cols
+//                               }
+//                             }
+
+//                             const isRemarksKey = /remarks/i.test(String(column?.key ?? ''));
+
 //                             return (
-//                               <th
+//                               <td
 //                                 key={column.key}
-//                                 onClick={() => column.sortable && handleSort(column.key)}
 //                                 className={[
-//                                   'px-3 py-2 font-bold text-blue-900 select-none',
-//                                   column.sortable ? 'cursor-pointer hover:bg-gray-200/50' : '',
+//                                   'px-3 py-[6px]',
 //                                   numberAlignClass(column),
 //                                   remarksCellClass(column),
-//                                   m.sticky ? 'sticky bg-gray-100 z-30' : '',
+//                                   stickyBodyClasses,
 //                                 ].join(' ')}
-//                                 style={m.sticky ? { left: m.left, width: m.width } : {}}
+//                                 style={stickyStyle}
+//                                 title={isRemarksKey ? String(row[column.key] ?? '') : undefined}
 //                               >
-//                                 <span className="inline-flex items-center">
-//                                   {column.label} {renderSortIcon(column.key)}
-//                                 </span>
-//                               </th>
+//                                 {renderValue(column, row[column.key], Number(column.roundingOff))}
+//                               </td>
 //                             );
 //                           })}
 
-//                           {/* Right-frozen View column header */}
-//                           <th
-//                             className="sticky bg-gray-100 z-40 px-3 py-2 font-bold text-blue-900 text-center border-l border-gray-200"
-//                             style={actionHeaderStyle}
+//                           {/* Right-frozen View action cell */}
+//                           <td
+//                             className="sticky z-[70] px-2 py-[6px] text-center border-l border-gray-200 bg-white"
+//                             style={actionCellStyle}
 //                           >
-//                             View
-//                           </th>
-//                         </tr>
-
-//                         {/* Header filter row */}
-//                         {showFilters && (
-//                           <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
-//                             {/* Select filter cell */}
-//                             {(() => {
-//                               const m = stickyMeta(0);
-//                               return (
-//                                 <td
-//                                   className="sticky bg-white z-40 px-2 py-1"
-//                                   style={{ left: m.left, width: m.width }}
-//                                 />
-//                               );
-//                             })()}
-
-//                             {/* Dynamic filter inputs */}
-//                             {visibleCols.map((column, vIdx) => {
-//                               const m = stickyMeta(vIdx + 1);
-//                               return (
-//                                 <td
-//                                   key={column.key}
-//                                   className={['px-2 py-1', m.sticky ? 'sticky bg-white z-30' : ''].join(' ')}
-//                                   style={m.sticky ? { left: m.left, width: m.width } : {}}
-//                                 >
-//                                   <input
-//                                     type="text"
-//                                     value={filters[column.key] || ''}
-//                                     onChange={(e) => handleFilterChange(e, column.key)}
-//                                     placeholder="Filter ..."
-//                                     className="w-full border rounded px-2 py-1 text-[10px] sm:text-[11px] focus:ring-2 focus:ring-blue-200"
-//                                   />
-//                                 </td>
-//                               );
-//                             })}
-
-//                             {/* Right-frozen empty filter cell */}
-//                             <td
-//                               className="sticky bg-white z-40 px-2 py-1 border-l border-gray-100"
-//                               style={actionCellStyle}
-//                             />
-//                           </tr>
-//                         )}
-//                       </thead>
-
-//                       <tbody className="bg-white whitespace-nowrap">
-//                         {paginatedData.length > 0 ? (
-//                           paginatedData.map((row, rIdx) => (
-//                             <tr
-//                               key={row.__idx ?? rIdx}
-//                               className={`text-[10px] sm:text-[11px] hover:bg-blue-50 ${
-//                                 rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-//                               }`}
-//                               onDoubleClick={() => handleViewRow(row)} // double-click whole row to view
+//                             <button
+//                               type="button"
+//                               onClick={(e) => { e.stopPropagation(); handleViewRow(row); }}
+//                               className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+//                               title="View document"
 //                             >
-//                               {/* Select data cell (frozen 0) */}
-//                               {(() => {
-//                                 const m = stickyMeta(0);
-//                                 return (
-//                                   <td
-//                                     className="sticky bg-inherit z-20 text-center"
-//                                     style={{ left: m.left, width: m.width }}
-//                                   >
-//                                     <input
-//                                       type="checkbox"
-//                                       checked={selected.some((s) => s.groupId === row.groupId)}
-//                                       onChange={() => toggleSelect(row)}
-//                                       className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-//                                     />
-//                                   </td>
-//                                 );
-//                               })()}
-
-//                               {/* Dynamic data cells */}
-//                               {visibleCols.map((column, vIdx) => {
-//                                 const m = stickyMeta(vIdx + 1);
-//                                 return (
-//                                   <td
-//                                     key={column.key}
-//                                     className={[
-//                                       'px-3 py-[6px]',
-//                                       numberAlignClass(column),
-//                                       remarksCellClass(column),
-//                                       m.sticky ? 'sticky bg-inherit z-10' : '',
-//                                     ].join(' ')}
-//                                     style={m.sticky ? { left: m.left, width: m.width } : {}}
-//                                     title={/remarks/i.test(String(column?.key ?? '')) ? String(row[column.key] ?? '') : undefined}
-//                                   >
-//                                     {renderValue(column, row[column.key], Number(column.roundingOff))}
-//                                   </td>
-//                                 );
-//                               })}
-
-//                               {/* Right-frozen View action cell */}
-//                               <td
-//                                 className="sticky bg-inherit z-20 px-2 py-[6px] text-center border-l border-gray-200"
-//                                 style={actionCellStyle}
-//                               >
-//                                 <button
-//                                   type="button"
-//                                   onClick={(e) => {
-//                                     e.stopPropagation();
-//                                     handleViewRow(row);
-//                                   }}
-//                                   className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
-//                                   title="View document"
-//                                 >
-//                                   <FontAwesomeIcon icon={faEye} />
-//                                 </button>
-//                               </td>
-//                             </tr>
-//                           ))
-//                         ) : (
-//                           <tr>
-//                             <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
-//                               <div className="inline-flex items-center gap-3 text-gray-500">
-//                                 <FontAwesomeIcon icon={faCircleExclamation} />
-//                                 <span className="text-sm">No matching records found.</span>
-//                               </div>
-//                             </td>
-//                           </tr>
-//                         )}
-//                       </tbody>
-//                     </>
-//                   );
-//                 })()}
+//                               <FontAwesomeIcon icon={faEye} />
+//                             </button>
+//                           </td>
+//                         </tr>
+//                       );
+//                     })
+//                   ) : (
+//                     <tr>
+//                       <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
+//                         <div className="inline-flex items-center gap-3 text-gray-500">
+//                           <FontAwesomeIcon icon={faCircleExclamation} />
+//                           <span className="text-sm">No matching records found.</span>
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   )}
+//                 </tbody>
 //               </table>
 //             </div>
 //           )}
@@ -541,7 +601,6 @@
 //         {/* Action bar */}
 //         <div className="border-t border-gray-200 bg-white sticky bottom-0 z-10">
 //           <div className="p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-//             {/* Left */}
 //             <div className="flex flex-col gap-2">
 //               <label className="flex items-center gap-2 cursor-pointer select-none">
 //                 <input
@@ -586,23 +645,9 @@
 //                 >
 //                   Cancel
 //                 </button>
-
-//                 {/* (Optional) keep the old button if you still want it here
-//                 <button
-//                   className="px-3 py-1.5 bg-white text-blue-700 border border-blue-200 rounded-md text-xs hover:bg-blue-50 disabled:opacity-50"
-//                   disabled={selected.length !== 1}
-//                   title={selected.length !== 1 ? 'Select exactly one to view' : 'View selected document'}
-//                   onClick={() => {
-//                     if (selected.length === 1) handleViewRow(selected[0]);
-//                   }}
-//                 >
-//                   View Document
-//                 </button>
-//                 */}
 //               </div>
 //             </div>
 
-//             {/* Right warning */}
 //             <div className="flex items-start gap-2 max-w-[520px]">
 //               <div className="text-red-600 mt-0.5">
 //                 <FontAwesomeIcon icon={faCircleExclamation} />
@@ -651,7 +696,7 @@
 
 
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTimes, faSort, faSortUp, faSortDown, faSpinner,
@@ -671,14 +716,6 @@ function useDebouncedValue(value, delay = 250) {
 
 /**
  * GlobalGLPostingModalv1
- * @param {Object[]} data
- * @param {Object[]} colConfigData
- * @param {string} title
- * @param {string} btnCaption
- * @param {Function} onClose
- * @param {Function} onPost(payloadArray, userPassword)
- * @param {Function} onViewDocument(row)
- * @param {boolean} remoteLoading  <-- NEW: parent passes its API loading state
  */
 const GlobalGLPostingModalv1 = ({
   data,
@@ -688,7 +725,7 @@ const GlobalGLPostingModalv1 = ({
   onClose,
   onPost,
   onViewDocument,
-  remoteLoading = false,         // NEW
+  remoteLoading = false,
 }) => {
   const [records, setRecords] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -701,8 +738,22 @@ const GlobalGLPostingModalv1 = ({
   const [globalQuery, setGlobalQuery] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [userPassword, setUserPassword] = useState(null);
+
   const itemsPerPage = 50;
   const firstFocusableRef = useRef(null);
+
+  // Sticky columns: View + Select + 4 data columns
+  // index 0 = View, 1 = Select, 2–5 = first 4 visible data columns
+  const STICKY_COUNT = 6;
+
+  const selectHeaderRef = useRef(null);
+  const viewHeaderRef = useRef(null);
+  const columnHeaderRefs = useRef({});
+  const [stickyLefts, setStickyLefts] = useState([]); // left offsets for sticky columns
+  const [resizeTick, setResizeTick] = useState(0);
+
+  // View column width (compressed)
+  const ACTION_COL_W = 70; // px, narrower like before
 
   // focus first control, allow ESC to close
   useEffect(() => {
@@ -712,7 +763,14 @@ const GlobalGLPostingModalv1 = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // map incoming props -> local state; no API here
+  // Listen for window resize to recompute sticky positions
+  useEffect(() => {
+    const handleResize = () => setResizeTick(t => t + 1);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // map incoming props -> local state
   useEffect(() => {
     setSelected([]);
     setSortConfig({ key: null, direction: null });
@@ -723,8 +781,13 @@ const GlobalGLPostingModalv1 = ({
     setColumnConfig(Array.isArray(colConfigData) ? colConfigData : []);
     const rows = Array.isArray(data) ? data.map((row, i) => ({ ...row, __idx: i })) : [];
     setRecords(rows);
-    setFiltered([]); // will be recomputed by the next effect
+    setFiltered([]);
   }, [data, colConfigData]);
+
+  const visibleCols = useMemo(
+    () => columnConfig.filter((c) => !c.hidden),
+    [columnConfig]
+  );
 
   const renderValue = (column, value, decimal = 2) => {
     if (!value && value !== 0) return '';
@@ -767,7 +830,7 @@ const GlobalGLPostingModalv1 = ({
     // global search
     if (debouncedGlobal?.trim()) {
       const q = debouncedGlobal.trim().toLowerCase();
-      const visibleKeys = columnConfig.filter(c => !c.hidden).map(c => c.key);
+      const visibleKeys = visibleCols.map(c => c.key);
       current = current.filter(row =>
         visibleKeys.some(k => String(row[k] ?? '').toLowerCase().includes(q))
       );
@@ -799,11 +862,43 @@ const GlobalGLPostingModalv1 = ({
     }
 
     setFiltered(current);
-  }, [records, debouncedFilters, sortConfig, columnConfig, debouncedGlobal]);
+  }, [records, debouncedFilters, sortConfig, columnConfig, debouncedGlobal, visibleCols]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedFilters, debouncedGlobal]);
+
+  // Compute sticky left offsets based on real DOM widths
+  useLayoutEffect(() => {
+    const lefts = [];
+    let accumulated = 0;
+
+    // View column (index 0)
+    if (viewHeaderRef.current) {
+      lefts[0] = 0;
+      accumulated = viewHeaderRef.current.offsetWidth;
+    }
+
+    // Select column (index 1)
+    if (selectHeaderRef.current) {
+      lefts[1] = accumulated;
+      accumulated += selectHeaderRef.current.offsetWidth;
+    }
+
+    // First 4 visible data columns (indexes 2–5 overall)
+    visibleCols.forEach((col, idx) => {
+      if (idx < STICKY_COUNT - 2) { // 4 data cols
+        const overallIndex = idx + 2; // 2..5
+        lefts[overallIndex] = accumulated;
+        const hdr = columnHeaderRefs.current[col.key];
+        if (hdr) {
+          accumulated += hdr.offsetWidth;
+        }
+      }
+    });
+
+    setStickyLefts(lefts);
+  }, [visibleCols, showFilters, resizeTick, filtered.length]);
 
   const handleFilterChange = (e, key) => {
     const v = e.target.value;
@@ -861,20 +956,35 @@ const GlobalGLPostingModalv1 = ({
 
   const activeFilterChips = Object.entries(filters).filter(([, v]) => v);
 
-  // Right-sticky "View" column
-  const ACTION_COL_W = 90; // px
-  const actionHeaderStyle = { right: 0, width: ACTION_COL_W };
-  const actionCellStyle = { right: 0, width: ACTION_COL_W };
-
   const handleViewRow = (row) => {
-    // still pass the whole row; your SVI flow already reads sviNo/branchCode
     onViewDocument?.(row);
   };
 
-  // Single place to decide loading UI:
-  // - parent is fetching (remoteLoading)
-  // - OR we haven't received any data yet while columns exist (initial mount case)
   const isLoading = !!remoteLoading || (Array.isArray(data) && data.length === 0 && !!remoteLoading);
+
+  const numberAlignClass = (col) =>
+    col?.renderType === 'number' ? 'text-right tabular-nums' : '';
+
+  const remarksCellClass = (col) => {
+    const key = String(col?.key ?? '');
+    const label = String(col?.label ?? '');
+    const isRemarks = /remarks/i.test(key) || /remarks/i.test(label);
+    return isRemarks ? 'max-w-[400px] truncate md:whitespace-nowrap' : '';
+  };
+
+  // Helper: meta for sticky columns
+  // index 0 = View, 1 = Select, 2–5 = first 4 visible data cols
+  const stickyMeta = (overallIndex) => {
+    if (overallIndex < STICKY_COUNT) {
+      const left = stickyLefts[overallIndex] ?? 0;
+      return {
+        sticky: true,
+        left,
+        maxWidth: overallIndex > 1 ? 200 : undefined, // only data sticky cols are capped
+      };
+    }
+    return { sticky: false, left: 0, maxWidth: undefined };
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 lg:p-8">
@@ -952,207 +1062,279 @@ const GlobalGLPostingModalv1 = ({
             </div>
           ) : (
             <div className="overflow-auto max-h-[calc(92vh-220px)] custom-scrollbar overscroll-x-contain">
-              <table className="min-w-full table-fixed">
-                {(() => {
-                  const visibleCols = columnConfig.filter((c) => !c.hidden);
+              {/* no table-fixed so widths can be natural */}
+              <table className="min-w-full">
+                {/* increased z-index so header is always on top */}
+                <thead className="sticky top-0 z-[80]">
+                  <tr className="bg-gray-100/90 backdrop-blur border-b border-gray-200 whitespace-nowrap text-[10px] sm:text[11px]">
+                    {/* View header (sticky col index 0) */}
+                    {(() => {
+                      const m = stickyMeta(0);
+                      const stickyStyle = {};
+                      if (m.sticky) {
+                        stickyStyle.left = m.left;
+                        stickyStyle.width = ACTION_COL_W;
+                        stickyStyle.minWidth = ACTION_COL_W;
+                        stickyStyle.maxWidth = ACTION_COL_W;
+                      }
+                      return (
+                        <th
+                          ref={viewHeaderRef}
+                          className="sticky bg-gray-100 z-[70] px-3 py-2 font-bold text-blue-900 text-center border-r border-gray-200"
+                          style={stickyStyle}
+                        >
+                          View
+                        </th>
+                      );
+                    })()}
 
-                  // Freeze first 5 columns: [Select, C1, C2, C3, C4]
-                  const FROZEN_COUNT = 5;
-                  const COL_WIDTHS = [50, 70, 100, 80, 200];
+                    {/* Select header (sticky col index 1) */}
+                    {(() => {
+                      const m = stickyMeta(1);
+                      const stickyStyle = {};
+                      if (m.sticky) {
+                        stickyStyle.left = m.left;
+                        // Narrow select col fixed width
+                        stickyStyle.width = 50;
+                        stickyStyle.minWidth = 50;
+                        stickyStyle.maxWidth = 50;
+                      }
+                      return (
+                        <th
+                          ref={selectHeaderRef}
+                          className="sticky bg-gray-100 z-[70] px-2 py-2 text-center font-bold text-blue-900"
+                          style={stickyStyle}
+                        >
+                          Select
+                        </th>
+                      );
+                    })()}
 
-                  const cumulativeLeft = COL_WIDTHS.map((_, i) =>
-                    COL_WIDTHS.slice(0, i).reduce((sum, w) => sum + w, 0)
-                  );
+                    {/* Dynamic headers (start at sticky index 2) */}
+                    {visibleCols.map((column, vIdx) => {
+                      const overallIndex = vIdx + 2; // 2.. for data cols
+                      const m = stickyMeta(overallIndex);
+                      const stickyHeaderClasses = m.sticky
+                        ? 'sticky bg-gray-100 z-[60]'
+                        : '';
+                      const stickyStyle = {};
+                      if (m.sticky) {
+                        stickyStyle.left = m.left;
+                        if (m.maxWidth) {
+                          stickyStyle.maxWidth = m.maxWidth; // cap at 200 for sticky data cols
+                        }
+                      }
 
-                  const stickyMeta = (visibleIdx) => {
-                    if (visibleIdx < FROZEN_COUNT) {
-                      return {
-                        sticky: true,
-                        left: cumulativeLeft[visibleIdx],
-                        width: COL_WIDTHS[visibleIdx],
-                      };
-                    }
-                    return { sticky: false, left: 0, width: undefined };
-                  };
+                      return (
+                        <th
+                          key={column.key}
+                          ref={el => {
+                            if (overallIndex < STICKY_COUNT) {
+                              columnHeaderRefs.current[column.key] = el;
+                            }
+                          }}
+                          onClick={() => column.sortable && handleSort(column.key)}
+                          className={[
+                            'px-3 py-2 font-bold text-blue-900 select-none',
+                            column.sortable ? 'cursor-pointer hover:bg-gray-200/50' : '',
+                            numberAlignClass(column),
+                            remarksCellClass(column),
+                            stickyHeaderClasses,
+                          ].join(' ')}
+                          style={stickyStyle}
+                        >
+                          <span className="inline-flex items-center">
+                            {column.label} {renderSortIcon(column.key)}
+                          </span>
+                        </th>
+                      );
+                    })}
+                  </tr>
 
-                  const numberAlignClass = (col) =>
-                    col?.renderType === 'number' ? 'text-right tabular-nums' : '';
+                  {/* Header filter row */}
+                  {showFilters && (
+                    <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
+                      {/* View filter cell (blank) */}
+                      {(() => {
+                        const m = stickyMeta(0);
+                        const stickyStyle = {};
+                        if (m.sticky) {
+                          stickyStyle.left = m.left;
+                          stickyStyle.width = ACTION_COL_W;
+                          stickyStyle.minWidth = ACTION_COL_W;
+                          stickyStyle.maxWidth = ACTION_COL_W;
+                        }
+                        return (
+                          <td
+                            className="sticky bg-white z-[70] px-2 py-1 border-r border-gray-100"
+                            style={stickyStyle}
+                          />
+                        );
+                      })()}
 
-                  const remarksCellClass = (col) => {
-                    const key = String(col?.key ?? '');
-                    const label = String(col?.label ?? '');
-                    const isRemarks = /remarks/i.test(key) || /remarks/i.test(label);
-                    return isRemarks ? 'max-w-[400px] truncate md:whitespace-nowrap' : '';
-                  };
+                      {/* Select filter cell (blank) */}
+                      {(() => {
+                        const m = stickyMeta(1);
+                        const stickyStyle = {};
+                        if (m.sticky) {
+                          stickyStyle.left = m.left;
+                          stickyStyle.width = 50;
+                          stickyStyle.minWidth = 50;
+                          stickyStyle.maxWidth = 50;
+                        }
+                        return (
+                          <td
+                            className="sticky bg-white z-[70] px-2 py-1"
+                            style={stickyStyle}
+                          />
+                        );
+                      })()}
 
-                  return (
-                    <>
-                      <thead className="sticky top-0 z-30">
-                        <tr className="bg-gray-100/90 backdrop-blur border-b border-gray-200 whitespace-nowrap text-[10px] sm:text[11px]">
-                          {/* Select header (frozen 0) */}
+                      {/* Dynamic filter inputs */}
+                      {visibleCols.map((column, vIdx) => {
+                        const overallIndex = vIdx + 2;
+                        const m = stickyMeta(overallIndex);
+                        const stickyFilterClasses = m.sticky
+                          ? 'sticky bg-white z-[60]'
+                          : '';
+                        const stickyStyle = {};
+                        if (m.sticky) {
+                          stickyStyle.left = m.left;
+                          if (m.maxWidth) {
+                            stickyStyle.maxWidth = m.maxWidth;
+                          }
+                        }
+
+                        return (
+                          <td
+                            key={column.key}
+                            className={['px-2 py-1', stickyFilterClasses].join(' ')}
+                            style={stickyStyle}
+                          >
+                            <input
+                              type="text"
+                              value={filters[column.key] || ''}
+                              onChange={(e) => handleFilterChange(e, column.key)}
+                              placeholder="Filter ..."
+                              className="w-full border rounded px-2 py-1 text-[10px] sm:text-[11px] focus:ring-2 focus:ring-blue-200"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  )}
+                </thead>
+
+                <tbody className="bg-white whitespace-nowrap">
+                  {paginatedData.length > 0 ? (
+                    paginatedData.map((row, rIdx) => {
+                      const rowBgClass = rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+                      return (
+                        <tr
+                          key={row.__idx ?? rIdx}
+                          className={`text-[10px] sm:text-[11px] hover:bg-blue-50 ${rowBgClass}`}
+                          onDoubleClick={() => handleViewRow(row)}
+                        >
+                          {/* View data cell (sticky index 0) */}
                           {(() => {
                             const m = stickyMeta(0);
+                            const stickyStyle = {};
+                            if (m.sticky) {
+                              stickyStyle.left = m.left;
+                              stickyStyle.width = ACTION_COL_W;
+                              stickyStyle.minWidth = ACTION_COL_W;
+                              stickyStyle.maxWidth = ACTION_COL_W;
+                            }
                             return (
-                              <th
-                                className="sticky bg-gray-100 z-40 px-2 py-2 text-center font-bold text-blue-900"
-                                style={{ left: m.left, width: m.width }}
-                              >
-                                Select
-                              </th>
-                            );
-                          })()}
-
-                          {/* Dynamic headers */}
-                          {visibleCols.map((column, vIdx) => {
-                            const m = stickyMeta(vIdx + 1);
-                            return (
-                              <th
-                                key={column.key}
-                                onClick={() => column.sortable && handleSort(column.key)}
-                                className={[
-                                  'px-3 py-2 font-bold text-blue-900 select-none',
-                                  column.sortable ? 'cursor-pointer hover:bg-gray-200/50' : '',
-                                  numberAlignClass(column),
-                                  remarksCellClass(column),
-                                  m.sticky ? 'sticky bg-gray-100 z-30' : '',
-                                ].join(' ')}
-                                style={m.sticky ? { left: m.left, width: m.width } : {}}
-                              >
-                                <span className="inline-flex items-center">
-                                  {column.label} {renderSortIcon(column.key)}
-                                </span>
-                              </th>
-                            );
-                          })}
-
-                          {/* Right-frozen View column header */}
-                          <th
-                            className="sticky bg-gray-100 z-40 px-3 py-2 font-bold text-blue-900 text-center border-l border-gray-200"
-                            style={actionHeaderStyle}
-                          >
-                            View
-                          </th>
-                        </tr>
-
-                        {/* Header filter row */}
-                        {showFilters && (
-                          <tr className="bg-white border-b border-gray-100 text-[10px] sm:text-[11px]">
-                            {/* Select filter cell */}
-                            {(() => {
-                              const m = stickyMeta(0);
-                              return (
-                                <td
-                                  className="sticky bg-white z-40 px-2 py-1"
-                                  style={{ left: m.left, width: m.width }}
-                                />
-                              );
-                            })()}
-
-                            {/* Dynamic filter inputs */}
-                            {visibleCols.map((column, vIdx) => {
-                              const m = stickyMeta(vIdx + 1);
-                              return (
-                                <td
-                                  key={column.key}
-                                  className={['px-2 py-1', m.sticky ? 'sticky bg-white z-30' : ''].join(' ')}
-                                  style={m.sticky ? { left: m.left, width: m.width } : {}}
-                                >
-                                  <input
-                                    type="text"
-                                    value={filters[column.key] || ''}
-                                    onChange={(e) => handleFilterChange(e, column.key)}
-                                    placeholder="Filter ..."
-                                    className="w-full border rounded px-2 py-1 text-[10px] sm:text-[11px] focus:ring-2 focus:ring-blue-200"
-                                  />
-                                </td>
-                              );
-                            })}
-
-                            {/* Right-frozen empty filter cell */}
-                            <td
-                              className="sticky bg-white z-40 px-2 py-1 border-l border-gray-100"
-                              style={actionCellStyle}
-                            />
-                          </tr>
-                        )}
-                      </thead>
-
-                      <tbody className="bg-white whitespace-nowrap">
-                        {paginatedData.length > 0 ? (
-                          paginatedData.map((row, rIdx) => (
-                            <tr
-                              key={row.__idx ?? rIdx}
-                              className={`text-[10px] sm:text-[11px] hover:bg-blue-50 ${rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-                              onDoubleClick={() => handleViewRow(row)}
-                            >
-                              {/* Select data cell (frozen 0) */}
-                              {(() => {
-                                const m = stickyMeta(0);
-                                return (
-                                  <td
-                                    className="sticky bg-inherit z-20 text-center"
-                                    style={{ left: m.left, width: m.width }}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selected.some((s) => s.groupId === row.groupId)}
-                                      onChange={() => toggleSelect(row)}
-                                      className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                  </td>
-                                );
-                              })()}
-
-                              {/* Dynamic data cells */}
-                              {visibleCols.map((column, vIdx) => {
-                                const m = stickyMeta(vIdx + 1);
-                                return (
-                                  <td
-                                    key={column.key}
-                                    className={[
-                                      'px-3 py-[6px]',
-                                      numberAlignClass(column),
-                                      remarksCellClass(column),
-                                      m.sticky ? 'sticky bg-inherit z-10' : '',
-                                    ].join(' ')}
-                                    style={m.sticky ? { left: m.left, width: m.width } : {}}
-                                    title={/remarks/i.test(String(column?.key ?? '')) ? String(row[column.key] ?? '') : undefined}
-                                  >
-                                    {renderValue(column, row[column.key], Number(column.roundingOff))}
-                                  </td>
-                                );
-                              })}
-
-                              {/* Right-frozen View action cell */}
                               <td
-                                className="sticky bg-inherit z-20 px-2 py-[6px] text-center border-l border-gray-200"
-                                style={actionCellStyle}
+                                className="sticky z-[30] px-2 py-[6px] text-center border-r border-gray-200 bg-white"
+                                style={stickyStyle}
                               >
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handleViewRow(row); }}
-                                  className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                  className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                                   title="View document"
                                 >
                                   <FontAwesomeIcon icon={faEye} />
                                 </button>
                               </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
-                              <div className="inline-flex items-center gap-3 text-gray-500">
-                                <FontAwesomeIcon icon={faCircleExclamation} />
-                                <span className="text-sm">No matching records found.</span>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </>
-                  );
-                })()}
+                            );
+                          })()}
+
+                          {/* Select data cell (sticky index 1) */}
+                          {(() => {
+                            const m = stickyMeta(1);
+                            const stickyStyle = {};
+                            if (m.sticky) {
+                              stickyStyle.left = m.left;
+                              stickyStyle.width = 50;
+                              stickyStyle.minWidth = 50;
+                              stickyStyle.maxWidth = 50;
+                            }
+                            return (
+                              <td
+                                className="sticky z-[30] text-center bg-white"
+                                style={stickyStyle}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected.some((s) => s.groupId === row.groupId)}
+                                  onChange={() => toggleSelect(row)}
+                                  className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                              </td>
+                            );
+                          })()}
+
+                          {/* Dynamic data cells (start at sticky index 2) */}
+                          {visibleCols.map((column, vIdx) => {
+                            const overallIndex = vIdx + 2;
+                            const m = stickyMeta(overallIndex);
+                            const stickyBodyClasses = m.sticky
+                              ? 'sticky z-[20] bg-white'
+                              : '';
+                            const stickyStyle = {};
+                            if (m.sticky) {
+                              stickyStyle.left = m.left;
+                              if (m.maxWidth) {
+                                stickyStyle.maxWidth = m.maxWidth; // cap at 200 for sticky data cols
+                              }
+                            }
+
+                            const isRemarksKey = /remarks/i.test(String(column?.key ?? ''));
+
+                            return (
+                              <td
+                                key={column.key}
+                                className={[
+                                  'px-3 py-[6px]',
+                                  numberAlignClass(column),
+                                  remarksCellClass(column),
+                                  stickyBodyClasses,
+                                ].join(' ')}
+                                style={stickyStyle}
+                                title={isRemarksKey ? String(row[column.key] ?? '') : undefined}
+                              >
+                                {renderValue(column, row[column.key], Number(column.roundingOff))}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={visibleCols.length + 2} className="px-4 py-10 text-center">
+                        <div className="inline-flex items-center gap-3 text-gray-500">
+                          <FontAwesomeIcon icon={faCircleExclamation} />
+                          <span className="text-sm">No matching records found.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
           )}

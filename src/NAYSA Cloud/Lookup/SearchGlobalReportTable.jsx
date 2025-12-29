@@ -22,19 +22,23 @@ import {
   faExpandArrowsAlt,
   faFileExcel,
   faColumns,
+  faFilePdf,
+  faFileImage,
+  faFileExport,
+  faFileCsv,
+  faPenToSquare,
 } from "@fortawesome/free-solid-svg-icons";
-// Assuming formatNumber and parseFormattedNumber are available globally or imported correctly
 import {
   formatNumber,
   parseFormattedNumber,
 } from "@/NAYSA Cloud/Global/behavior";
-// Assuming useReturnToDate is available globally or imported correctly
 import { useReturnToDate } from "@/NAYSA Cloud/Global/dates";
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
-// 🔹 Import your Excel export helper
 import { exportGenericQueryExcel } from "@/NAYSA Cloud/Global/report";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const ACTION_COL_WIDTH = 64;
 
@@ -56,7 +60,10 @@ const SearchGlobalReportTable = forwardRef(
       itemsPerPage = 50,
       showFilters = true,
       rightActionLabel = null,
-      onRowAction,
+      onRowAction,           // View button
+      onRowActionsClick,     // 🔹 NEW: gear button handler (optional)
+      actionsIcon,           // 🔹 optional override (default = gear)
+      actionsTitle,          // 🔹 optional tooltip for gear
       onRowDoubleClick,
       className = "",
       initialState,
@@ -68,6 +75,8 @@ const SearchGlobalReportTable = forwardRef(
     ref
   ) => {
     const scrollRef = useRef(null);
+    const exportContainerRef = useRef(null); // hidden full-table container for PDF/Image
+
     const [filters, setFilters] = useState(() => initialState?.filters || {});
     const [sortConfig, setSortConfig] = useState(
       () => initialState?.sortConfig || { key: null, direction: null }
@@ -81,19 +90,15 @@ const SearchGlobalReportTable = forwardRef(
     const [expandedGroups, setExpandedGroups] = useState({});
     const [draggedCol, setDraggedCol] = useState(null);
 
-    // Column widths only after resize
     const [colWidths, setColWidths] = useState({});
     const resizingRef = useRef(null);
-
-    // NEW: user-controlled hidden columns (on top of col.hidden)
     const [userHiddenCols, setUserHiddenCols] = useState(
       () => initialState?.userHiddenCols || []
     );
     const [showColumnChooser, setShowColumnChooser] = useState(false);
-    const { user,companyInfo, currentUserRow, refsLoaded, refsLoading } = useAuth();
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const { companyInfo, currentUserRow } = useAuth();
 
-
-    // Initial column order setup
     useEffect(() => {
       if (columns.length && columnOrder.length === 0) {
         setColumnOrder(columns.map((c) => c.key));
@@ -118,13 +123,14 @@ const SearchGlobalReportTable = forwardRef(
     }, [groupBy]);
 
     // Clear grouping state when data is empty
-    useEffect(() => {
-      if (Array.isArray(data) && data.length === 0) {
-        if (groupBy.length > 0) {
-          setGroupBy([]);
-        }
-      }
-    }, [data.length, groupBy.length]);
+   useEffect(() => {
+  if (!data || data.length === 0) {
+    // Only reset if needed to prevent re-renders
+    if (groupBy.length > 0) {
+      setGroupBy([]);
+    }
+  }
+}, [data]); 
 
     // --- Utility Functions ---
     const parseNumber = (v) => {
@@ -176,9 +182,19 @@ const SearchGlobalReportTable = forwardRef(
         .filter(Boolean);
     }, [columns, columnOrder]);
 
-    // Columns that are "allowed" to show in chooser: not config-hidden
+    // 🔹 detect if there is an "actions" config column
+    const hasActionsConfig = useMemo(
+      () => columns.some((c) => c.renderType === "actions"),
+      [columns]
+    );
+
+    // Columns that are "allowed" to show in chooser / table:
+    // not config-hidden AND not the special "actions" config column
     const baseVisibleColumns = useMemo(
-      () => orderedCols.filter((c) => !c.hidden),
+      () =>
+        orderedCols.filter(
+          (c) => !c.hidden && c.renderType !== "actions"
+        ),
       [orderedCols]
     );
 
@@ -366,6 +382,37 @@ const SearchGlobalReportTable = forwardRef(
       return groupData(filteredData);
     }, [filteredData, groupBy]);
 
+    // full render rows (all pages, all groups expanded) for export
+    const fullRenderRows = useMemo(() => {
+      if (groupBy.length === 0) return filteredData;
+
+      const expandAll = (nodes) => {
+        let list = [];
+        nodes.forEach((node) => {
+          if (node.isGroup) {
+            list.push(node);
+            if (node.level === groupBy.length - 1) {
+              list = list.concat(node.children);
+            } else {
+              list = list.concat(expandAll(node.children));
+            }
+            list.push({
+              isSubtotal: true,
+              groupLabel: columns.find((c) => c.key === node.key)?.label,
+              groupValue: node.value,
+              aggregates: node.aggregates,
+              level: node.level,
+            });
+          } else {
+            list.push(node);
+          }
+        });
+        return list;
+      };
+
+      return expandAll(groupedStructure);
+    }, [filteredData, groupedStructure, groupBy, columns]);
+
     // --- Pagination Logic ---
     const totalItems =
       groupBy.length > 0 ? groupedStructure.length : filteredData.length;
@@ -412,60 +459,48 @@ const SearchGlobalReportTable = forwardRef(
       [filteredData, visibleCols]
     );
 
+    const getDateTimeStamp = () => {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mi = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+      return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+    };
 
-
-  const getDateTimeStamp = () => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mi = String(now.getMinutes()).padStart(2, "0");
-    const ss = String(now.getSeconds()).padStart(2, "0");
-    return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
-  };
-
-
-
-    // 🔹 Export handler using your global function
+    // 🔹 Excel export (unchanged)
     const handleExportClick = async () => {
       try {
+        const now = new Date();
+        const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
+        const timePart = now.toTimeString().slice(0, 8).replace(/:/g, "");
+        const defaultFileName = `Query Report ${datePart}_${timePart}`;
 
-
-    const getDateTimeStamp = () => {
-    // Example implementation: YYYYMMDD_HHmmss
-    const now = new Date();
-    const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const timePart = now.toTimeString().slice(0, 8).replace(/:/g, '');
-    return `${datePart}_${timePart}`;
-};
-
-    const defaultFileName = `Query Report ${getDateTimeStamp()}`;
-    const { value: fileName } = await Swal.fire({
-        title: 'Enter File Name',
-        input: 'text',
-        inputLabel: 'Export File Name:',
-        inputValue: defaultFileName, 
-        width: '400px',
-        showCancelButton: true,
-        confirmButtonText: 'Export',
-        inputValidator: (value) => {
-            if (!value || value.trim() === '') {
-                return 'File name cannot be empty!';
+        const { value: fileName } = await Swal.fire({
+          title: "Enter File Name",
+          input: "text",
+          inputLabel: "Export File Name:",
+          inputValue: defaultFileName,
+          width: "400px",
+          showCancelButton: true,
+          confirmButtonText: "Export",
+          inputValidator: (value) => {
+            if (!value || value.trim() === "") {
+              return "File name cannot be empty!";
             }
+          },
+        });
+
+        if (!fileName) {
+          return;
         }
-    });
 
-
-
-  if (!fileName) {
-      return;
-  }
-
-      const exportData =
+        const exportData =
           groupBy.length > 0 ? groupedStructure : filteredData;
 
-       await exportGenericQueryExcel(
+        await exportGenericQueryExcel(
           exportData,
           grandTotals,
           visibleCols,
@@ -477,15 +512,181 @@ const SearchGlobalReportTable = forwardRef(
           currentUserRow?.userName,
           companyInfo?.compName,
           companyInfo?.compAddr,
-          companyInfo?.telNo,
+          companyInfo?.telNo
         );
       } catch (err) {
         console.error("Error exporting Excel:", err);
       }
     };
 
+    const hasDataFiltered =
+      Array.isArray(filteredData) && filteredData.length > 0;
 
+    // 🔹 CSV export with UPPERCASE_HEADERS + SPACE→_ + remove commas
+    const handleExportCsvClick = async () => {
+      if (!hasDataFiltered) return;
 
+      try {
+        const defaultFileName = `Query Report ${getDateTimeStamp()}`;
+        const { value: fileName } = await Swal.fire({
+          title: "Enter File Name",
+          input: "text",
+          inputLabel: "Export CSV File Name:",
+          inputValue: defaultFileName,
+          width: "400px",
+          showCancelButton: true,
+          confirmButtonText: "Export CSV",
+          inputValidator: (value) => {
+            if (!value || value.trim() === "") {
+              return "File name cannot be empty!";
+            }
+          },
+        });
+
+        if (!fileName) return;
+
+        const rowsToExport = filteredData;
+
+        // HEADER: Uppercase, spaces -> underscore, remove commas
+        const headerRow = visibleCols
+          .map((col) => {
+            let header = String(col.label ?? "");
+            header = header.replace(/,/g, ""); // remove commas in header
+            header = header.toUpperCase().replace(/\s+/g, "_");
+            const escaped = header.replace(/"/g, '""');
+            return `"${escaped}"`;
+          })
+          .join(",");
+
+        const csvLines = [headerRow];
+
+        // DETAILS: same value but remove commas
+        rowsToExport.forEach((row) => {
+          const line = visibleCols
+            .map((col) => {
+              const raw = row[col.key];
+              const formatted = formatValue(raw, col);
+              const noCommas = String(formatted ?? "").replace(/,/g, "");
+              const escaped = noCommas.replace(/"/g, '""');
+              return `"${escaped}"`;
+            })
+            .join(",");
+          csvLines.push(line);
+        });
+
+        const csvContent = csvLines.join("\r\n");
+
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `${fileName}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Error exporting CSV:", err);
+      }
+    };
+
+    // PDF export using hidden container
+    const handleExportPdfClick = async () => {
+      if (!hasDataFiltered || !exportContainerRef.current) return;
+
+      try {
+        const element = exportContainerRef.current;
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+
+        const defaultFileName = `Query Report ${getDateTimeStamp()}`;
+        const { value: fileName } = await Swal.fire({
+          title: "Enter File Name",
+          input: "text",
+          inputLabel: "Export PDF File Name:",
+          inputValue: defaultFileName,
+          width: "400px",
+          showCancelButton: true,
+          confirmButtonText: "Export PDF",
+          inputValidator: (value) => {
+            if (!value || value.trim() === "") {
+              return "File name cannot be empty!";
+            }
+          },
+        });
+
+        if (!fileName) return;
+
+        const pdf = new jsPDF("l", "mm", "a4");
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidthPx = canvas.width;
+        const imgHeightPx = canvas.height;
+
+        const ratio = Math.min(pdfWidth / imgWidthPx, pdfHeight / imgHeightPx);
+        const imgWidth = imgWidthPx * ratio;
+        const imgHeight = imgHeightPx * ratio;
+
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = (pdfHeight - imgHeight) / 2;
+
+        pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
+        pdf.save(`${fileName}.pdf`);
+      } catch (err) {
+        console.error("Error exporting PDF:", err);
+      }
+    };
+
+    // Image export using hidden container
+    const handleExportImageClick = async () => {
+      if (!hasDataFiltered || !exportContainerRef.current) return;
+
+      try {
+        const element = exportContainerRef.current;
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+
+        const defaultFileName = `Query Report ${getDateTimeStamp()}`;
+        const { value: fileName } = await Swal.fire({
+          title: "Enter File Name",
+          input: "text",
+          inputLabel: "Export Image File Name:",
+          inputValue: defaultFileName,
+          width: "400px",
+          showCancelButton: true,
+          confirmButtonText: "Export Image",
+          inputValidator: (value) => {
+            if (!value || value.trim() === "") {
+              return "File name cannot be empty!";
+            }
+          },
+        });
+
+        if (!fileName) return;
+
+        const link = document.createElement("a");
+        link.href = imgData;
+        link.download = `${fileName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Error exporting image:", err);
+      }
+    };
 
     const toggleGroup = (node) => {
       const uniqueId = `${node.key}-${node.value}-${node.level}`;
@@ -511,7 +712,7 @@ const SearchGlobalReportTable = forwardRef(
       setExpandedGroups(allKeys);
     };
 
-    // --- Column resizing: mouse handlers ---
+    // Column resizing: mouse handlers
     const handleMouseMove = useCallback((e) => {
       if (!resizingRef.current) return;
       const { startX, startWidth, key } = resizingRef.current;
@@ -551,54 +752,27 @@ const SearchGlobalReportTable = forwardRef(
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    // --- Sticky Plan (reverted initial widths, only override after resize) ---
-    // const stickyPlan = useMemo(() => {
-    //   let left = hasActionCol ? ACTION_COL_WIDTH : 0;
-    //   return visibleCols.map((c) => {
-    //     const resizedWidth = colWidths[c.key];
-
-    //     if (c.stickyLeft) {
-    //       const width =
-    //         resizedWidth ?? (Number(c.width) || 120);
-    //       const meta = { sticky: true, left, width };
-    //       left += width;
-    //       return meta;
-    //     }
-
-    //     return { sticky: false, left: 0, width: resizedWidth || undefined };
-    //   });
-    // }, [visibleCols, hasActionCol, colWidths]);
-
-    // --- Sticky Plan (reverted initial widths, only override after resize) ---
+    // Sticky Plan (original: 1 sticky data col when grouped)
     const stickyPlan = useMemo(() => {
       let left = hasActionCol ? ACTION_COL_WIDTH : 0;
 
-      // 1. Determine the maximum number of data columns to freeze
-      // Freeze up to 2 columns if grouped, otherwise only 1
+      // Freeze up to 1 data column when grouped, 0 when not grouped
       const maxStickyCols = groupBy.length > 0 ? 1 : 0;
-      
+
       return visibleCols.map((col, index) => {
         const resizedWidth = colWidths[col.key];
-        
-        // 2. Check if the current column is one of the designated sticky columns
         const isSticky = index < maxStickyCols;
 
         if (isSticky) {
-          // Use resized width, or fallback to config width, or default 120
           const width = resizedWidth ?? (Number(col.width) || 120);
           const meta = { sticky: true, left, width };
-          
-          // Accumulate the 'left' offset for the next sticky column
           left += width;
           return meta;
         }
 
-        // For non-sticky columns, return width if resized, otherwise undefined
         return { sticky: false, left: 0, width: resizedWidth || undefined };
       });
-      // 3. Added groupBy.length to dependencies to recalculate when grouping changes
     }, [visibleCols, hasActionCol, colWidths, groupBy.length]);
-
 
     const numberAlignClass = (col) =>
       col?.renderType === "number" || col?.renderType === "currency"
@@ -630,12 +804,10 @@ const SearchGlobalReportTable = forwardRef(
       goToPage: (p) => setCurrentPage(Math.max(1, Number(p) || 1)),
     }));
 
-    const hasData = Array.isArray(filteredData) && filteredData.length > 0;
-
     // loader while dynamic columns are still loading (or parent says loading)
     const isLoadingColumns = isLoading || columns.length === 0;
 
-    // --- Column chooser helpers ---
+    // Column chooser helpers
     const allChooserKeys = baseVisibleColumns.map((c) => c.key);
     const allChecked = userHiddenCols.length === 0;
 
@@ -646,6 +818,9 @@ const SearchGlobalReportTable = forwardRef(
         setUserHiddenCols([]);
       }
     };
+
+    const effectiveActionsIcon = actionsIcon || faPenToSquare;
+    const showActionsButton = hasActionsConfig || typeof onRowActionsClick === "function";
 
     // --- Render ---
     return (
@@ -661,7 +836,7 @@ const SearchGlobalReportTable = forwardRef(
           </div>
         ) : (
           <>
-            {hasData && (
+            {hasDataFiltered && (
               <div
                 className="p-2 bg-gray-50 border-b flex flex-wrap gap-2 items-center min-h-[45px] shrink-0"
                 onDragOver={(e) => e.preventDefault()}
@@ -699,7 +874,7 @@ const SearchGlobalReportTable = forwardRef(
                   ))}
                 </div>
 
-                {/* Right side: group controls + export + column chooser */}
+                {/* Right side: group controls + export menu + column chooser */}
                 <div className="flex items-center gap-2">
                   {groupBy.length > 0 && (
                     <>
@@ -722,21 +897,101 @@ const SearchGlobalReportTable = forwardRef(
                         className="text-xs bg-white border px-2 py-1 rounded hover:bg-gray-100"
                         title="Remove All Groups"
                       >
-                       <FontAwesomeIcon icon={faTimes} className="text-red-600 mr-1" />Remove
+                        <FontAwesomeIcon
+                          icon={faTimes}
+                          className="text-red-600 mr-1"
+                        />
+                        Remove
                       </button>
                     </>
                   )}
 
-                  {/* 🔹 Export button (beside Columns) */}
-                 <button
-                    type="button"
-                    onClick={handleExportClick}
-                    disabled={!hasData}
-                    className="text-xs bg-white border px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-50"
-                    title="Export to Excel"
-                  >
-                    <FontAwesomeIcon icon={faFileExcel} className="text-green-600" /> Export
-                  </button>
+                  {/* Export dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        hasDataFiltered &&
+                        setShowExportMenu((prev) => !prev)
+                      }
+                      disabled={!hasDataFiltered}
+                      className="text-xs bg-white border px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-50"
+                      title="Export options"
+                    >
+                      <FontAwesomeIcon
+                        icon={faFileExport}
+                        className="text-blue-600 mr-1"
+                      />
+                      Export
+                    </button>
+
+                    {showExportMenu && (
+                      <div
+                        className="absolute right-0 mt-1 bg-white border rounded shadow-lg p-2 z-50 min-w-[180px]"
+                        onMouseLeave={() => setShowExportMenu(false)}
+                      >
+                        <div className="text-[11px] font-semibold mb-1 border-b pb-1">
+                          Export Options
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setShowExportMenu(false);
+                            await handleExportClick();
+                          }}
+                          className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon
+                            icon={faFileExcel}
+                            className="text-green-600"
+                          />
+                          Excel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setShowExportMenu(false);
+                            await handleExportCsvClick();
+                          }}
+                          className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon
+                            icon={faFileCsv}
+                            className="text-emerald-600"
+                          />
+                          CSV
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setShowExportMenu(false);
+                            await handleExportPdfClick();
+                          }}
+                          className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon
+                            icon={faFilePdf}
+                            className="text-red-600"
+                          />
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setShowExportMenu(false);
+                            await handleExportImageClick();
+                          }}
+                          className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon
+                            icon={faFileImage}
+                            className="text-blue-600"
+                          />
+                          Image
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Column chooser */}
                   <div className="relative">
@@ -745,10 +1000,17 @@ const SearchGlobalReportTable = forwardRef(
                       onClick={() => setShowColumnChooser((prev) => !prev)}
                       className="text-xs bg-white border px-2 py-1 rounded hover:bg-gray-100"
                     >
-                        <FontAwesomeIcon icon={faColumns} className="text-green-600" /> Columns
+                      <FontAwesomeIcon
+                        icon={faColumns}
+                        className="text-green-600"
+                      />{" "}
+                      Columns
                     </button>
                     {showColumnChooser && (
-                      <div className="absolute right-0 mt-1 bg-white border rounded shadow-lg p-2 max-h-64 overflow-auto z-50 min-w-[200px]">
+                      <div
+                        className="absolute right-0 mt-1 bg-white border rounded shadow-lg p-2 max-h-64 overflow-auto z-50 min-w-[200px]"
+                        onMouseLeave={() => setShowColumnChooser(false)}
+                      >
                         <div className="flex items-center justify-between text-[11px] font-semibold mb-1 border-b pb-1">
                           <span>Show / Hide Columns</span>
                           <label className="flex items-center gap-1 text-[11px]">
@@ -788,9 +1050,6 @@ const SearchGlobalReportTable = forwardRef(
                     )}
                   </div>
                 </div>
-
-
-                
               </div>
             )}
 
@@ -798,7 +1057,7 @@ const SearchGlobalReportTable = forwardRef(
               ref={scrollRef}
               key={`table-view-${groupBy.length > 0 ? "grouped" : "flat"}`}
               className={`flex-grow w-full overscroll-x-contain relative ${
-                hasData ? "overflow-auto" : "overflow-hidden"
+                hasDataFiltered ? "overflow-auto" : "overflow-hidden"
               }`}
             >
               <table className="min-w-full border-collapse relative table-fixed">
@@ -879,7 +1138,7 @@ const SearchGlobalReportTable = forwardRef(
                     })}
                   </tr>
 
-                  {showFilters && hasData && (
+                  {showFilters && hasDataFiltered && (
                     <tr className="bg-white border-b border-gray-200 text-[10px]">
                       {hasActionCol && (
                         <td className="sticky left-0 z-50 px-2 py-1 border-r bg-white" />
@@ -950,9 +1209,7 @@ const SearchGlobalReportTable = forwardRef(
                                 >
                                   <FontAwesomeIcon
                                     icon={
-                                      isExpanded
-                                        ? faChevronDown
-                                        : faChevronRight
+                                      isExpanded ? faChevronDown : faChevronRight
                                     }
                                     className="w-3 h-3 mr-2 text-gray-500"
                                   />
@@ -1045,24 +1302,47 @@ const SearchGlobalReportTable = forwardRef(
                             }`}
                             onDoubleClick={() => onRowDoubleClick?.(row)}
                           >
+                            
                             {hasActionCol && (
                               <td className="sticky left-0 z-10 px-2 py-[2px] text-center border-r border-gray-200 bg-inherit w-[64px] min-w-[64px]">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRowAction?.(row);
-                                  }}
-                                  className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                                  title={rightActionLabel ?? "Open"}
-                                >
-                                  <FontAwesomeIcon
-                                    icon={faEye}
-                                    className="w-4 h-3"
-                                  />
-                                </button>
+                                <div className="flex items-center justify-center gap-1">
+                                  {/* View button – original size */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRowAction?.(row);
+                                    }}
+                                    className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    title={rightActionLabel ?? "Open"}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={faEye}
+                                      className="w-4 h-3"   // ✅ back to original
+                                    />
+                                  </button>
+
+                                  {/* Gear / actions button – same size as View */}
+                                  {showActionsButton && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRowActionsClick?.(row);
+                                      }}
+                                      className="px-2 py-0.5 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                                      title={actionsTitle || "More actions"}
+                                    >
+                                      <FontAwesomeIcon
+                                        icon={effectiveActionsIcon}
+                                        className="w-4 h-3" // ✅ matches View
+                                      />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             )}
+
 
                             {visibleCols.map((col, i) => {
                               const meta = stickyPlan[i];
@@ -1111,7 +1391,7 @@ const SearchGlobalReportTable = forwardRef(
                   )}
                 </tbody>
 
-                {hasData && (
+                {hasDataFiltered && (
                   <tfoot className="sticky bottom-0 z-30 shadow-[0_-4px_6px_rgba(0,0,0,0.1)] text-[10px] sm:text-[11px]">
                     <tr className="bg-gray-100 font-bold border-t border-blue-400">
                       {hasActionCol && (
@@ -1157,14 +1437,14 @@ const SearchGlobalReportTable = forwardRef(
             </div>
 
             {/* No data (but data array exists) */}
-            {!hasData && Array.isArray(data) && data.length > 0 && (
+            {!hasDataFiltered && Array.isArray(data) && data.length > 0 && (
               <div className="p-4 text-center text-gray-500">
                 No results found matching the current filters.
               </div>
             )}
 
             {/* Pagination Controls */}
-            {itemsPerPage > 0 && hasData && (
+            {itemsPerPage > 0 && hasDataFiltered && (
               <div className="flex items-center justify-end gap-2 p-2 border-t bg-white text-[11px] shrink-0">
                 <span className="mr-2 opacity-70">
                   {groupBy.length > 0 ? "Groups: " : "Rows: "}
@@ -1172,9 +1452,7 @@ const SearchGlobalReportTable = forwardRef(
                 </span>
                 <button
                   className="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-50"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.max(1, p - 1))
-                  }
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
                 >
                   Prev
@@ -1182,14 +1460,141 @@ const SearchGlobalReportTable = forwardRef(
                 <button
                   className="px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-50"
                   onClick={() =>
-                    setCurrentPage((p) =>
-                      p < totalPages ? p + 1 : p
-                    )
+                    setCurrentPage((p) => (p < totalPages ? p + 1 : p))
                   }
                   disabled={safePage >= totalPages}
                 >
                   Next
                 </button>
+              </div>
+            )}
+
+            {/* Hidden full-table container for PDF / Image export (ALL PAGES)
+                👉 max column width 150px, text wrapped */}
+            {hasDataFiltered && (
+              <div
+                ref={exportContainerRef}
+                style={{ position: "absolute", left: "-99999px", top: 0 }}
+              >
+                <table className="border-collapse text-[8px]">
+                  <thead>
+                    <tr>
+                      {visibleCols.map((col) => (
+                        <th
+                          key={col.key}
+                          className="border px-2 py-1 text-left bg-gray-200 align-top"
+                          style={{
+                            maxWidth: 150,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {col.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(groupBy.length === 0 ? filteredData : fullRenderRows).map(
+                      (row, idx) => {
+                        // Group header rows (when grouped)
+                        if (groupBy.length > 0 && row.isGroup) {
+                          return (
+                            <tr
+                              key={`exp-g-${row.key}-${row.value}-${row.level}-${idx}`}
+                            >
+                              <td
+                                colSpan={visibleCols.length}
+                                className="border px-2 py-1 font-semibold bg-gray-100"
+                                style={{
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {columns.find((c) => c.key === row.key)?.label}:{" "}
+                                {row.value} ({row.count})
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        // Subtotal rows (when grouped)
+                        if (groupBy.length > 0 && row.isSubtotal) {
+                          return (
+                            <tr key={`exp-sub-${row.groupValue}-${idx}`}>
+                              {visibleCols.map((col, i) => {
+                                const val = row.aggregates[col.key];
+                                return (
+                                  <td
+                                    key={col.key}
+                                    className="border px-2 py-1 font-semibold bg-yellow-50 align-top"
+                                    style={{
+                                      maxWidth: 150,
+                                      whiteSpace: "normal",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {i === 0 && (
+                                      <>
+                                        Sub Total for {row.groupLabel}:{" "}
+                                        {row.groupValue}{" "}
+                                      </>
+                                    )}
+                                    {val !== undefined
+                                      ? formatValue(val, col)
+                                      : ""}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        }
+
+                        // Normal data rows
+                        return (
+                          <tr key={`exp-row-${idx}`}>
+                            {visibleCols.map((col) => (
+                              <td
+                                key={col.key}
+                                className="border px-2 py-1 align-top"
+                                style={{
+                                  maxWidth: 150,
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {formatValue(row[col.key], col)}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      }
+                    )}
+                  </tbody>
+
+                  <tfoot>
+                    <tr>
+                      {visibleCols.map((col, i) => (
+                        <td
+                          key={col.key}
+                          className="border px-2 py-1 font-bold bg-gray-100 align-top"
+                          style={{
+                            maxWidth: 150,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {i === 0 &&
+                            (groupBy.length > 0 ? "Grand Total" : "Total")}
+                          {grandTotals[col.key] !== undefined
+                            ? ` ${formatValue(grandTotals[col.key], col)}`
+                            : ""}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
           </>
@@ -1200,4 +1605,3 @@ const SearchGlobalReportTable = forwardRef(
 );
 
 export default SearchGlobalReportTable;
-

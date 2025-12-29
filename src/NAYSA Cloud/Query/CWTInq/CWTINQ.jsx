@@ -345,6 +345,12 @@ const handleViewTop = useCallback((row) => {
 
 
 
+  function useNormalizeDat(data) {
+  return data
+    .map(row => Object.values(row).join(""))
+    .join("\r\n");
+}
+
   // Export (base "Export Query")
   const doExport = useCallback(async () => {
     if (!Array.isArray(rows) || rows.length === 0) return;

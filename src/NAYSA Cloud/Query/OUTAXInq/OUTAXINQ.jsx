@@ -243,6 +243,15 @@ export default function OUTAXINQ() {
   }, []);
 
 
+  
+  function useNormalizeDat(data) {
+  return data
+    .map(row => Object.values(row).join(""))
+    .join("\r\n");
+}
+
+
+
   // Compute summary totals
   const computeTotals = useCallback((list = []) => {
     if (!Array.isArray(list) || list.length === 0) {
@@ -633,7 +642,7 @@ export default function OUTAXINQ() {
             <section className="p-5">
               <h3 className="flex items-center gap-2 text-gray-800 font-semibold mb-4">
                 <FontAwesomeIcon className="text-blue-600" icon={faUser} />
-                Payee Details
+                Customer Details
               </h3>
 
               {/* Branch */}

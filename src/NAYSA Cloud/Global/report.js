@@ -1387,7 +1387,7 @@ export const exportGenericQueryExcel = async (
     const MAX_TEXT_CHAR_WIDTH = 40; // max characters for general text
     const MAX_NUM_CHAR_WIDTH = 25; // max characters for number and currency
     const MAX_DATE_CHAR_WIDTH = 15; // ✅ NEW: max characters for date columns
-    const FIRST_COL_CHAR_WIDTH = 10; // fixed width for first column
+    const FIRST_COL_CHAR_WIDTH = 15; // fixed width for first column
 
     worksheet.columns.forEach((column, colIndex) => {
     const colNumber = colIndex + 1;

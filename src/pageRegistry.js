@@ -46,11 +46,13 @@ import GLReportModal from "./NAYSA Cloud/Printing/GLReport.jsx";
 import VIReportModal from "./NAYSA Cloud/Printing/VIReport.jsx";
 import EWTReportModal from "./NAYSA Cloud/Printing/EWTReport.jsx";
 
-
+import GLINQ from "./NAYSA Cloud/Query/GLInq/GLINQ.jsx"
 import ARINQ from "./NAYSA Cloud/Query/ARInq/ARINQ.jsx";
 import APINQ from "./NAYSA Cloud/Query/APInq/APINQ.jsx";
 import EWTINQ from "./NAYSA Cloud/Query/EWTInq/EWTINQ.jsx";
 import CWTINQ from "./NAYSA Cloud/Query/CWTInq/CWTINQ.jsx";
+import CheckRL from "./NAYSA Cloud/Query/CheckRL/CheckRL.jsx"
+import CWTMonitoring from "./NAYSA Cloud/Query/CWTInq/CWTMonitoring.jsx";
 import INTAXINQ from "./NAYSA Cloud/Query/INTAXInq/INTAXINQ.jsx";
 import OUTAXINQ from "./NAYSA Cloud/Query/OUTAXInq/OUTAXINQ.jsx";
 
@@ -78,7 +80,7 @@ export const pageRegistry = {
 
 
   //Global
-  AllTranHistory,ARINQ,APINQ,EWTINQ,CWTINQ,INTAXINQ,OUTAXINQ,
+  AllTranHistory,ARINQ,APINQ,EWTINQ,CWTINQ,INTAXINQ,OUTAXINQ,CWTMonitoring,CheckRL,GLINQ,
 
   // Global Reference
   BranchRef,

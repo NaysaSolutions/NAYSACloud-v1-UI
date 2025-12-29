@@ -250,6 +250,14 @@ export default function EWTINQ() {
     });
   }, []);
 
+  
+  function useNormalizeDat(data) {
+  return data
+    .map(row => Object.values(row).join(""))
+    .join("\r\n");
+}
+
+
 
 
   // Compute summary totals

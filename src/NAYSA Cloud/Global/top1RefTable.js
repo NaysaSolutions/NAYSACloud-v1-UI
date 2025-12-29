@@ -313,6 +313,25 @@ export async function useTopSLRow(slCode) {
 }
 
 
+
+
+export async function useTopCutOffRow(cutoffCode) {
+  if (!cutoffCode) return null;
+
+  try {
+    const response = await fetchData("getCutOff", { CUTOFF_CODE: cutoffCode });
+    if (response.success) {
+      const responseData = JSON.parse(response.data[0].result);
+      return responseData.length > 0 ? responseData[0] : null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching Cutoff row:", error);
+    return null;
+  }
+}
+
+
 export async function useTopAccountRow(acctCode) {
   if (!acctCode) return null;
 
