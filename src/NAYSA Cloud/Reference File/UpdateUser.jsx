@@ -3,13 +3,14 @@ import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 import BranchLookupModal from "@/NAYSA Cloud/Lookup/SearchBranchRef";
 import RCLookupModal from "@/NAYSA Cloud/Lookup/SearchRCMast";
+import UserRoleModal from "@/NAYSA Cloud/Lookup/SetUserRole";
 
 // FontAwesome Icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faEdit, faTrashAlt, faPlus, faPrint, faChevronDown,
     faFileCsv, faFileExcel, faFilePdf, faSave, faUndo,
-    faUsers, faKey, faMagnifyingGlass, faSpinner, faInfoCircle, faVideo
+    faUsers, faKey, faMagnifyingGlass, faSpinner, faInfoCircle, faVideo, faUserShield
 } from "@fortawesome/free-solid-svg-icons";
 
 // Global components and utilities
@@ -41,12 +42,13 @@ const UpdateUser = () => {
     const [userId, setUserId] = useState("");
     const [userName, setUserName] = useState("");
     const [userType, setUserType] = useState("");
-    const [branchCode, setBranchCode] = useState("Head Office");
+    const [branchCode, setBranchCode] = useState("");
     const [branchName, setBranchName] = useState(""); // Add this for displaying branch name
     const [branchModalOpen, setBranchModalOpen] = useState(false); // Add this for modal control
     const [rcCode, setRcCode] = useState("");
     const [rcName, setRcName] = useState(""); // Add this for displaying RC name
     const [rcModalOpen, setRcModalOpen] = useState(false); // Add this for RC modal control
+    const [showUserRoleModal, setShowUserRoleModal] = useState(false);
     const [position, setPosition] = useState("");
     const [emailAdd, setEmailAdd] = useState("");
     const [viewCostamt, setViewCostamt] = useState("N");
@@ -135,11 +137,11 @@ const UpdateUser = () => {
         }
     };
 
-    // Loading spinner component
     const LoadingSpinner = () => (
-        <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm flex items-center justify-center">
-            <div className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl">
-                {saving ? "Saving…" : "Loading…"}
+        <div className="global-tran-spinner-main-div-ui">
+            <div className="global-tran-spinner-sub-div-ui">
+                <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-blue-500 mb-2" />
+                <p>Please wait...</p>
             </div>
         </div>
     );
@@ -148,20 +150,18 @@ const UpdateUser = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            // Match your PHP controller's expected parameter name
             const { data } = await apiClient.get("/load", {
                 params: {
-                    Status: activeTab === "active" ? "Active" : "Inactive"
+                    Status:
+                        activeTab === "active" ? "Active" :
+                            activeTab === "pending" ? "Pending" :
+                                "Inactive"
                 }
             });
 
-            console.log("API Response:", data);
-
-            // Handle the response structure based on your stored procedure
             let userData = [];
 
             if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-                // If data.data[0].result exists and contains JSON string
                 if (data.data[0]?.result) {
                     try {
                         userData = JSON.parse(data.data[0].result);
@@ -171,7 +171,6 @@ const UpdateUser = () => {
                     }
                 }
             } else if (data?.result) {
-                // If result is directly in data
                 try {
                     userData = JSON.parse(data.result);
                 } catch (parseError) {
@@ -179,32 +178,53 @@ const UpdateUser = () => {
                     userData = [];
                 }
             } else if (Array.isArray(data)) {
-                // If data is directly an array
                 userData = data;
             }
 
-            // Ensure userData is an array and filter out invalid entries
             if (Array.isArray(userData)) {
+                // 1) keep only valid rows
                 const filteredUsers = userData.filter(
-                    (u) => u && (u.userCode || u.userName || u.userType || u.emailAdd ||
-                        u.branchCode || u.position || u.rcCode ||
-                        u.active || u.viewCostamt || u.editUprice)
+                    (u) =>
+                        u &&
+                        (u.userCode ||
+                            u.userName ||
+                            u.userType ||
+                            u.emailAdd ||
+                            u.branchCode ||
+                            u.position ||
+                            u.rcCode ||
+                            u.active ||
+                            u.viewCostamt ||
+                            u.editUprice)
                 );
-                console.log("Filtered users:", filteredUsers);
-                setUsers(filteredUsers);
+
+                // 2) 🔧 FLATTEN names even if SQL used FOR JSON AUTO (nested under table aliases b/c)
+                const normalized = filteredUsers.map((u) => ({
+                    ...u,
+                    branchName:
+                        u.branchName ?? u.b?.branchName ?? u.b?.branchname ?? u.branchCode ?? "",
+                    rcName:
+                        u.rcName ?? u.c?.rcName ?? u.c?.rcname ?? u.rcCode ?? "",
+                }));
+
+                setUsers(normalized);
+
             } else {
                 console.log("userData is not an array:", userData);
                 setUsers([]);
             }
-
         } catch (error) {
             console.error("Error fetching users:", error);
             setUsers([]);
-            await useSwalErrorAlert("Error", `Failed to load users: ${error?.response?.data?.message || error.message}`);
+            await useSwalErrorAlert(
+                "Error",
+                `Failed to load users: ${error?.response?.data?.message || error.message}`
+            );
         } finally {
             setLoading(false);
         }
     };
+
 
     // Close menus on outside click
     useEffect(() => {
@@ -284,7 +304,8 @@ const UpdateUser = () => {
             if (f.rcCode && !includesCI(u.rcName || u.rcCode, f.rcCode)) return false;
             if (f.position && !includesCI(u.position, f.position)) return false;
             if (f.emailAdd && !includesCI(u.emailAdd, f.emailAdd)) return false;
-            if (f.active && !includesCI(u.active === "Y" ? "Yes" : "No", f.active)) return false;
+            if (f.active && !includesCI(activeLabel(u.active), f.active)) return false;
+
             return true;
         });
 
@@ -370,7 +391,10 @@ const UpdateUser = () => {
                     rcCode: rcCode || "",
                     viewCostamt: viewCostamt || "N", // Ensure single character
                     editUprice: editUprice || "N",   // Ensure single character
-                    active: active === "Yes" ? "Y" : "N", // Convert Yes/No to Y/N
+                    active:
+                        active === "Yes" ? "Y" :
+                            active === "Pending" ? "P" :
+                                "N", // Convert Yes/No to Y/N
                     position: position ? position.trim() : ""
                 }
             };
@@ -516,7 +540,11 @@ const UpdateUser = () => {
         setEmailAdd(user.emailAdd || "");
 
         // Handle the active field properly - your sproc returns Y/N, but form expects Yes/No
-        setActive(user.active === "Y" ? "Yes" : "No");
+        setActive(
+            user.active === "Y" ? "Yes" :
+                user.active === "P" ? "Pending" :
+                    "No"
+        );
 
         // Handle the permission fields - ensure they default to "N" if not set
         setViewCostamt(user.viewCostamt === "Y" ? "Y" : "N");
@@ -548,80 +576,88 @@ const UpdateUser = () => {
         setIsEditing(true);
     };
 
-    // Reset Password
+    // Reset Password (tokenless email link)
     const handleResetPassword = async () => {
         if (!selectedUser?.userCode) {
             await useSwalWarningAlert("Warning", "Please select a user to reset password");
             return;
         }
 
-        const confirm = await useSwalDeleteConfirm(
+        const confirmRes = await useSwalDeleteConfirm(
             "Reset Password",
-            `Are you sure you want to reset password for ${selectedUser.userName}?`,
+            `Are you sure you want to reset the password for ${selectedUser.userName}?`,
             "Yes, reset it"
         );
-
-        if (!confirm.isConfirmed) return;
+        if (!confirmRes.isConfirmed) return;
 
         try {
-            const payload = {
-                entity: "userPassword",
-                data: {
-                    userCode: selectedUser.userCode,
-                    resetBy: user.USER_CODE
-                }
-            };
+            // optional global spinner (remove if you don't use it)
+            setShowSpinner?.(true);
 
-            const { data: response } = await apiClient.get("/upsert", { params: payload });
+            // 🔑 Call the new Laravel endpoint that sends the email (purpose='reset')
+            const { data } = await apiClient.post("/users/request-password-reset", {
+                userCode: selectedUser.userCode,
+                // resetBy: user.USER_CODE, // include only if you log this server-side
+            });
 
-            if (response.status === "success") {
-                await useSwalSuccessAlert("Success", "Password has been reset successfully");
+            if (data?.status === "success") {
+                await useSwalSuccessAlert(
+                    "Success",
+                    "Password reset link has been emailed to the user."
+                );
             } else {
-                await useSwalErrorAlert("Error", response.message || "Failed to reset password");
+                await useSwalErrorAlert(
+                    "Error",
+                    data?.message || "Failed to send the reset email."
+                );
             }
         } catch (error) {
             console.error("Password reset error:", error);
-            await useSwalErrorAlert("Error", "Failed to reset password");
+            const msg = error?.response?.data?.message || error.message || "Request failed.";
+            await useSwalErrorAlert("Error", msg);
+        } finally {
+            setShowSpinner?.(false);
         }
     };
 
-// Release Account
-const handleReleaseAccount = async () => {
-  if (!selectedUser?.userCode) {
-    await useSwalWarningAlert("Warning", "Please select a user to release account");
-    return;
-  }
 
-  const confirmRes = await useSwalDeleteConfirm(
-    "Release Account",
-    `Are you sure you want to release the account for ${selectedUser.userName}?`,
-    "Yes, release it"
-  );
-  if (!confirmRes.isConfirmed) return;
+    // Release Account
+    const handleReleaseAccount = async () => {
+        if (!selectedUser?.userCode) {
+            await useSwalWarningAlert("Warning", "Please select a user to approve account");
+            return;
+        }
 
-  try {
-    setShowSpinner(true); // you already have this spinner flag
+        const confirmRes = await useSwalDeleteConfirm(
+            "Approve Account",
+            `Are you sure you want to approve the account for ${selectedUser.userName}?`,
+            "Yes, approve it"
+        );
+        if (!confirmRes.isConfirmed) return;
 
-    // 🔑 Call the new Laravel endpoint that sets bcrypt hash + tpword_date and emails the temp password
-    const { data } = await apiClient.post("/users/release", {
-      userCode: selectedUser.userCode,
-    });
+        try {
+            setShowSpinner(true); // you already have this spinner flag
 
-    if (data?.status === "success") {
-      await useSwalSuccessAlert("Success", "Temporary password sent and tpword_date updated.");
-      // (optional) refresh the selected user to show the new tpwordDate on screen
-      // await reloadUser(selectedUser.userCode);
-    } else {
-      await useSwalErrorAlert("Error", data?.message || "Failed to release account");
-    }
-  } catch (error) {
-    console.error("Account release error:", error);
-    const msg = error?.response?.data?.message || error?.message || "Failed to release account";
-    await useSwalErrorAlert("Error", msg);
-  } finally {
-    setShowSpinner(false);
-  }
-};
+            // 🔑 Call the new Laravel endpoint that sets bcrypt hash + tpword_date and emails the temp password
+            const { data } = await apiClient.post("/users/approve", {
+                userCode: selectedUser.userCode,
+            });
+
+            if (data?.status === "success") {
+                await useSwalSuccessAlert("Success", "Temporary password sent");
+                // (optional) refresh the selected user to show the new tpwordDate on screen
+                // await reloadUser(selectedUser.userCode);
+            } else {
+                await useSwalErrorAlert("Error", data?.message || "Failed to approve account");
+            }
+        } catch (error) {
+            console.error("Account approval error:", error);
+            const msg = error?.response?.data?.message || error?.message || "Failed to approve account";
+            await useSwalErrorAlert("Error", msg);
+        } finally {
+            setShowSpinner(false);
+        }
+    };
 
 
     const handleExport = (format) => {
@@ -656,6 +692,13 @@ const handleReleaseAccount = async () => {
         }
     };
 
+    const activeLabel = (code) => {
+        if (code === "Y") return "Yes";
+        if (code === "P") return "Pending";
+        if (code === "N") return "No";
+        return "-";
+    };
+
     // Guides
     const handlePDFGuide = () => {
         if (pdfLink) window.open(pdfLink, "_blank");
@@ -686,6 +729,15 @@ const handleReleaseAccount = async () => {
                     onClose={handleCloseRCModal}
                 />
             )}
+            {/* User Role Modal */}
+            {showUserRoleModal && selectedUser && (
+                <UserRoleModal
+                    isOpen={showUserRoleModal}
+                    user={selectedUser}
+                    onClose={() => setShowUserRoleModal(false)}
+                />
+            )}
+
             <div className="fixed mt-4 top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
@@ -865,6 +917,7 @@ const handleReleaseAccount = async () => {
                                 className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
                             >
                                 <option value="Yes">Yes</option>
+                                <option value="Pending">Pending</option>
                                 <option value="No">No</option>
                             </select>
                             <label htmlFor="active" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>Active?</label>
@@ -1015,6 +1068,19 @@ const handleReleaseAccount = async () => {
                     </button>
                     <button
                         onClick={() => {
+                            setActiveTab('pending');
+                            fetchUsers();
+                        }}
+                        className={`px-4 py-2 font-medium rounded-t-lg ${activeTab === 'pending'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                    >
+                        Pending Users
+                    </button>
+
+                    <button
+                        onClick={() => {
                             setActiveTab('inactive');
                             fetchUsers();
                         }}
@@ -1045,7 +1111,9 @@ const handleReleaseAccount = async () => {
                                             ["emailAdd", "Email Address"],
                                             ["active", "Active"],
                                             ["_edit", "Edit"],
+                                            ["_roles", "Set Role"],
                                             ["_delete", "Delete"],
+
                                         ].map(([key, label]) => (
                                             <th
                                                 key={key}
@@ -1124,17 +1192,18 @@ const handleReleaseAccount = async () => {
                                                 onChange={(e) => { setColumnFilters(s => ({ ...s, emailAdd: e.target.value })); setPage(1); }}
                                             />
                                         </th>
-                                        <th className="global-ref-th-ui">
-                                            <select
-                                                className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                                                value={columnFilters.active}
-                                                onChange={(e) => { setColumnFilters(s => ({ ...s, active: e.target.value })); setPage(1); }}
-                                            >
-                                                <option value="">All</option>
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
-                                            </select>
-                                        </th>
+                                        <select
+                                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                                            value={columnFilters.active}
+                                            onChange={(e) => { setColumnFilters(s => ({ ...s, active: e.target.value })); setPage(1); }}
+                                        >
+                                            <option value="">All</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="No">No</option>
+                                        </select>
+
+                                        <th className="global-ref-th-ui"></th>
                                         <th className="global-ref-th-ui"></th>
                                         <th className="global-ref-th-ui"></th>
                                     </tr>
@@ -1152,10 +1221,11 @@ const handleReleaseAccount = async () => {
                                     ) : (
                                         pageRows
                                             .filter(user =>
-                                                activeTab === 'active'
-                                                    ? user.active === 'Y'
-                                                    : user.active === 'N'
+                                                activeTab === 'active' ? user.active === 'Y' :
+                                                    activeTab === 'pending' ? user.active === 'P' :
+                                                        user.active === 'N'
                                             )
+
                                             .map((user, idx) => (
                                                 <tr
                                                     key={idx}
@@ -1169,33 +1239,82 @@ const handleReleaseAccount = async () => {
                                                     <td className="global-ref-td-ui">{user.rcName || user.rcCode || "-"}</td>
                                                     <td className="global-ref-td-ui">{user.position || "-"}</td>
                                                     <td className="global-ref-td-ui">{user.emailAdd || "-"}</td>
-                                                    <td className="global-ref-td-ui">
+                                                    {/* <td className="global-ref-td-ui">
                                                         {user.active === 'Y' ? 'Yes' : 'No'}
+                                                    </td> */}
+                                                    <td className="global-ref-td-ui">
+                                                        {activeLabel(user.active)}
                                                     </td>
-                                                    <td className="global-ref-td-ui text-center sticky right-10">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditUser(user);
-                                                            }}
-                                                            className="global-ref-td-button-edit-ui"
-                                                        >
-                                                            <FontAwesomeIcon icon={faEdit} />
-                                                        </button>
+
+                                                    {/* Edit */}
+                                                    <td className="sticky right-[110px] px-2 py-0.5 bg-blue-50 z-[30]">
+                                                        <div className="flex justify-center items-center h-full">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleEditUser(user); }}
+                                                                title="Edit"
+                                                                className="
+        flex items-center justify-center
+        h-7 w-7
+        rounded
+        bg-blue-500 text-white hover:bg-blue-600
+        shadow-sm transition
+        focus:outline-none focus:ring-1 focus:ring-blue-300
+      "
+                                                            >
+                                                                <FontAwesomeIcon icon={faEdit} className="text-[12px]" />
+                                                            </button>
+                                                        </div>
                                                     </td>
-                                                    <td className="global-ref-td-ui text-center sticky right-0">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedUser(user);
-                                                                handleDeleteUser(user);
-                                                            }}
-                                                            className="global-ref-td-button-delete-ui"
-                                                            title={`Delete ${user.userName || user.userCode}`}
-                                                        >
-                                                            <FontAwesomeIcon icon={faTrashAlt} />
-                                                        </button>
+
+                                                    {/* Set Role */}
+                                                    <td className="sticky right-[55px] px-2 py-0.5 bg-blue-50 z-[40]">
+                                                        <div className="flex justify-center items-center h-full">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedUser(user);
+                                                                    setShowUserRoleModal(true);
+                                                                }}
+                                                                title="Set Role"
+                                                                className="
+        flex items-center justify-center
+        h-7 w-7
+        rounded
+        bg-blue-500 text-white hover:bg-blue-600
+        shadow-sm transition
+        focus:outline-none focus:ring-1 focus:ring-blue-300
+      "
+                                                            >
+                                                                <FontAwesomeIcon icon={faUserShield} className="text-[12px]" />
+                                                            </button>
+                                                        </div>
                                                     </td>
+
+                                                    {/* Delete */}
+                                                    <td className="sticky right-0 px-1 py-0.5 bg-blue-50 z-[50]">
+                                                        <div className="flex justify-center items-center h-full">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedUser(user);
+                                                                    handleDeleteUser(user);
+                                                                }}
+                                                                title="Delete"
+                                                                className="
+        flex items-center justify-center
+        h-7 w-7
+        rounded
+        bg-red-500 text-white hover:bg-red-600
+        shadow-sm transition
+        focus:outline-none focus:ring-1 focus:ring-red-300
+      "
+                                                            >
+                                                                <FontAwesomeIcon icon={faTrashAlt} className="text-[12px]" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+
+
                                                 </tr>
                                             ))
                                     )}
@@ -1207,10 +1326,11 @@ const handleReleaseAccount = async () => {
                                 <div className="text-xs opacity-80 font-semibold">
                                     Total Records: {
                                         filtered.filter(user =>
-                                            activeTab === 'active'
-                                                ? user.active === 'Y'
-                                                : user.active === 'N'
+                                            activeTab === 'active' ? user.active === 'Y' :
+                                                activeTab === 'pending' ? user.active === 'P' :
+                                                    user.active === 'N'
                                         ).length
+
                                     }
                                 </div>
                                 <div className="flex items-center gap-2">

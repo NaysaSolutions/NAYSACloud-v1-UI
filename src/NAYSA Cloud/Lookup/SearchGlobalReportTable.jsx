@@ -298,15 +298,34 @@ const SearchGlobalReportTable = forwardRef(
       });
     }, [data, filters, sortConfig, columns]);
 
-    const shouldSumColumn = (col) => {
-      if (col.renderType !== "number" && col.renderType !== "currency")
-        return false;
-      const label = col.label.toLowerCase();
-      const key = col.key.toLowerCase();
-      if (totalExemptions.some((ex) => label.includes(ex) || key.includes(ex)))
-        return false;
-      return true;
-    };
+
+
+  const shouldSumColumn = (col) => {
+  const noTotalKeys = [
+    "unitCost",
+    "currRate",
+    "unitPrice",
+    "unitCost",
+    "runBal",
+  ].map(k => k.toLowerCase());
+
+  if (!col) return false;
+  const key = String(col.key ?? "").toLowerCase();
+  const label = String(col.label ?? "").toLowerCase();
+
+  if (noTotalKeys.includes(key)) return false;
+  if (col.renderType !== "number" && col.renderType !== "currency")
+    return false;
+
+  if (totalExemptions.some(ex => label.includes(ex) || key.includes(ex)))
+    return false;
+
+  return true;
+};
+
+
+
+
 
     const calculateAggregates = (rows) => {
       const sums = {};

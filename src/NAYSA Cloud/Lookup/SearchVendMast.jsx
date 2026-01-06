@@ -15,7 +15,8 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
       vendTin: '',
       atcCode: '',
       vatCode: '',
-      addr: ''
+      addr: '',
+      paytermCode: ''
     });
     const [loading, setLoading] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
@@ -27,7 +28,7 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
             // Reset state when modal closes
             setPayee([]);
             setFiltered([]);
-            setFilters({ vendCode: '', vendName: '', source: '', vendTin: '', atcCode: '', vatCode: '', addr: '' });
+            setFilters({ vendCode: '', vendName: '', source: '', vendTin: '', atcCode: '', vatCode: '', addr: '', paytermCode: '' });
             setSortConfig({ key: '', direction: 'asc' });
             setCurrentPage(1); // Reset page to 1
             return; // Exit early if not open
@@ -43,7 +44,7 @@ const PayeeMastLookupModal = ({ isOpen, onClose, customParam }) => {
     const fetchData = async (page = 1) => {
         setLoading(true);
         try {
-            const { data: result } = await apiClient.get("/lookupPayee", {
+            const { data: result } = await apiClient.get("/lookupVendMast", {
             params: {
                 PARAMS: JSON.stringify({ search: customParam ?? "ActiveAll" }),
                 page,

@@ -3,15 +3,8 @@ import { FiUser, FiLock, FiEye, FiEyeOff, FiGlobe } from "react-icons/fi";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
-import {
-  apiClient,
-  http,
-  ensureCsrf,
-  setTenant,
-  getTenant,
-} from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+import { apiClient, setTenant } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 
-/* ---------- helpers ---------- */
 function normalizeCompaniesPayload(raw) {
   let arr = [];
   if (Array.isArray(raw)) arr = raw;
@@ -41,13 +34,14 @@ function normalizeCompaniesPayload(raw) {
 }
 
 export default function Login({ onSwitchToRegister, onForgot }) {
-  const { login: ctxLogin, user, loading } = useAuth() ?? {};
+  const { setUser } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ USER_CODE: "", PASSWORD: "" });
   const [companies, setCompanies] = useState([]);
-  // Prefer getTenant() so it reads from localStorage (shared across tabs)
-  const [companyCode, setCompanyCode] = useState(getTenant() || "");
+  const [companyCode, setCompanyCode] = useState(
+    localStorage.getItem("companyCode") || ""
+  );
   const [loadingCompanies, setLoadingCompanies] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -55,40 +49,26 @@ export default function Login({ onSwitchToRegister, onForgot }) {
   const [capsOn, setCapsOn] = useState(false);
   const pwdRef = useRef(null);
 
-  // If already logged in, go home
-  useEffect(() => {
-    if (!loading && user) navigate("/", { replace: true });
-  }, [user, loading, navigate]);
-
-  // Keep tenant header in sync with companyCode
-  useEffect(() => {
-    if (companyCode) setTenant(companyCode);
-  }, [companyCode]);
-
-  // Load companies (public GET; interceptor will disable credentials automatically)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         setLoadingCompanies(true);
         const { data } = await apiClient.get("/companies");
-        const options = normalizeCompaniesPayload(data).filter((x) => x.code || x.database);
-        if (!alive) return;
+        const options = normalizeCompaniesPayload(data).filter(
+          (x) => x.code || x.database
+        );
 
+        if (!alive) return;
         setCompanies(options);
 
-        // Initialize or correct selected company from storage
-        const persisted = getTenant() || "";
-        if (!persisted && options.length === 1) {
+        if (!companyCode && options.length === 1) {
           setCompanyCode(options[0].code || options[0].database || "");
         } else if (
-          persisted &&
-          !options.some((o) => o.code === persisted || o.database === persisted)
+          companyCode &&
+          !options.some((o) => o.code === companyCode || o.database === companyCode)
         ) {
           if (options[0]) setCompanyCode(options[0].code || options[0].database || "");
-          else setCompanyCode("");
-        } else if (persisted) {
-          setCompanyCode(persisted);
         }
       } catch (e) {
         Swal.fire({
@@ -106,7 +86,12 @@ export default function Login({ onSwitchToRegister, onForgot }) {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (companyCode) localStorage.setItem("companyCode", companyCode);
+  }, [companyCode]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -116,23 +101,12 @@ export default function Login({ onSwitchToRegister, onForgot }) {
   const handleCaps = (e) =>
     setCapsOn(e.getModifierState && e.getModifierState("CapsLock"));
 
-  // Fallback cookie login if context login isn't provided (kept for compatibility)
-  const doCookieLogin = async ({ USER_CODE, PASSWORD }) => {
-    await ensureCsrf();
-    await http.post("/login", { USER_CODE, PASSWORD });
-    const { data } = await apiClient.get("/me");
-    return data;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const enteredUser = form.USER_CODE.trim();
-    const enteredPass = form.PASSWORD;
-
-    if (!enteredUser || !enteredPass) return;
+    if (!form.USER_CODE.trim() || !form.PASSWORD) return;
 
     if (!companyCode) {
-      Swal.fire({
+      await Swal.fire({
         icon: "warning",
         title: "Select Company",
         text: "Please choose a company before logging in.",
@@ -142,41 +116,92 @@ export default function Login({ onSwitchToRegister, onForgot }) {
 
     setIsLoading(true);
     try {
-      // Ensure tenant header set for both /login and /me calls
       setTenant(companyCode);
 
-      if (typeof ctxLogin === "function") {
-        await ctxLogin({
-          companyCode,
-          USER_CODE: enteredUser,
-          PASSWORD: enteredPass,
-        });
-      } else {
-        // Fallback flow
-        await doCookieLogin({ USER_CODE: enteredUser, PASSWORD: enteredPass });
+      const { data } = await apiClient.post("/login", {
+        USER_CODE: form.USER_CODE.trim(),
+        PASSWORD: form.PASSWORD,
+      });
+
+      if (data?.status !== "success") {
+        throw new Error(data?.message || "Login failed.");
       }
 
-      Swal.fire({
+      const d = data?.data || {};
+      const normalized = {
+        USER_CODE: d.USER_CODE ?? form.USER_CODE.trim(),
+        USER_NAME: d.USER_NAME ?? d.username ?? form.USER_CODE.trim(),
+      };
+
+      setUser(normalized);
+
+      await Swal.fire({
         toast: true,
         position: "top-end",
         icon: "success",
-        title: `Welcome back, ${enteredUser}!`,
+        title: `Welcome back, ${normalized.USER_NAME}!`,
         showConfirmButton: false,
-        timer: 1500,
+        timer: 1800,
         timerProgressBar: true,
       });
 
       navigate("/", { replace: true });
     } catch (err) {
-        Swal.fire({
-            icon: "error",
-            title: "Login failed",
-            text:
-              err?.response?.data?.message ||
-              err?.message ||
-              "Please try again.",
-            confirmButtonText: "OK",
-          });
+      const status = err?.response?.status;
+      const code = err?.response?.data?.code;
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Please try again.";
+
+      // ✅ Pending
+      if (status === 403 && code === "PENDING") {
+        await Swal.fire({
+          icon: "info",
+          title: "Awaiting System Administrator Approval",
+          html: `
+            <p style="font-size: 14px; color: #1f2937;">
+              Your account is currently <strong>pending activation</strong>.<br/>
+              Please wait for the administrator to approve your account and send a temporary password.
+            </p>
+          `,
+          confirmButtonText: "OK",
+          confirmButtonColor: "#1e3a8a",
+          background: "#f9fafb",
+          iconColor: "#2563eb",
+        });
+        return;
+      }
+
+      // ✅ Inactive
+      if (status === 403 && code === "INACTIVE") {
+        await Swal.fire({
+          icon: "error",
+          title: "Account Inactive",
+          text: msg || "Your account has been deactivated. Please contact the administrator.",
+          confirmButtonText: "OK",
+        });
+        return;
+      }
+
+      // ✅ Seat limit
+      if (status === 429 && code === "SEAT_LIMIT") {
+        await Swal.fire({
+          icon: "warning",
+          title: "Login Limit Reached",
+          text: msg || "Maximum concurrent users reached. Please try again later.",
+          confirmButtonText: "OK",
+        });
+        return;
+      }
+
+      // ✅ Generic error
+      await Swal.fire({
+        icon: "error",
+        title: "Login failed",
+        text: msg,
+        confirmButtonText: "OK",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +231,7 @@ export default function Login({ onSwitchToRegister, onForgot }) {
                 Company
                 {!loadingCompanies && (
                   <span className="ml-2 text-xs text-slate-500">
-                    ({(companies || []).length} found)
+                    ({companies.length} found)
                   </span>
                 )}
               </span>
@@ -222,8 +247,8 @@ export default function Login({ onSwitchToRegister, onForgot }) {
                   <option value="" disabled>
                     {loadingCompanies ? "Loading companies…" : "Select a company"}
                   </option>
-                  {(companies || []).map((c) => {
-                    const value = c.code || c.database; // middleware accepts code or database
+                  {companies.map((c) => {
+                    const value = c.code || c.database;
                     const label = c.company || value || "(unnamed)";
                     return (
                       <option key={value || label} value={value}>
@@ -257,7 +282,9 @@ export default function Login({ onSwitchToRegister, onForgot }) {
             <label className="block">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">Password</span>
-                {capsOn && <span className="text-xs font-semibold text-white">Caps Lock is ON</span>}
+                {capsOn && (
+                  <span className="text-xs font-semibold text-white">Caps Lock is ON</span>
+                )}
               </div>
               <div className="relative">
                 <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -330,7 +357,10 @@ export default function Login({ onSwitchToRegister, onForgot }) {
           </form>
 
           <div className="mt-6 text-center">
-            <button onClick={onSwitchToRegister} className="text-sm text-slate-700 hover:underline">
+            <button
+              onClick={onSwitchToRegister}
+              className="text-sm text-slate-700 hover:underline"
+            >
               Don’t have an account? <span className="text-sky-700">Register</span>
             </button>
             <p className="mt-3 text-xs text-slate-500">
@@ -342,4 +372,3 @@ export default function Login({ onSwitchToRegister, onForgot }) {
     </div>
   );
 }
-

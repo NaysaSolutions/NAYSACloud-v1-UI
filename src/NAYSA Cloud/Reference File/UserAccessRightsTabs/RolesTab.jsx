@@ -1,309 +1,133 @@
-import { useState, useEffect } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faUserShield, faInfoCircle, faEye, faUndo, faCheck } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSpinner, faUserShield
+} from "@fortawesome/free-solid-svg-icons";
 
 import {
-  useSwalErrorAlert,
   useSwalSuccessAlert,
   useSwalWarningAlert,
+  useSwalErrorAlert,
 } from "@/NAYSA Cloud/Global/behavior";
 
-const RolesTab = ({ users, roles, appliedUserRoles, setAppliedUserRoles, fetchUserRoles }) => {
-  const [selectedUsers, setSelectedUsers] = useState(
-    () => JSON.parse(sessionStorage.getItem("ar_selectedUsers") || "[]")
-  );
+const RolesTab = forwardRef(({ users, roles, appliedUserRoles, setAppliedUserRoles, fetchUserRoles }, ref) => {
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState([]);
-  const [viewingRoles, setViewingRoles] = useState(
-    () => JSON.parse(sessionStorage.getItem("ar_viewingRoles") || "false")
-  );
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [pendingUnassign, setPendingUnassign] = useState(
-    () => JSON.parse(sessionStorage.getItem("ar_pendingUnassign") || "[]")
-  );
-
-  const handleRoleCheckboxChange = (role) => {
-    const roleCode = role.roleCode;
-
-    const usersWithRole = selectedUsers.filter(
-      (userCode) => appliedUserRoles.has(`${userCode}-${roleCode}`)
-    );
-
-    const allUsersHaveRole = usersWithRole.length === selectedUsers.length;
-    const someUsersHaveRole =
-      usersWithRole.length > 0 && usersWithRole.length < selectedUsers.length;
-
-    const isCurrentlySelected = selectedRoles.includes(roleCode);
-    const isPendingUnassign = pendingUnassign.includes(roleCode);
-
-    // A) All selected users already have the role, and it's not already queued for add
-    // Unchecking means: queue for removal (toggle)
-    if (allUsersHaveRole && !isCurrentlySelected) {
-      setPendingUnassign((prev) =>
-        isPendingUnassign ? prev.filter((c) => c !== roleCode) : [...prev, roleCode]
-      );
-      return;
-    }
-
-    // B) Some users have it; unchecking here means "assign to the remaining"
-    if (someUsersHaveRole && !isCurrentlySelected) {
-      setSelectedRoles((prev) => [...prev, roleCode]);
-      return;
-    }
-
-    // C) Role was newly selected (to add) — uncheck cancels the add
-    if (isCurrentlySelected) {
-      setSelectedRoles((prev) => prev.filter((c) => c !== roleCode));
-      return;
-    }
-
-    // D) Otherwise (nobody has it) — checking means add
-    setSelectedRoles((prev) => [...prev, roleCode]);
-  };
+  const [viewingRoles, setViewingRoles] = useState(false);
+  const [usersLoading] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   const handleViewRole = () => {
     if (selectedUsers.length === 0) {
       useSwalWarningAlert("No Users Selected", "Please select at least one user before viewing roles.");
       return;
     }
-    setViewingRoles(true);
-    fetchUserRoles(selectedUsers);
-  };
 
+    // Auto-select roles that are already applied to selected users
+    const preSelectedRoles = new Set();
+    selectedUsers.forEach(userCode => {
+      roles.forEach(role => {
+        if (appliedUserRoles.has(`${userCode}-${role.roleCode}`)) {
+          preSelectedRoles.add(role.roleCode);
+        }
+      });
+    });
+
+    setSelectedRoles(Array.from(preSelectedRoles));
+    setViewingRoles(true);
+  };
   const handleResetUserRoleMatching = () => {
     setSelectedUsers([]);
     setSelectedRoles([]);
-    setPendingUnassign([]);
     setViewingRoles(false);
-    sessionStorage.removeItem("ar_selectedUsers");
-    sessionStorage.removeItem("ar_viewingRoles");
-    sessionStorage.removeItem("ar_pendingUnassign");
-    sessionStorage.removeItem("ar_appliedUserRoles"); // clear cached roles
   };
 
   const handleApplyRoles = async () => {
-    if (selectedUsers.length === 0) return;
+    if (selectedUsers.length === 0) {
+      useSwalWarningAlert("No Users Selected", "Please select at least one user before applying roles.");
+      return;
+    }
+
+    // Find roles to add and remove
+    const rolesToApply = selectedRoles;
+    const rolesToRemove = [];
+    selectedUsers.forEach(userCode => {
+      roles.forEach(role => {
+        const combo = `${userCode}-${role.roleCode}`;
+        if (appliedUserRoles.has(combo) && !rolesToApply.includes(role.roleCode)) {
+          rolesToRemove.push({ userCode, roleCode: role.roleCode });
+        }
+      });
+    });
 
     try {
-      // A. ADD new roles (selectedRoles)
-      if (selectedRoles.length > 0) {
-        const upsertPayload = {
-          dt1: selectedRoles.map((roleCode) => ({ roleCode })),
-          dt2: selectedUsers.map((userCode) => ({ userCode })),
+      let anyChange = false;
+
+      // Apply new roles
+      if (rolesToApply.length > 0) {
+        const payload = {
+          dt1: rolesToApply.map((code) => ({
+            roleCode: code || "",
+          })),
+          dt2: selectedUsers.map((code) => ({
+            userCode: code
+          }))
         };
 
-        const { data: up } = await apiClient.post("/UpsertUserRole", {
-          json_data: { json_data: upsertPayload },
-        });
-
-        const upStatus = up?.data?.status ?? up?.status;
-        if (upStatus !== "success") {
-          await useSwalErrorAlert(
-            "Error!",
-            up?.data?.message || up?.message || "Error saving role."
-          );
+        const { data: res } = await apiClient.post("/UpsertUserRole", { json_data: { json_data: payload } });
+        if (res.data?.status === "success") {
+          anyChange = true;
+        } else {
+          await useSwalErrorAlert("Error!", res.data?.message || "Something went wrong.");
           return;
         }
-
-        // reflect adds in UI
-        setAppliedUserRoles((prev) => {
-          const s = new Set(prev);
-          selectedUsers.forEach((u) =>
-            selectedRoles.forEach((r) => s.add(`${u}-${r}`))
-          );
-          return s;
-        });
       }
 
-      // B. DELETE roles queued in pendingUnassign
-      if (pendingUnassign.length > 0) {
-        const deletePayload = {
-          dt1: pendingUnassign.map((roleCode) => ({ roleCode })),
-          dt2: selectedUsers.map((userCode) => ({ userCode })),
+      // Remove unchecked roles
+      for (const { userCode, roleCode } of rolesToRemove) {
+        const payload = {
+          dt1: [{ roleCode }],
+          dt2: [{ userCode }]
         };
-
-        const { data: del } = await apiClient.post("/deleteUserRole", {
-          json_data: { json_data: deletePayload }, // same envelope as Upsert
-        });
-
-        const delStatus = del?.data?.status ?? del?.status;
-        if (delStatus !== "success") {
-          await useSwalErrorAlert(
-            "Error!",
-            del?.data?.message || del?.message || "Error deleting user role."
-          );
-          return;
-        }
-
-        // reflect deletes in UI
-        setAppliedUserRoles((prev) => {
-          const s = new Set(prev);
-          selectedUsers.forEach((u) =>
-            pendingUnassign.forEach((r) => s.delete(`${u}-${r}`))
-          );
-          return s;
-        });
+        await apiClient.post("/deleteUserRole", { json_data: { json_data: payload } });
+        anyChange = true;
       }
 
-      // Done
-      setSelectedRoles([]);
-      setPendingUnassign([]);
-      await useSwalSuccessAlert("Success!", "Roles have been applied.");
+      // Update appliedUserRoles state to persist checkboxes
+      const newAppliedCombinations = new Set(appliedUserRoles);
+      selectedUsers.forEach(userCode => {
+        roles.forEach(role => {
+          const combo = `${userCode}-${role.roleCode}`;
+          if (rolesToApply.includes(role.roleCode)) {
+            newAppliedCombinations.add(combo);
+          } else {
+            newAppliedCombinations.delete(combo);
+          }
+        });
+      });
+      setAppliedUserRoles(newAppliedCombinations);
+
+      // Refresh from server
+      await fetchUserRoles(selectedUsers);
+
+      // Always show success alert if apply was clicked
+      await useSwalSuccessAlert("Success!", "Users-Role updated successfully!");
     } catch (e) {
       console.error(e);
-      await useSwalErrorAlert(
-        "Error!",
-        e?.response?.data?.message || "Something went wrong."
-      );
+      await useSwalErrorAlert("Error!", e?.response?.data?.message || "Error saving role.");
     }
   };
 
-  const handleRemoveRole = async (userCode, roleCode) => {
-    try {
-      console.log(`Removing role ${roleCode} from user ${userCode}`);
-
-      // keep the same envelope as Upsert
-      const payload = {
-        dt1: [{ roleCode }],
-        dt2: [{ userCode }],
-      };
-
-      const { data: res } = await apiClient.post("/deleteUserRole", {
-        json_data: { json_data: payload },
-      });
-
-      // accept either {data:{status:"success"}} or {status:"success"}
-      const status = res?.data?.status ?? res?.status;
-
-      if (status === "success") {
-        setAppliedUserRoles(prev => {
-          const s = new Set(prev);
-          s.delete(`${userCode}-${roleCode}`);
-          return s;
-        });
-        return true;
-      } else {
-        await useSwalErrorAlert(
-          "Error!",
-          res?.data?.message || res?.message || "Failed to remove role from user."
-        );
-        return false;
-      }
-    } catch (error) {
-      console.error("Error removing role:", error);
-      await useSwalErrorAlert(
-        "Error!",
-        "Failed to remove role from user: " +
-        (error.response?.data?.message || error.message || "Unknown error")
-      );
-      return false;
-    }
-  };
-
-  const isRoleChecked = (roleCode) => {
-    if (pendingUnassign.includes(roleCode)) return false; // show unchecked if queued to remove
-    if (selectedRoles.includes(roleCode)) return true;
-
-    if (selectedUsers.length === 0) return false;
-    return selectedUsers.every((userCode) =>
-      appliedUserRoles.has(`${userCode}-${roleCode}`)
-    );
-  };
-
-  // Check if some but not all users have the role
-  const isRolePartial = (roleCode) => {
-    if (selectedUsers.length === 0) return false;
-
-    const usersWithRole = selectedUsers.filter(userCode =>
-      appliedUserRoles.has(`${userCode}-${roleCode}`)
-    );
-
-    return usersWithRole.length > 0 && usersWithRole.length < selectedUsers.length;
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // PERSIST/RESTORE: users, flags, and appliedUserRoles (NEW)
-  // ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    sessionStorage.setItem("ar_selectedUsers", JSON.stringify(selectedUsers));
-  }, [selectedUsers]);
-
-  useEffect(() => {
-    sessionStorage.setItem("ar_viewingRoles", JSON.stringify(viewingRoles));
-  }, [viewingRoles]);
-
-  useEffect(() => {
-    sessionStorage.setItem("ar_pendingUnassign", JSON.stringify(pendingUnassign));
-  }, [pendingUnassign]);
-
-  // ✅ NEW: Persist appliedUserRoles as an array of keys
-  useEffect(() => {
-    sessionStorage.setItem("ar_appliedUserRoles", JSON.stringify([...appliedUserRoles]));
-  }, [appliedUserRoles]);
-
-  // ✅ NEW: Restore appliedUserRoles on mount (so boxes are checked immediately after reload)
-  useEffect(() => {
-    const savedRoles = sessionStorage.getItem("ar_appliedUserRoles");
-    if (savedRoles) {
-      try {
-        const arr = JSON.parse(savedRoles);
-        if (Array.isArray(arr)) setAppliedUserRoles(new Set(arr));
-      } catch {
-        // ignore JSON errors
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // If in "view roles" mode and users are selected after a reload,
-  // refresh from backend so the cache stays accurate.
-  useEffect(() => {
-    if (viewingRoles && selectedUsers.length > 0) {
-      fetchUserRoles(selectedUsers); // This should update appliedUserRoles (Set of "user-role" keys)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewingRoles, selectedUsers]);
-  // ─────────────────────────────────────────────────────────────
+  useImperativeHandle(ref, () => ({
+    viewRole: handleViewRole,
+    apply: handleApplyRoles,
+    reset: handleResetUserRoleMatching,
+  }));
 
   return (
     <div className="w-full">
-      {/* Action Buttons */}
-      <div className="flex gap-2 mb-4 justify-end">
-        <button
-          className={`${viewingRoles
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-purple-600"
-            } text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700`}
-          onClick={handleViewRole}
-          disabled={viewingRoles}
-        >
-          <FontAwesomeIcon icon={faEye} /> View Role
-        </button>
-        <button
-          className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700"
-          onClick={handleResetUserRoleMatching}
-        >
-          <FontAwesomeIcon icon={faUndo} /> Reset
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            const hasChanges = selectedRoles.length > 0 || pendingUnassign.length > 0;
-            if (!viewingRoles || !hasChanges) return; // hard stop
-            e.stopPropagation();
-            handleApplyRoles();
-          }}
-          disabled={!viewingRoles || (selectedRoles.length === 0 && pendingUnassign.length === 0)}
-          className={`px-3 py-2 rounded-lg flex items-center gap-2 text-white
-    ${!viewingRoles || (selectedRoles.length === 0 && pendingUnassign.length === 0)
-              ? "bg-gray-400 cursor-not-allowed pointer-events-none"
-              : "bg-blue-600 hover:bg-blue-700"
-            }`}
-        >
-          <FontAwesomeIcon icon={faCheck} /> Apply
-        </button>
-
-      </div>
+      
 
       {/* Two Tables Side by Side */}
       <div className="flex flex-col md:flex-row gap-6">
@@ -386,8 +210,9 @@ const RolesTab = ({ users, roles, appliedUserRoles, setAppliedUserRoles, fetchUs
                     </thead>
                     <tbody>
                       {roles.map((role, index) => {
-                        const isChecked = isRoleChecked(role.roleCode);
-                        const isPartial = isRolePartial(role.roleCode);
+                        const isAppliedToSelectedUsers = selectedUsers.some(userCode =>
+                          appliedUserRoles.has(`${userCode}-${role.roleCode}`)
+                        );
 
                         return (
                           <tr
@@ -395,21 +220,23 @@ const RolesTab = ({ users, roles, appliedUserRoles, setAppliedUserRoles, fetchUs
                             className="global-tran-tr-ui"
                           >
                             <td className="global-ref-td-ui">{role.roleCode}</td>
-                            <td className="global-ref-td-ui">
-                              {role.roleName}
-                              {isPartial && (
-                                <span className="ml-2 text-xs text-orange-600" title="Some users have this role">
-                                  (Partial)
-                                </span>
-                              )}
-                            </td>
+                            <td className="global-ref-td-ui">{role.roleName}</td>
                             <td className="global-ref-td-ui text-center">
                               <input
                                 type="checkbox"
                                 className="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                checked={isChecked}
-                                onChange={() => handleRoleCheckboxChange(role)}
-                                style={isPartial ? { accentColor: 'orange' } : {}}
+                                checked={selectedRoles.includes(role.roleCode)}
+                                onChange={() => {
+                                  setSelectedRoles((prev) => {
+                                    if (prev.includes(role.roleCode)) {
+                                      return prev.filter(
+                                        (roleCode) => roleCode !== role.roleCode
+                                      );
+                                    } else {
+                                      return [...prev, role.roleCode];
+                                    }
+                                  });
+                                }}
                               />
                             </td>
                           </tr>
@@ -436,26 +263,20 @@ const RolesTab = ({ users, roles, appliedUserRoles, setAppliedUserRoles, fetchUs
       {selectedUsers.length > 0 && (
         <div className="mt-4 bg-blue-50 p-2 rounded text-xs">
           {viewingRoles
-            ? `Managing roles for ${selectedUsers.length} selected user(s). Check/uncheck roles and click Apply to save changes.`
+            ? `Assigning roles to ${selectedUsers.length} selected user(s). Please select roles and click Apply.`
             : `${selectedUsers.length} user(s) selected. Click "View Role" to continue.`}
         </div>
       )}
 
       {viewingRoles && selectedRoles.length > 0 && (
         <div className="mt-2 bg-green-50 p-2 rounded text-xs">
-          {`${selectedRoles.length} role(s) selected to apply to selected user(s).`}
+          {`${selectedRoles.length} role(s) selected to apply.`}
         </div>
       )}
 
-      {selectedUsers.length > 0 && viewingRoles && (
-        <div className="mt-2 bg-yellow-50 p-2 rounded text-xs">
-          <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
-          <strong>How it works:</strong> Checked roles are applied to ALL selected users.
-          Uncheck an applied role to remove it. Roles marked "(Partial)" are only applied to some users.
-        </div>
-      )}
+
     </div>
   );
-};
+});
 
 export default RolesTab;

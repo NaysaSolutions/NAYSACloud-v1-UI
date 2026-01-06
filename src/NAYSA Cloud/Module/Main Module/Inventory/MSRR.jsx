@@ -25,14 +25,14 @@ import RCLookupModal from "../../../Lookup/SearchRCMast.jsx";
 import MSLookupModal from "../../../Lookup/SearchMSMast.jsx";
 import PayeeMastLookupModal from "../../../Lookup/SearchVendMast";
 import PaytermLookupModal from "../../../Lookup/SearchPayTermRef.jsx";
+import SearchPOOpenModal from "../../../Lookup/SearchPOOpenModal.jsx";
 import VATLookupModal from "../../../Lookup/SearchVATRef.jsx";
-
-// JO.jsx (top of file)
-import SearchPROpenModal from "../../../Lookup/SearchOpenPRBalance.jsx";
+import WarehouseLookupModal from "../../../Lookup/SearchWareMast.jsx";
+import LocationLookupModal from "../../../Lookup/SearchLocation.jsx";
 
 // Configuration
-import { postRequest } from "../../../Configuration/BaseURL.jsx";
-import { useReset } from "../../../Components/ResetContext";
+import { postRequest, fetchData } from "../../../Configuration/BaseURL.jsx";
+import { useReset } from "../../../Components/ResetContext.jsx";
 
 import {
   docTypeNames,
@@ -48,8 +48,6 @@ import {
   useTopHSOption,
   useTopDocControlRow,
   useTopDocDropDown,
-  useTopPayTermRow,
-  useTopVatRow,
 } from "@/NAYSA Cloud/Global/top1RefTable";
 
 import {
@@ -70,7 +68,7 @@ import {
 // Header
 import Header from "@/NAYSA Cloud/Components/Header";
 
-const JO = () => {
+const MSRR = (item) => {
   const loadedFromUrlRef = useRef(false);
   const navigate = useNavigate();
   const { resetFlag } = useReset();
@@ -86,6 +84,8 @@ const JO = () => {
     glCurrGlobal1: "",
     glCurrGlobal2: "",
     glCurrGlobal3: "",
+    drNo: "",
+    siNo: "",
 
     // Document information
     documentName: "",
@@ -95,11 +95,7 @@ const JO = () => {
     documentNo: "",
     documentStatus: "",
     status: "OPEN",
-
-    currencyCode: "",
-    currencyName: "Philippine Peso",
-    currencyRate: "1.000000",
-    defaultCurrRate: "1.000000",
+    currRate: "",
 
     // UI state
     activeTab: "basic",
@@ -112,7 +108,7 @@ const JO = () => {
 
     // Header information
     header: {
-      jo_date: new Date().toISOString().split("T")[0], // PR Date
+      rr_date: new Date().toISOString().split("T")[0], // PR Date
     },
 
     branchCode: "HO",
@@ -125,11 +121,8 @@ const JO = () => {
     currCode: "",
     currName: "",
     attention: "",
-
-    vendName: null,
-    vendCode: null,
-    paytermCode: "",
-    paytermName: "",
+    vendCode: "",
+    vendName: "",
 
     // Currency information (not used by sproc_PHP_PR but kept for UI consistency)
     currCode: "",
@@ -138,24 +131,27 @@ const JO = () => {
     defaultCurrRate: "1.000000",
 
     // Other Header Info (aligned to PR header fields)
-    prTranTypes: [],
-    prTypes: [],
-    selectedPrTranType: "",
-    selectedPrType: "",
+    poTranTypes: [],
+    poTypes: [],
+    selectedPoTranType: "",
+    selectedPoType: "",
     cutoffCode: "",
     rcCode: "",
     rcName: "", // responsibility center name for display
     requestDept: "",
-    refPrNo1: "",
+    vendCode: "",
+    vendName: "",
+    refPoNo1: "",
     refPrNo2: "",
     remarks: "",
     billtermCode: "",
     billtermName: "",
     noReprints: "0",
-    prCancelled: "",
+    poCancelled: "",
+    poNo: "",
+    payTerm: "",
     userCode: "NSI",
-    sourcePrNo: "",
-    sourcePrBranchCode: "",
+    selectedPOStatus: "",
 
     // Detail lines (PR dt1)
     detailRows: [],
@@ -172,16 +168,31 @@ const JO = () => {
     showAttachModal: false,
     showSignatoryModal: false,
     showPostModal: false,
-    showPaytermModal: false,
-    payeeModalOpen: false,
-    prLookupModalOpen: false,
+    poLookupModalOpen: false,
+    poLookupModalOpen: false,
+    vatLookupOpen: false,
+    vatLookupRowIndex: null,
+    // Specs modal
+specsModalOpen: false,
+specsRowIndex: null,
+specsTempText: "",
+
+
+    // Warehouse / Location header values
+    WHcode: "", // keep same key you already destructure
+    WHname: "",
+    locCode: "",
+    locName: "",
 
     // RC Lookup modal (table)
     rcLookupModalOpen: false,
     rcLookupContext: "", // "rc" or "reqDept"
 
+    // Modal flags
+    warehouseLookupOpen: false,
+    locationLookupOpen: false,
+
     msLookupModalOpen: false,
-    vatLookupModalOpen: false,
   });
 
   const updateState = (updates) => {
@@ -196,6 +207,8 @@ const JO = () => {
     documentStatus,
     documentNo,
     status,
+    drNo,
+    siNo,
 
     activeTab,
     isLoading,
@@ -205,6 +218,8 @@ const JO = () => {
     isSaveDisabled,
     isResetDisabled,
     isFetchDisabled,
+    poNo,
+    selectedPOType,
 
     glCurrMode,
     glCurrDefault,
@@ -214,14 +229,14 @@ const JO = () => {
     glCurrGlobal2,
     glCurrGlobal3,
     defaultCurrRate,
-    handleSelectAPAccount,
+    poStatus,
+    RRDate,
 
     // Header
     branchCode,
     branchName,
-
-    vendName,
-    vendCode,
+    payTerm,
+    WHcode,
 
     // Responsibility Center
     rcCode,
@@ -234,36 +249,32 @@ const JO = () => {
     currCode,
     currName,
     attention,
-    prDate,
+    poDate,
     cutoffFrom,
     cutoffTo,
-    prStatus,
 
-    prTranTypes,
-    prTypes,
-    selectedPrTranType,
-    selectedPrType,
+    vendCode,
+    vendName,
+
+    poTranTypes,
+    poTypes,
+    selectedPoTranType,
+    selectedPoType,
     cutoffCode,
     requestDept,
-    refPrNo1,
+    dateNeeded,
+    refPoNo1,
     refPrNo2,
     remarks,
     billtermCode,
     billtermName,
     noReprints,
-    prCancelled,
+    poCancelled,
     userCode,
-    showPaytermModal,
-    selectedRowIndex,
-    sourcePrNo,
-    sourcePrBranchCode,
+    currRate,
+    drno,
 
     detailRows,
-
-    currencyCode,
-    currencyName,
-    currencyRate,
-    payTerm,
 
     // Modals
     currencyModalOpen,
@@ -274,11 +285,6 @@ const JO = () => {
     showAttachModal,
     showSignatoryModal,
     showPostModal,
-    payeeModalOpen,
-    prLookupModalOpen,
-    paytermCode,
-    prLookupOpen,
-    vatLookupModalOpen,
 
     // RC Lookup
     rcLookupModalOpen,
@@ -287,72 +293,22 @@ const JO = () => {
     msLookupModalOpen,
   } = state;
 
-  const handleSelectPR = (result) => {
-    // Always close the modal
-    updateState({ prLookupModalOpen: false });
-
-    // If user clicked Close, result will be null
-    if (!result) return;
-
-    const { header, details } = result;
-
-    // 1) Update JO header from selected PR header
-    //    Adjust these mappings to what you really want.
-    updateState({
-      refPrNo1: header.PRNo, // if you have refPrNo1 in JO header
-      // you can also carry dept / remarks if needed:
-      requestDept: header.ReqRcCode ?? state.requestDept,
-      remarks: state.remarks || header.Particulars || "",
-    });
-
-    // 2) Map selected PR detail lines into JO detailRows
-    //    Adjust the target fields based on your JO row schema.
-    const mappedDetails = details.map((d) => ({
-      // Example mapping – change to your JO detail structure:
-      jobCode: d.JobCode, // or from d.Type / some lookup
-      scopeOfWork: d.ScopeOfWork,
-      specification: "",
-      quantity: d.QtyNeeded?.toString() ?? "0",
-      unitPrice: "0.000000",
-      uomCode: d.UOM,
-      grossAmt: "0.000000",
-      discRate: "0.000000",
-      discAmt: "0.000000",
-      totalAmt: "0.000000",
-      vatCode: "",
-      vatAmt: "0.000000",
-      netAmt: "0.000000",
-      deliveryDate: d.DateNeeded?.substring(0, 10) || "",
-      prNo: d.PRNo,
-      prLn: d.Ln?.toString() ?? "",
-      acctCode: "",
-    }));
-
-    const newDetailRows = [...state.detailRows, ...mappedDetails];
-
-    updateState({
-      detailRows: newDetailRows,
-    });
-  };
-
   const [header, setHeader] = useState({
-    jo_date: new Date().toISOString().split("T")[0],
+    rr_date: new Date().toISOString().split("T")[0],
   });
 
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [totals, setTotals] = useState({
-    totalGross: "0.000000",
-    totalVat: "0.000000",
-    totalNet: "0.000000",
+    totalQtyNeeded: "",
   });
 
   // PR.jsx
-  const docType = docTypes?.JO || "JO";
+  const docType = docTypes?.MSRR || "MSRR";
 
   const pdfLink = docTypePDFGuide[docType];
   const videoLink = docTypeVideoGuide[docType];
-  const documentTitle = docTypeNames[docType] || "Job Order";
+  const documentTitle = docTypeNames[docType] || "MS Receiving Report";
 
   const displayStatus = status || "OPEN";
   const statusMap = {
@@ -365,34 +321,9 @@ const JO = () => {
     displayStatus
   );
 
-  const updateTotalsDisplay = (rows) => {
-    const arr = rows || [];
-
-    let gross = 0;
-    let vat = 0;
-    let net = 0;
-
-    arr.forEach((r) => {
-      gross += parseFormattedNumber(r.grossAmt || 0);
-      vat += parseFormattedNumber(r.vatAmt || 0);
-      net += parseFormattedNumber(r.netAmt || 0);
-    });
-
+  const updateTotalsDisplay = (qtyNeeded) => {
     setTotals({
-      totalGross: formatNumber(gross || 0, 6),
-      totalVat: formatNumber(vat || 0, 6),
-      totalNet: formatNumber(net || 0, 6),
-    });
-  };
-
-  const handleCurrencyRateBlur = (e) => {
-    const num = formatNumber(e.target.value, 6);
-    updateState({
-      currencyRate: isNaN(num) ? "0.000000" : num,
-      withCurr2:
-        (glCurrMode === "M" && glCurrDefault !== currencyCode) ||
-        glCurrMode === "D",
-      withCurr3: glCurrMode === "T",
+      totalQtyNeeded: formatNumber(qtyNeeded, 6),
     });
   };
 
@@ -427,6 +358,40 @@ const JO = () => {
     }
   }, [glCurrMode, glCurrDefault, currCode]);
 
+  const openSpecsModal = (rowIndex) => {
+  if (isFormDisabled) return;
+
+  const current = detailRows?.[rowIndex]?.itemSpecs ?? "";
+  updateState({
+    specsModalOpen: true,
+    specsRowIndex: rowIndex,
+    specsTempText: current,
+  });
+};
+
+const closeSpecsModal = () => {
+  updateState({
+    specsModalOpen: false,
+    specsRowIndex: null,
+    specsTempText: "",
+  });
+};
+
+const saveSpecsModal = () => {
+  const idx = state.specsRowIndex;
+  if (idx === null || idx === undefined) return closeSpecsModal();
+
+  const updated = [...detailRows];
+  updated[idx] = {
+    ...updated[idx],
+    itemSpecs: state.specsTempText ?? "",
+  };
+
+  updateState({ detailRows: updated });
+  closeSpecsModal();
+};
+
+
   const LoadingSpinner = () => (
     <div className="global-tran-spinner-main-div-ui">
       <div className="global-tran-spinner-sub-div-ui">
@@ -445,6 +410,110 @@ const JO = () => {
   // INITIAL LOAD / RESET
   // ==========================
 
+  const handleClosePOOpenModal = async (selection) => {
+    // closed without selection
+    if (!selection) {
+      updateState({ poLookupModalOpen: false });
+      return;
+    }
+
+    const { header, details } = selection;
+
+    const vendCodeFromDetail = details?.[0]?.VEND_CODE ?? "";
+
+   const vatCodes = [...new Set((details || [])
+  .map(d => d.VAT_CODE)
+  .filter(Boolean)
+)];
+
+const vatRatePairs = await Promise.all(
+  vatCodes.map(async (code) => [code, await fetchVatRate(code)])
+);
+
+const vatRateMap = Object.fromEntries(vatRatePairs);
+
+
+    const vendNameFromDetail = details?.[0]?.VEND_NAME ?? ""; // if you later include it
+
+    updateState({
+      poLookupModalOpen: false,
+      poNo: header?.PoNo || "",
+      branchCode: header?.BC || branchCode,
+      rcCode: header?.RcCode || rcCode,
+
+      // ✅ vendor from Header (VendCode/VendName), fallback to Detail (VEND_CODE)
+      vendCode:
+        header?.VendCode ?? header?.Vend_Code ?? vendCodeFromDetail ?? "",
+      vendName:
+        header?.VendName ?? header?.Vend_Name ?? vendNameFromDetail ?? "",
+    });
+
+    // 2) map selected PO detail lines into MSRR detailRows
+    const newRows = (details || []).map((r, idx) => {
+      const poQty = Number(r.PO_QUANTITY ?? 0);
+      const rrQty = Number(r.QTY_BALANCE ?? poQty - Number(r.RR_QTY ?? 0));
+      const unitCost = Number(r.UNIT_COST ?? 0);
+
+      const gross = Number(r.GROSS_AMOUNT ?? poQty * unitCost);
+      const discAmt = Number(r.DISC_AMOUNT ?? 0);
+      const vatAmt = Number(r.VAT_AMOUNT ?? 0);
+      const net = Number(r.NET_AMOUNT ?? gross - discAmt); // VAT may already be included depending on your design
+
+      return {
+        lN: Number(r.LINE_NO) || idx + 1,
+
+        // internal
+        invType: r.INV_TYPE || "",
+        poStatus: r.PO_STATUS || "",
+        groupId: r.CATEG_CODE || r.GROUP_ID || "",
+
+        // item
+        itemCode: r.ITEM_CODE || "",
+        itemName: r.ITEM_NAME || "",
+        itemSpecs: r.ITEM_SPECS || "",
+
+        uomCode: r.UOM_CODE || "",
+        uomCode2: r.UOM_CODE2 || "",
+        uomQty2: String(r.UOM_QTY2 ?? 0),
+
+        // quantities
+        poQty: String(poQty),
+        rrQty: String(rrQty),
+
+        // currency/costing
+        currCode: r.CURR_CODE || "PHP",
+        unitCost: String(unitCost),
+
+        // amounts
+        amount: String(r.ITEM_AMOUNT ?? gross), // Amount column
+        grossAmount: String(gross),
+        discRate: String(r.DISC_RATE ?? 0),
+        discAmount: String(discAmt),
+        vatCode: r.VAT_CODE || "",
+        vatAmount: String(vatAmt),
+        netAmount: String(net),
+
+        // date
+        dateNeeded: r.DEL_DATE ? String(r.DEL_DATE).substring(0, 10) : "",
+
+       vatCode: r.VAT_CODE || "",
+vatRate: vatRateMap?.[r.VAT_CODE] !== undefined
+  ? String(vatRateMap[r.VAT_CODE])
+  : "",
+
+// if you have VAT rate ref table later
+        lotNo: "",
+        bbDate: "",
+        qcStatus: "",
+        whName: state.WHname || "",
+        locName: state.locName || "",
+        freeQty: "0.000000",
+      };
+    });
+
+    updateState({ detailRows: newRows });
+  };
+
   const handleReset = () => {
     loadDocDropDown();
     loadDocControl();
@@ -453,15 +522,21 @@ const JO = () => {
     const today = new Date().toISOString().split("T")[0];
 
     updateState({
-      header: { pr_date: today },
+      header: { rr_date: today },
       branchCode: "HO",
       branchName: "Head Office",
       cutoffCode: "",
+      poNo: "",
+      drNo: "",
+      siNo: "",
       rcCode: "",
       rcName: "",
       reqRcCode: "",
       reqRcName: "",
-      refPrNo1: "",
+      vendCode: "",
+      vendName: "",
+      dateNeeded: today, // <-- DEFAULT TO TODAY
+      refPoNo1: "",
       refPrNo2: "",
       remarks: "",
       documentNo: "",
@@ -476,35 +551,68 @@ const JO = () => {
       isFetchDisabled: false,
       status: "OPEN",
       noReprints: "0",
-      prCancelled: "",
+      poCancelled: "",
       detailRows: [],
       rcLookupModalOpen: false,
       rcLookupContext: "",
       msLookupModalOpen: false,
-      selectedRowIndex: null,
     });
 
-    updateTotalsDisplay([]);
+    updateTotalsDisplay(0);
+  };
+
+  const handleOpenVatLookup = (rowIndex) => {
+    if (isFormDisabled) return;
+    updateState({ vatLookupOpen: true, vatLookupRowIndex: rowIndex });
+  };
+
+  const handleCloseVatLookup = (vat) => {
+    const rowIndex = state.vatLookupRowIndex;
+
+    updateState({ vatLookupOpen: false, vatLookupRowIndex: null });
+
+    if (!vat || rowIndex === null || rowIndex === undefined) return;
+
+    const updatedRows = [...detailRows];
+    const row = { ...updatedRows[rowIndex] };
+
+    // set VAT code always
+    row.vatCode = vat?.vatCode || "";
+
+    // set VAT rate from lookup (supports various backend keys)
+    const rate =
+      vat?.vatRate ??
+      vat?.vat_rate ??
+      vat?.rate ??
+      vat?.vatPerc ??
+      vat?.vat_percent ??
+      "";
+
+    row.vatRate = String(vat?.vatRate ?? "");
+
+
+    updatedRows[rowIndex] = row;
+    updateState({ detailRows: updatedRows });
   };
 
   const loadCompanyData = async () => {
     updateState({ isLoading: true });
     try {
-      const [prTranDrop, prTypeDrop] = await Promise.all([
-        useTopDocDropDown(docType, "PRTRAN_TYPE"),
-        useTopDocDropDown(docType, "PR_TYPE"),
+      const [poTranDrop, poTypeDrop] = await Promise.all([
+        useTopDocDropDown(docType, "POTRAN_TYPE"),
+        useTopDocDropDown(docType, "PO_TYPE"),
       ]);
 
-      if (prTranDrop) {
+      if (poTranDrop) {
         updateState({
-          prTranTypes: prTranDrop,
-          selectedPrTranType: prTranDrop[0]?.DROPDOWN_CODE ?? "",
+          poTranTypes: poTranDrop,
+          selectedPoTranType: poTranDrop[0]?.DROPDOWN_CODE ?? "",
         });
       }
-      if (prTypeDrop) {
+      if (poTypeDrop) {
         updateState({
-          prTypes: prTypeDrop,
-          selectedPrType: prTypeDrop[0]?.DROPDOWN_CODE ?? "",
+          poTypes: poTypeDrop,
+          selectedPoType: poTypeDrop[0]?.DROPDOWN_CODE ?? "",
         });
       }
 
@@ -529,69 +637,6 @@ const JO = () => {
       }
     } catch (err) {
       console.error("Error fetching data:", err);
-    } finally {
-      updateState({ isLoading: false });
-    }
-  };
-
-  const handleClosePayeeModal = async (selectedData) => {
-    if (!selectedData) {
-      updateState({ payeeModalOpen: false });
-      return;
-    }
-
-    updateState({ payeeModalOpen: false, isLoading: true });
-
-    try {
-      // Set basic payee info
-      const payeeDetails = {
-        vendCode: selectedData?.vendCode || "",
-        vendName: selectedData?.vendName || "",
-        currCode: selectedData?.currCode || "",
-        acctCode: selectedData?.acctCode || "",
-      };
-
-      updateState({
-        vendName: payeeDetails,
-        vendCode: selectedData.vendCode,
-        apAccountCode: selectedData.acctCode || "",
-        apAccountName: selectedData.acctName || "",
-      });
-
-      // Update all existing detail rows with the payee's SL Code
-      const updatedRows = detailRows.map((row) => ({
-        ...row,
-        slCode: selectedData.vendCode,
-        slName: selectedData.vendName,
-      }));
-
-      updateState({ detailRows: updatedRows });
-
-      // FIX: Use postRequest with the correct payload structure
-      if (!selectedData.currCode) {
-        // The backend expects VEND_CODE as a field in the request, not wrapped in json_data
-        const vendResponse = await postRequest("getVendMast", {
-          VEND_CODE: selectedData.vendCode,
-        });
-
-        if (vendResponse.success) {
-          const vendData = JSON.parse(vendResponse.data[0].result);
-          payeeDetails.currCode = vendData[0]?.currCode;
-          payeeDetails.acctCode = vendData[0]?.acctCode;
-          updateState({
-            vendName: payeeDetails,
-            apAccountCode: vendData[0]?.acctCode || "",
-            apAccountName: vendData[0]?.acctName || "",
-          });
-        }
-      }
-
-      await Promise.all([
-        handleSelectCurrency(payeeDetails.currCode),
-        handleSelectAPAccount(payeeDetails.acctCode),
-      ]);
-    } catch (error) {
-      console.error("Error:", error);
     } finally {
       updateState({ isLoading: false });
     }
@@ -624,46 +669,12 @@ const JO = () => {
     }
   };
 
-  const handleClosePaytermModal = async (selectedPayterm) => {
-    if (selectedPayterm) {
-      await handleSelectPayTerm(selectedPayterm.paytermCode);
-    }
-    updateState({ showPaytermModal: false });
-  };
-
-  const handleSelectPayTerm = async (code) => {
-    if (!code) return;
-
-    const result = await useTopPayTermRow(code);
-    if (!result) return;
-
-    // If no row is selected, update header payterm
-    if (selectedRowIndex === null) {
-      updateState({
-        paytermCode: result.paytermCode,
-        paytermName: result.paytermName,
-      });
-      return;
-    }
-
-    // Otherwise, update the specific detail row
-    const updatedRows = [...detailRows];
-    updatedRows[selectedRowIndex] = {
-      ...updatedRows[selectedRowIndex],
-      paytermCode: result.paytermCode,
-      paytermName: result.paytermName,
-      // if you really need dueDate:
-      // dueDate: calculateDueDate(header.pr_date, result.daysDue),
-    };
-    updateState({ detailRows: updatedRows });
-  };
-
   const loadDocDropDown = async () => {
-    const data = await useTopDocDropDown(docType, "PRTRAN_TYPE");
+    const data = await useTopDocDropDown(docType, "POTRAN_TYPE");
     if (data) {
       updateState({
-        prTranTypes: data,
-        selectedPrTranType: data[0]?.DROPDOWN_CODE ?? "",
+        poTranTypes: data,
+        selectedPoTranType: data[0]?.DROPDOWN_CODE ?? "",
       });
     }
   };
@@ -672,7 +683,7 @@ const JO = () => {
   // FETCH (GET) – PR HEADER + DT1
   // ==========================
 
-  const fetchTranData = async (prNo, _branchCode) => {
+  const fetchTranData = async (rrNo, _branchCode) => {
     const resetState = () => {
       updateState({
         documentNo: "",
@@ -686,76 +697,115 @@ const JO = () => {
     updateState({ isLoading: true });
 
     try {
-      const data = await useFetchTranData(prNo, _branchCode, docType, "prNo");
+  const res = await useFetchTranData(rrNo, _branchCode, docType, "rrNo");
 
-      if (!data?.prId) {
-        Swal.fire({
-          icon: "info",
-          title: "No Records Found",
-          text: "Transaction does not exist.",
-        });
-        return resetState();
-      }
+  // ✅ handle Laravel format: { success:true, data:[{ result:"{...}" }] }
+  let data = res;
+  if (res?.success && Array.isArray(res?.data)) {
+    const raw = res.data?.[0]?.result;
+    data = raw ? JSON.parse(raw) : null;
+  }
 
-      let prDateForHeader = "";
-      if (data.prDate) {
-        const d = new Date(data.prDate);
-        prDateForHeader = isNaN(d) ? "" : d.toISOString().split("T")[0];
-      }
+  // ✅ RR "not found" must check rrHdId (or rrNo)
+  if (!data?.rrHdId) {
+    Swal.fire({
+      icon: "info",
+      title: "No Records Found",
+      text: "Transaction does not exist.",
+    });
+    return resetState();
+  }
 
-      const retrievedDetailRows = (data.dt1 || []).map((item) => ({
-        ...item,
-        lN: item.lN,
-        invType: item.invType || "",
-        groupId: item.groupId || "",
-        prStatus: item.prStatus || "",
-        itemCode: item.itemCode || "",
-        itemName: item.itemName || "",
-        uomCode: item.uomCode || "",
-        qtyOnHand: formatNumber(item.qtyOnHand ?? 0, 6),
-        qtyAlloc: formatNumber(item.qtyAlloc ?? 0, 6),
-        qtyNeeded: formatNumber(item.qtyNeeded ?? 0, 6),
-        uomCode2: item.uomCode2 || "",
-        uomQty2: formatNumber(item.uomQty2 ?? 0, 6),
-        itemSpecs: item.itemSpecs || "",
-        serviceCode: item.serviceCode || "",
-        serviceName: item.serviceName || "",
-        poQty: formatNumber(item.poQty ?? 0, 6),
-        rrQty: formatNumber(item.rrQty ?? 0, 6),
-      }));
+  const rrDateForHeader = data.rrDate
+    ? new Date(data.rrDate).toISOString().split("T")[0]
+    : "";
 
-      const totalQty = retrievedDetailRows.reduce(
-        (acc, r) => acc + (parseFormattedNumber(r.qtyNeeded) || 0),
-        0
-      );
-      updateTotalsDisplay(totalQty);
+  // ✅ Map RR dt1 -> your table expects rrQty field
+  const retrievedDetailRows = (data.dt1 || []).map((item, idx) => ({
+    lN: item.lN ?? String(idx + 1),
 
-      updateState({
-        documentStatus: data.status,
-        status: data.status,
-        documentID: data.prId,
-        documentNo: data.prNo,
-        branchCode: data.branchCode,
-        header: {
-          pr_date: prDateForHeader,
-        },
-        cutoffCode: data.cutoffCode || "",
-        rcCode: data.rcCode || "",
-        rcName: data.rcName || "",
-        custCode: data.rcCode || "",
-        custName: "",
-        selectedPrTranType: data.prTranType || "",
-        selectedPrType: data.prType || "",
-        refPrNo1: data.refPrNo1 || "",
-        refPrNo2: data.refPrNo2 || "",
-        remarks: data.remarks || "",
-        prCancelled: data.prCancelled || "",
-        noReprints: data.noReprints ?? "0",
-        detailRows: retrievedDetailRows,
-        isDocNoDisabled: true,
-        isFetchDisabled: true,
-      });
-    } catch (error) {
+    // references
+    prNo: item.prNo ?? "",
+    LineNo: item.LineNo ?? "",
+    poNo: item.poNo ?? "",
+    poLineNo: item.poLineNo ?? "",
+
+    rcCode: item.rcCode ?? "",
+    invType: item.invType ?? "",
+
+    itemCode: item.itemCode ?? "",
+    itemName: item.itemName ?? "",
+    uomCode: item.uomCode ?? "",
+
+    // ✅ RR quantity from backend is rrQuantity
+    rrQty: formatNumber(item.rrQuantity ?? 0, 6),
+    whName: item.whouseCode ?? "",   // ✅ so details show something
+locName: item.locCode ?? "",
+
+
+    // optional other amounts if your grid shows them
+    unitCost: formatNumber(item.unitCost ?? 0, 6),
+    grossAmount: formatNumber(item.grossAmount ?? 0, 2),
+    discRate: formatNumber(item.discRate ?? 0, 2),
+    discAmount: formatNumber(item.discAmount ?? 0, 2),
+    netAmount: formatNumber(item.netAmount ?? 0, 2),
+    vatCode: item.vatCode ?? "",
+    vatAmount: formatNumber(item.vatAmount ?? 0, 2),
+    itemAmount: formatNumber(item.itemAmount ?? 0, 2),
+
+    itemSpecs: item.itemSpecs ?? "",
+    lotNo: item.lotNo ?? "",
+    bbDate: item.bbDate ? new Date(item.bbDate).toISOString().split("T")[0] : "",
+    qstatCode: item.qstatCode ?? "",
+
+    whouseCode: item.whouseName ?? "",
+    locCode: item.locName ?? "",
+  }));
+
+  // ✅ total should be RR qty (not qtyNeeded)
+  const totalRRQty = retrievedDetailRows.reduce(
+    (acc, r) => acc + (parseFormattedNumber(r.rrQty) || 0),
+    0
+  );
+  updateTotalsDisplay(totalRRQty);
+
+  // ✅ Update state using RR keys
+  updateState({
+    documentStatus: data.status ?? "OPEN",
+    status: data.status ?? "OPEN",
+
+    documentID: data.rrHdId,
+    documentNo: data.rrNo,
+
+    branchCode: data.branchCode ?? _branchCode,
+
+    header: {
+      rr_date: rrDateForHeader,
+    },
+
+    vendCode: data.vendCode ?? "",
+    vendName: data.vendName ?? "",
+    poNo: data.poNo ?? "",
+    drNo: data.drNo ?? "",
+    siNo: data.siNo ?? "",
+    currCode: data.currCode ?? "PHP",
+    currRate: formatNumber(data.currRate ?? 1, 6),
+
+    WHcode: data.whouseCode ?? "",
+  WHname: data.whouseCode ?? "",   // ✅ fallback display
+  locCode: data.locCode ?? "",
+  locName: data.locCode ?? "",
+
+    remarks: data.remarks ?? "",
+    noReprints: data.noReprints ?? "0",
+
+    detailRows: retrievedDetailRows,
+
+    isDocNoDisabled: true,
+    isFetchDisabled: true,
+  });
+
+} catch (error) {
       console.error("Error fetching transaction data:", error);
       Swal.fire({
         icon: "error",
@@ -774,12 +824,12 @@ const JO = () => {
       return;
     }
 
-    const today = header.pr_date || new Date().toISOString().split("T")[0];
+    const today = header.rr_date || new Date().toISOString().split("T")[0];
 
     const newRow = {
       invType: "MS",
       groupId: selectedItem.categCode || "",
-      prStatus: status || "",
+      poStatus: status || "",
       itemCode: selectedItem.itemCode || "",
       itemName: selectedItem.itemName || "",
       uomCode: selectedItem.uom || "",
@@ -788,11 +838,14 @@ const JO = () => {
       qtyNeeded: "0.000000",
       uomCode2: "",
       uomQty2: "0.000000",
+      dateNeeded: today,
       itemSpecs: "",
       serviceCode: "",
       serviceName: "",
       poQty: "0.000000",
       rrQty: "0.000000",
+      freeQty: "0.000000",
+
     };
 
     const updatedRows = [...detailRows, newRow];
@@ -805,50 +858,7 @@ const JO = () => {
       (acc, r) => acc + (parseFormattedNumber(r.qtyNeeded) || 0),
       0
     );
-    updateTotalsDisplay(updatedRows);
-  };
-
-  // Same logic as useTopVatAmount in top1RefTable.js, but synchronous
-  const computeVatFromInclusive = (vatRate, grossAmt) => {
-    const rate = parseFormattedNumber(vatRate || 0); // % (e.g. 12)
-    const gross = parseFormattedNumber(grossAmt || 0); // VAT-inclusive amount
-
-    if (!rate || !gross) return 0;
-
-    const r = rate * 0.01; // convert to decimal (0.12)
-    // Formula: VAT portion from VAT-inclusive amount
-    return (gross * r) / (1 + r);
-  };
-
-  const recalcDetailRow = (row) => {
-    const qty = parseFormattedNumber(row.quantity || 0);
-    const unitPrice = parseFormattedNumber(row.unitPrice || 0);
-    const vatRate = row.vatRate ?? 0; // will be set when VAT is chosen
-
-    // 1) Gross = Quantity × Unit Price
-    const gross = qty * unitPrice;
-
-    // (Optional) Discount if you want to keep this working
-    const discRate = parseFormattedNumber(row.discRate || 0); // percent
-    const discAmt = gross * (discRate / 100);
-
-    // Base amount after discount (still VAT-inclusive if your price is inclusive)
-    const baseAfterDisc = gross - discAmt;
-
-    // 2) VAT amount using SAME logic as useTopVatAmount (inclusive)
-    const vatAmt = computeVatFromInclusive(vatRate, baseAfterDisc);
-
-    // Let Net be Amount EXCLUDING VAT (base - VAT)
-    const net = baseAfterDisc - vatAmt;
-
-    return {
-      ...row,
-      grossAmt: formatNumber(gross || 0, 6),
-      discAmt: formatNumber(discAmt || 0, 6),
-      totalAmt: formatNumber(baseAfterDisc || 0, 6), // total line amount incl VAT
-      vatAmt: formatNumber(vatAmt || 0, 6),
-      netAmt: formatNumber(net || 0, 6), // net of VAT
-    };
+    updateTotalsDisplay(totalQty);
   };
 
   const handlePrNoBlur = () => {
@@ -873,45 +883,43 @@ const JO = () => {
   };
 
   const handlePrTranTypeChange = (e) => {
-    updateState({ selectedPrTranType: e.target.value });
+    updateState({ selectedPoTranType: e.target.value });
   };
 
   const handlePrTypeChange = (e) => {
-    updateState({ selectedPrType: e.target.value });
+    updateState({ selectedPoType: e.target.value });
   };
 
   // ==========================
   // DETAIL (PR_DT1) HANDLERS
   // ==========================
-  const createEmptyDetailRow = (joDate) => ({
-    jobCode: "",
-    scopeOfWork: "",
-    specification: "",
-    quantity: "0.000000",
-    unitPrice: "0.000000",
-    uomCode: "",
-    grossAmt: "0.000000",
-    discRate: "0.000000",
-    discAmt: "0.000000",
-    totalAmt: "0.000000",
-    vatCode: "",
-    vatAmt: "0.000000",
-    netAmt: "0.000000",
-    deliveryDate: joDate || new Date().toISOString().split("T")[0],
-    prNo: "",
-    prLn: "",
-    acctCode: "",
-  });
+
+  const fetchVatRate = async (vatCode) => {
+  if (!vatCode) return "";
+
+  const res = await fetchData(`/getVat?VAT_CODE=${encodeURIComponent(vatCode)}`);
+
+  if (!res?.success) return "";
+
+  // Laravel returns: { success:true, data:[ { result:"[...json...]" } ] }
+  const row0 = res?.data?.[0];
+  if (!row0?.result) return "";
+
+  const parsed = JSON.parse(row0.result);
+  const vat = Array.isArray(parsed) ? parsed[0] : parsed;
+
+  return vat?.vatRate ?? "";
+};
+
 
   // When user clicks the "Add Line" button
-  // When user clicks the "Add Line" button
   const handleAddRowClick = () => {
-    // Optional: require Department before adding
-    if (!reqRcCode) {
+    // Block if RC or Requesting Dept is blank
+    if (!rcCode || !reqRcCode) {
       Swal.fire({
         icon: "warning",
         title: "Required Header Fields",
-        text: "Please select Department before adding JO lines.",
+        text: "Please select both Responsibility Center and Requesting Dept before adding PR lines.",
         timer: 2500,
         showConfirmButton: false,
       });
@@ -920,30 +928,18 @@ const JO = () => {
 
     if (isFormDisabled) return;
 
-    const newRow = createEmptyDetailRow(header.pr_date);
-    const updatedRows = [...detailRows, newRow];
-
-    updateState({ detailRows: updatedRows });
-
-    // Recompute totals (here we total Net Amount)
-    const netTotal = updatedRows.reduce(
-      (acc, r) => acc + (parseFormattedNumber(r.netAmt) || 0),
-      0
-    );
-    updateTotalsDisplay(netTotal);
-
-    // we no longer use showTypeDropdown in JO
-    setShowTypeDropdown(false);
+    // Toggle dropdown
+    setShowTypeDropdown((prev) => !prev);
   };
 
   // When user picks FG / MS / RM
   const handleSelectTypeAndAddRow = (typeCode) => {
-    const today = header.pr_date || new Date().toISOString().split("T")[0];
+    const today = header.rr_date || new Date().toISOString().split("T")[0];
 
     const newRow = {
       invType: typeCode,
       groupId: "",
-      prStatus: status || "",
+      poStatus: status || "",
       itemCode: "",
       itemName: "",
       uomCode: "",
@@ -952,11 +948,13 @@ const JO = () => {
       qtyNeeded: "0.000000",
       uomCode2: "",
       uomQty2: "0.000000",
+      dateNeeded: today,
       itemSpecs: "",
       serviceCode: "",
       serviceName: "",
       poQty: "0.000000",
       rrQty: "0.000000",
+      freeQty: "0.000000",
     };
 
     const updatedRows = [...detailRows, newRow];
@@ -983,207 +981,251 @@ const JO = () => {
 
     updateState({ detailRows: updatedRows });
 
-    const netTotal = updatedRows.reduce(
-      (acc, r) => acc + (parseFormattedNumber(r.netAmt) || 0),
+    const totalQty = updatedRows.reduce(
+      (acc, r) => acc + (parseFormattedNumber(r.qtyNeeded) || 0),
       0
     );
-    updateTotalsDisplay(updatedRows);
+    updateTotalsDisplay(totalQty);
   };
 
-  const handleDetailChange = (index, field, value) => {
-    const updatedRows = [...detailRows];
-    const row = { ...updatedRows[index] };
-
-    const numericFields = [
-      "quantity",
-      "unitPrice",
-      "grossAmt",
-      "discRate",
-      "discAmt",
-      "totalAmt",
-      "vatAmt",
-      "netAmt",
-    ];
-
-    if (numericFields.includes(field)) {
-      const sanitized = value.replace(/[^0-9.]/g, "");
-      row[field] = sanitized;
-    } else {
-      row[field] = value;
+  const handleCloseWarehouseLookup = (row) => {
+    if (!row) {
+      updateState({ warehouseLookupOpen: false });
+      return;
     }
 
-    // 🔄 Recompute amounts using the new values
-    const recalculatedRow = recalcDetailRow(row);
-    updatedRows[index] = recalculatedRow;
-
-    updateState({ detailRows: updatedRows });
-    updateTotalsDisplay(updatedRows);
+    updateState({
+      warehouseLookupOpen: false,
+      WHcode: row?.whCode ?? "",
+      WHname: row?.whName ?? "",
+    });
   };
+
+  const handleCloseLocationLookup = (row) => {
+    if (!row) {
+      updateState({ locationLookupOpen: false });
+      return;
+    }
+
+    updateState({
+      locationLookupOpen: false,
+      locCode: row?.locCode ?? "",
+      locName: row?.locName ?? "",
+      // optional: if you want to auto-set WH based on selected location:
+      // WHcode: row?.whCode ?? state.WHcode,
+    });
+  };
+
+  const recalcMSRRRow = (row) => {
+  const rrQty = parseFormattedNumber(row.rrQty || 0);
+  const freeQty = parseFormattedNumber(row.freeQty || 0);
+  const unitCost = parseFormattedNumber(row.unitCost || 0);
+  const vatRate = parseFormattedNumber(row.vatRate || 0);
+
+  // ✅ ONLY chargeable quantity
+  const chargeableQty = Math.max(rrQty - freeQty, 0);
+
+  const gross = chargeableQty * unitCost;
+
+  // VAT-inclusive example (adjust if exclusive in your setup)
+  const vatAmt = vatRate
+    ? gross - gross / (1 + vatRate / 100)
+    : 0;
+
+  const netAmt = gross - vatAmt;
+
+  return {
+    ...row,
+    grossAmount: formatNumber(gross, 2),
+    vatAmount: formatNumber(vatAmt, 2),
+    netAmount: formatNumber(netAmt, 2),
+    amount: formatNumber(gross, 2), // your Amount column
+  };
+};
+
+
+  const handleDetailChange = (index, field, value) => {
+  const updatedRows = [...detailRows];
+  let row = { ...updatedRows[index] };
+
+  if (
+    [
+      "rrQty",
+      "freeQty",
+      "unitCost",
+      "vatRate"
+    ].includes(field)
+  ) {
+    row[field] = value.replace(/[^0-9.]/g, "");
+  } else {
+    row[field] = value;
+  }
+
+  // ✅ recompute amounts EXCLUDING free quantity
+  row = recalcMSRRRow(row);
+
+  updatedRows[index] = row;
+  updateState({ detailRows: updatedRows });
+
+  // ✅ totals should count ONLY RR qty (not free)
+  const totalRRQty = updatedRows.reduce(
+    (acc, r) => acc + parseFormattedNumber(r.rrQty || 0),
+    0
+  );
+  updateTotalsDisplay(totalRRQty);
+};
+
 
   // ==========================
   // SAVE / UPSERT (PR + DT1)
   // ==========================
   const handleActivityOption = async (action) => {
-    // If already posted/cancelled/finalized, do not allow save
-    if (documentStatus !== "") {
-      return;
-    }
+  if (documentStatus !== "") return;
+  if (action !== "Upsert") return;
 
-    if (action !== "Upsert") return;
+  updateState({ isLoading: true });
 
-    updateState({ isLoading: true });
+  try {
+    const isNew = !state.documentID; // documentID should hold rrHdId for RR
 
-    try {
-      const {
-        branchCode,
-        documentNo,
-        documentID,
-        header,
-        selectedPrTranType,
-        selectedPrType,
-        refPrNo1,
-        refPrNo2,
-        cutoffCode,
-        rcCode, // <-- from state
-        reqRcCode, // <-- requesting dept code from state
-        reqRcName, // <-- requesting dept name from state
-        remarks,
-        noReprints,
-        prCancelled,
-        detailRows,
-      } = state;
+    const rrData = {
+      branchCode: state.branchCode,
 
-      // NEW vs EDIT
-      const isNew = !documentID;
+      // RR header keys expected by sproc_PHP_RR
+      rrNo: isNew ? "" : (state.documentNo || ""),
+      rrHdId: isNew ? 0 : (state.documentID || 0),
+      rrDate: header.rr_date,
 
-      // JO Payload (matches sproc_PHP_JO)
-      let totalGross = 0;
-      let totalVat = 0;
-      let totalDisc = 0;
-      let totalNet = 0;
+      poNo: state.poNo || "",
+      vendCode: state.vendCode || "",
+      vendName: state.vendName || "",
 
-      const dt1 = detailRows
-        // optional: only send rows with some content
-        .filter((row) => (row.scopeOfWork || "").trim() !== "")
-        .map((row, idx) => {
-          const qty = parseFormattedNumber(row.qtyNeeded || row.quantity || 0);
-          const unitCost = parseFormattedNumber(
-            row.unitCost || row.unitPrice || 0
-          );
+      drNo: state.drNo || "",
+      siNo: state.siNo || "",
+      siDate: header.si_date || null, // if you have this in header state
 
-          const grossAmount =
-            parseFormattedNumber(row.grossAmt || 0) || qty * unitCost;
+      currCode: state.currCode || "PHP",
+      currRate: parseFormattedNumber(state.currRate || 1),
 
-          const discRate = parseFormattedNumber(row.discRate || 0);
-          const discAmount =
-            parseFormattedNumber(row.discAmt || 0) ||
-            (grossAmount * discRate) / 100;
+      whouseCode: state.WHcode || "",
+      locCode: state.locCode || "",
 
-          const vatAmount = parseFormattedNumber(row.vatAmt || 0);
-          const netAmount =
-            parseFormattedNumber(row.netAmt || 0) || grossAmount - discAmount;
+      refDocNo: state.refDocNo || "", // if you have it, else remove
+      status: state.status || "OPEN",
+      apvNo: state.apvNo || "",
+      tranMode: state.tranMode || "",
 
-          const joAmount =
-            parseFormattedNumber(row.totalAmt || 0) || netAmount + vatAmount;
+      rrAmount: 0, // sproc recomputes from dt1 anyway, ok to send 0
+      remarks: state.remarks || "",
+      userCode: state.userCode || user?.USER_CODE || "NSI",
 
-          totalGross += grossAmount;
-          totalVat += vatAmount;
-          totalDisc += discAmount;
-          totalNet += netAmount;
+      // RR Details (dt1) must match OPENJSON mapping in your sproc
+      dt1: (state.detailRows || []).map((row, idx) => {
+        const rrQty = parseFormattedNumber(row.rrQty || 0);
+        const unitCost = parseFormattedNumber(row.unitCost || 0);
 
-          return {
-            // === MUST MATCH JO_DT1 expected fields ===
-            LINE_NO: idx + 1,
-            PR_NO: row.prNo || state.sourcePrNo || "",
-            SCOPE: row.scopeOfWork || "",
-            QTY_NEEDED: qty,
-            UOM_CODE: row.uomCode || "",
-            CURR_CODE: state.currCode || "PHP",
-            UNIT_COST: unitCost,
-            GROSS_AMOUNT: grossAmount,
-            DISC_RATE: discRate,
-            DISC_AMOUNT: discAmount,
-            NET_AMOUNT: netAmount,
-            VAT_CODE: row.vatCode || "",
-            VAT_AMOUNT: vatAmount,
-            JO_AMOUNT: joAmount,
-            DEL_DATE:
-              row.deliveryDate ||
-              state.header?.pr_date ||
-              state.header?.joDate ||
-              null,
-            RC_CODE: state.reqRcCode || state.rcCode || "",
-            PRLINE_NO: row.prLn || row.prlineNo || "",
-            REF_BRANCHCODE: state.sourcePrBranchCode || state.branchCode,
-          };
-        });
+        const grossAmount = parseFormattedNumber(row.grossAmount || 0); // you want gross_amount
+        const discRate = parseFormattedNumber(row.discRate || 0);
+        const discAmount = parseFormattedNumber(row.discAmount || 0);
+        const vatAmount = parseFormattedNumber(row.vatAmount || 0);
+        const netAmount = parseFormattedNumber(row.netAmount || 0);
 
-      // now header totals come from detail
-      const joData = {
-        // === JO HEADER (matches sproc_PHP_JO) ===
-        branchCode: state.branchCode,
+        return {
+          lN: String(row.lN ?? (idx + 1)),
+          lineNo: idx + 1,                 // ✅ ADD THIS (what sproc reads)
+          LineNo: idx + 1,  
 
-        joNo: isNew ? "" : state.documentNo || "",
-        joId: isNew ? "" : state.documentID || "",
-        joDate: state.header?.joDate || state.header?.pr_date,
+          rcCoderNo: row.rrNo || "",
+          LineNo: row.LineNo || "",
+          poNo: state.poNo || row.poNo || "",          // from selected PO
+          poLineNo: row.poLineNo || String(row.poLineNo ?? ""),
 
-        cutoffCode: state.cutoffCode || "",
-        rcCode: state.rcCode || "",
+          rcCode: state.rcCode || row.rcCode || "",
+          vendCode: state.vendCode || "",             // sproc uses header vendCode too
 
-        vendCode: state.vendCode || "",
-        vendName: state.vendName?.vendName || state.vendName || "",
-        address1: state.address1 || "",
-        address2: state.address2 || "",
-        address3: state.address3 || "",
-        vendContact: state.vendContact || "",
-        paytermCode: state.paytermCode || "",
+          invType: row.invType || "MS",
+          itemCode: row.itemCode || "",
+          itemName: row.itemName || "",
+          uomCode: row.uomCode || "",
 
-        joType: state.selectedPrType || state.joType || "",
-        delDate: state.delDate || state.header?.pr_date,
+          rrQuantity: Math.max(
+  parseFormattedNumber(row.rrQty || 0) -
+  parseFormattedNumber(row.freeQty || 0),
+  0
+),
 
-        currCode: state.currCode || "PHP",
-        currRate: parseFormattedNumber(state.currRate || 1),
 
-        refjoNo1: state.refPrNo1 || "", // re-using your Ref PR 1 as JO Ref 1
-        refjoNo2: state.refPrNo2 || "", // re-using your Ref PR 2 as JO Ref 2
+          uomCode2: row.uomCode2 || "",
+          uom2Quantity: parseFormattedNumber(row.uomQty2 || 0),
 
-        joAmount: totalGross,
-        vatAmount: totalVat,
-        discAmount: totalDisc,
-        advAmount: 0,
+          currCode: state.currCode || "PHP",
+          unitCost: unitCost,
+          fxAmount: parseFormattedNumber(row.fxAmount || 0),
 
-        remarks: state.remarks || "",
-        status: (state.documentStatus || "O").substring(0, 1), // e.g. "O", "F", "C"
-        joCancelled: state.joCancelled || "",
-        noReprints: Number(state.noReprints || 0),
-        userCode: userCode || state.userCode || "NSI",
+          grossAmount: grossAmount,
+          discRate: discRate,
+          discAmount: discAmount,
+          netAmount: netAmount,
 
-        dt1,
-      };
+          vatCode: row.vatCode || "",
+          vatAmount: vatAmount,
+          itemAmount: grossAmount, // if your RR item_amount should equal gross, adjust if needed
 
-      console.log("JO Payload", joData);
+          itemSpecs: row.itemSpecs || "",
+          lotNo: row.lotNo || "",
 
-      const response = await useTransactionUpsert(
-        docType, // this should already be "JO"
-        joData, // new payload above
-        updateState,
-        "joId", // returned id column from sproc_PHP_JO
-        "joNo" // returned number column from sproc_PHP_JO
+          // BB Date must be a date format but blank allowed:
+          bbDate: row.bbDate ? row.bbDate : null,
+
+          qstatCode: row.qcStatus || "",
+          categCode: row.categCode || row.groupId || "",
+          whouseCode: state.WHcode || "",
+          locCode: state.locCode || "",
+          poBalance: parseFormattedNumber(row.poBalance || 0),
+
+          detailedLoc: row.detailedLoc || "",
+          refBranchCode: state.branchCode || "",
+          refPoNo: state.poNo || "",
+          refRrNo: state.documentNo || "",
+          ucostNetVat: parseFormattedNumber(row.ucostNetVat || 0),
+
+          faCategCode: row.faCategCode || "",
+          faClassCode: row.faClassCode || "",
+          fLocCode: row.fLocCode || "",
+          whName: item.whouseName ?? "",
+          locName: item.locName ?? "",
+        };
+      }),
+
+      // dt2 (GL) — if your UI has no GL yet, pass empty and let sproc validation fail
+      // If you want to generate entries first, you should call mode GenerateEntries and fill dt2.
+      dt2: state.dt2 || [],
+    };
+
+    console.log("RR Payload", rrData);
+
+    const response = await useTransactionUpsert(
+      docType,           // "RR"
+      rrData,
+      updateState,
+      "rrHdId",          // <-- returned by sproc_PHP_RR
+      "rrNo"             // <-- returned by sproc_PHP_RR
+    );
+
+    if (response) {
+      useSwalshowSaveSuccessDialog(handleReset, () =>
+        handleSaveAndPrint(response.data[0].rrHdId)
       );
-
-      if (response) {
-        useSwalshowSaveSuccessDialog(handleReset, () =>
-          handleSaveAndPrint(response.data[0].prId)
-        );
-      }
-
-      updateState({ isDocNoDisabled: true, isFetchDisabled: true });
-    } catch (error) {
-      console.error("Error during transaction upsert:", error);
-    } finally {
-      updateState({ isLoading: false });
     }
-  };
+
+    updateState({ isDocNoDisabled: true, isFetchDisabled: true });
+  } catch (error) {
+    console.error("Error during RR upsert:", error);
+  } finally {
+    updateState({ isLoading: false });
+  }
+};
+
 
   // ==========================
   // PRINT / CANCEL / POST / ATTACH
@@ -1223,6 +1265,21 @@ const JO = () => {
     }
   };
 
+  const handleClosePayeeLookup = (row) => {
+    // closed/cancel
+    if (!row) {
+      updateState({ payeeLookupOpen: false });
+      return;
+    }
+
+    updateState({
+      payeeLookupOpen: false,
+      vendCode: row?.vend_code ?? row?.vendCode ?? "", // keep both if you have the typo key
+      vendCode: row?.vend_code ?? row?.vendCode ?? "",
+      vendName: row?.vend_name ?? row?.vendName ?? "",
+    });
+  };
+
   // ==========================
   // HISTORY – URL PARAM HANDLING
   // ==========================
@@ -1241,7 +1298,7 @@ const JO = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const docNo = params.get("prNo");
+    const docNo = params.get("poNo");
     const brCode = params.get("branchCode");
 
     if (!loadedFromUrlRef.current && docNo && brCode) {
@@ -1316,9 +1373,9 @@ const JO = () => {
     });
   };
 
-  const handleSaveAndPrint = async (prId) => {
+  const handleSaveAndPrint = async (poId) => {
     updateState({ showSpinner: true });
-    await useHandlePrint(prId, docType);
+    await useHandlePrint(poId, docType);
     updateState({ showSpinner: false });
   };
 
@@ -1375,63 +1432,9 @@ const JO = () => {
     }
   };
 
-  const handleCloseVATLookup = async (selectedVAT) => {
-    // Close only
-    if (!selectedVAT || selectedRowIndex == null) {
-      updateState({
-        vatLookupModalOpen: false,
-        selectedRowIndex: null,
-      });
-      return;
-    }
-
-    // Clone rows & target row
-    const updatedRows = [...detailRows];
-    const row = { ...updatedRows[selectedRowIndex] };
-
-    // 1) Set VAT code (and acct code if needed)
-    row.vatCode = selectedVAT.vatCode || "";
-    row.acctCode = selectedVAT.acctCode || row.acctCode || "";
-
-    // 2) Fetch VAT row to get vatRate (using top1RefTable)
-    let vatRate = 0;
-    try {
-      const vatRow = await useTopVatRow(row.vatCode);
-      vatRate = vatRow?.vatRate ?? 0;
-      row.vatRate = vatRate;
-    } catch (err) {
-      console.error("Error fetching VAT row:", err);
-      row.vatRate = row.vatRate ?? 0;
-    }
-
-    // 3) Recompute gross / VAT / net for this row
-    const recalculated = recalcDetailRow(row);
-
-    // 4) Save the row back
-    updatedRows[selectedRowIndex] = recalculated;
-
-    // 5) Recompute footer totals (if you don’t already do this elsewhere)
-    // 5) Recompute footer totals (if you don’t already do this elsewhere)
-    const totalGross = updatedRows.reduce(
-      (sum, r) => sum + (parseFormattedNumber(r.grossAmt || 0) || 0),
-      0
-    );
-    const totalVat = updatedRows.reduce(
-      (sum, r) => sum + (parseFormattedNumber(r.vatAmt || 0) || 0),
-      0
-    );
-    const totalNet = updatedRows.reduce(
-      (sum, r) => sum + (parseFormattedNumber(r.netAmt || 0) || 0),
-      0
-    );
-
-    updateState({
-      detailRows: updatedRows,
-      vatLookupModalOpen: false,
-      selectedRowIndex: null,
-    });
-
-    updateTotalsDisplay(updatedRows);
+  const handlePOStatChange = (e) => {
+    const selectedType = e.target.value;
+    updateState({ selectedJVType: selectedType });
   };
 
   const handleCloseCurrencyModal = async (selectedCurrency) => {
@@ -1448,7 +1451,7 @@ const JO = () => {
         const rate =
           code === glCurrDefault
             ? defaultCurrRate
-            : await useTopForexRate(code, header.pr_date);
+            : await useTopForexRate(code, header.rr_date);
 
         updateState({
           currCode: result.currCode,
@@ -1457,24 +1460,6 @@ const JO = () => {
         });
       }
     }
-  };
-
-  const handleClosePRLookup = (selectedRow) => {
-    if (!selectedRow) {
-      updateState({ prLookupModalOpen: false });
-      return;
-    }
-
-    // Map all the fields you want from the selected PR
-    updateState({
-      prLookupModalOpen: false,
-      sourcePrNo: selectedRow.prNo || "",
-      sourcePrBranchCode: selectedRow.branchCode || "",
-      // Optional: pre-fill some JO header values from PR
-      reqRcCode: selectedRow.reqRcCode || state.reqRcCode,
-      reqRcName: selectedRow.reqRcName || state.reqRcName,
-      remarks: state.remarks || selectedRow.remarks || "",
-    });
   };
 
   const handleCloseBillTermModal = async (selectedBillTerm) => {
@@ -1609,8 +1594,8 @@ const JO = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    id="prNo"
-                    value={state.prNo}
+                    id="poNo"
+                    value={state.documentNo}
                     onChange={(e) =>
                       updateState({ documentNo: e.target.value })
                     }
@@ -1629,8 +1614,8 @@ const JO = () => {
                     }`}
                     disabled={state.isDocNoDisabled}
                   />
-                  <label htmlFor="joNo" className="global-tran-floating-label">
-                    JO No.
+                  <label htmlFor="poNo" className="global-tran-floating-label">
+                    MSRR NO.
                   </label>
                   <button
                     className={`global-tran-textbox-button-search-padding-ui ${
@@ -1653,40 +1638,36 @@ const JO = () => {
                 <div className="relative">
                   <input
                     type="date"
-                    id="JODate"
+                    id="RRDate"
                     className="peer global-tran-textbox-ui"
-                    value={header.pr_date}
+                    value={header.rr_date}
                     onChange={(e) =>
                       setHeader((prev) => ({
                         ...prev,
-                        pr_date: e.target.value,
+                        rr_date: e.target.value,
                       }))
                     }
                     disabled={isFormDisabled}
                   />
                   <label
-                    htmlFor="JODate"
+                    htmlFor="RRDate"
                     className="global-tran-floating-label"
                   >
-                    JO Date
+                    MSRR Date
                   </label>
                 </div>
 
                 <div className="relative">
                   <input
                     type="text"
-                    id="sourcePrNo"
-                    value={sourcePrNo}
+                    id="poNo"
+                    value={poNo}
                     readOnly
                     placeholder=" "
-                    className="peer global-tran-textbox-ui cursor-pointer select-none"
-                    onFocus={(e) => e.target.blur()}
+                    className="peer global-tran-textbox-ui"
                   />
-                  <label
-                    htmlFor="sourcePrNo"
-                    className="global-tran-floating-label"
-                  >
-                    PR No.
+                  <label htmlFor="poNo" className="global-tran-floating-label">
+                    PO No
                   </label>
                   <button
                     type="button"
@@ -1696,7 +1677,7 @@ const JO = () => {
                         : "global-tran-textbox-button-search-enabled-ui"
                     } global-tran-textbox-button-search-ui`}
                     disabled={isFormDisabled}
-                    onClick={() => updateState({ prLookupModalOpen: true })}
+                    onClick={() => updateState({ poLookupModalOpen: true })}
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
@@ -1706,22 +1687,161 @@ const JO = () => {
               {/* Column 2: Responsibility Center / Requesting Dept / Tran Type */}
               <div className="global-tran-textbox-group-div-ui">
                 {/* Responsibility Center */}
-
-                {/* Requesting Dept. */}
+                {/* Payee Code. */}
                 <div className="relative group flex-[1.3]">
                   <input
                     type="text"
-                    id="rcName"
-                    value={reqRcName}
+                    id="vendCode"
+                    value={vendCode}
+                    readOnly
+                    placeholder=" "
+                    className="peer global-tran-textbox-ui"
+                    onClick={() => updateState({ payeeLookupOpen: true })}
+                  />
+
+                  <label
+                    htmlFor="vendCode"
+                    className="global-tran-floating-label"
+                  >
+                    Payee Code <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={isFormDisabled}
+                    className={`global-tran-textbox-button-search-padding-ui ${
+                      isFetchDisabled
+                        ? "global-tran-textbox-button-search-disabled-ui"
+                        : "global-tran-textbox-button-search-enabled-ui"
+                    } global-tran-textbox-button-search-ui`}
+                    onClick={() => updateState({ payeeLookupOpen: true })}
+                  >
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </button>
+                  <div></div>
+                </div>
+
+                {/* Ref No (Payee Name) */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="vendName"
+                    value={vendName}
+                    placeholder=" "
+                    onChange={(e) => updateState({ vendName: e.target.value })}
+                    className="peer global-tran-textbox-ui"
+                    disabled={isFormDisabled}
+                    onClick={() => updateState({ payeeLookupOpen: true })}
+                  />
+                  <label
+                    htmlFor="vendName"
+                    className="global-tran-floating-label"
+                  >
+                    Payee Name <span className="text-red-500">*</span>
+                  </label>
+                </div>
+
+                {/* PR Tran Type */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="siNo"
+                    value={siNo || ""}
+                    placeholder=" "
+                    onChange={(e) => updateState({ siNo: e.target.value })}
+                    className="peer global-tran-textbox-ui"
+                    disabled={isFormDisabled}
+                  />
+                  <label htmlFor="siNo" className="global-tran-floating-label">
+                    SI No.
+                  </label>
+                </div>
+
+                {/* DR DATE  */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="drNo"
+                    value={drNo || ""}
+                    placeholder=" "
+                    onChange={(e) => updateState({ drNo: e.target.value })}
+                    className="peer global-tran-textbox-ui"
+                    disabled={isFormDisabled}
+                  />
+                  <label htmlFor="drNo" className="global-tran-floating-label">
+                    Reference No. <span className="text-red-500">*</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Column 3: Currency */}
+              <div className="global-tran-textbox-group-div-ui">
+                {/* NEW FLEX CONTAINER FOR CURRENCY AND CURRENCY RATE */}
+                <div className="relative w-full">
+                  <div className="relative">
+                    <input
+                      type="date"
+                      id="SIdate"
+                      className="peer global-tran-textbox-ui"
+                      value={header.rr_date}
+                      onChange={(e) =>
+                        setHeader((prev) => ({
+                          ...prev,
+                          rr_date: e.target.value,
+                        }))
+                      }
+                      disabled={isFormDisabled}
+                    />
+                    <label
+                      htmlFor="SIdate"
+                      className="global-tran-floating-label"
+                    >
+                      SI Date
+                    </label>
+                  </div>
+
+                  {/* Currency */}
+                  {/* <div className="relative flex-grow w-2/3"> 
+                        <input type="text" 
+                            id="currCode" 
+                            value={currCode}  
+                            className="peer global-tran-textbox-ui hidden"/>
+                            
+                          <input type="text" 
+                            id="currName" 
+                            value={currName}  
+                            className="peer global-tran-textbox-ui"/>
+
+                        <label htmlFor="currCode" className="global-tran-floating-label">Currency</label>
+                        <button onClick={() => {updateState({ currencyModalOpen: true })}}                        
+                            className={`global-tran-textbox-button-search-padding-ui ${
+                                isFetchDisabled
+                                ? "global-tran-textbox-button-search-disabled-ui"
+                                : "global-tran-textbox-button-search-enabled-ui"
+                            } global-tran-textbox-button-search-ui`}
+                            disabled={isFormDisabled} 
+                        >
+                            <FontAwesomeIcon icon={faMagnifyingGlass} />
+                        </button>
+                    </div> */}
+                  <div></div>
+                </div>
+
+                {/* WareHouse  */}
+
+                <div className="relative group flex-[1.3]">
+                  <input
+                    type="text"
+                    id="WHcode"
+                    value={state.WHname || state.WHcode || ""}
                     readOnly
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
                   />
                   <label
-                    htmlFor="reqRcName"
+                    htmlFor="WHcode"
                     className="global-tran-floating-label"
                   >
-                    Department
+                    Warehouse <span className="text-red-500">*</span>
                   </label>
                   <button
                     type="button"
@@ -1733,213 +1853,148 @@ const JO = () => {
                     disabled={isFormDisabled}
                     onClick={() =>
                       !isFormDisabled &&
-                      updateState({
-                        rcLookupModalOpen: true,
-                        rcLookupContext: "reqDept",
-                      })
+                      updateState({ warehouseLookupOpen: true })
                     }
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
+                  <div></div>
                 </div>
 
-                {/* PR Tran Type */}
-                {/* Payee Code Input with optional lookup */}
-                <div className="relative">
+                {/* Currency */}
+                {/* <div className="relative flex-grow"> 
+                       <input type="text" id="currRate" value={currRate} 
+                            onChange={(e) => {
+                            const inputValue = e.target.value;
+                            const sanitizedValue = inputValue.replace(/[^0-9.]/g, '');
+                            if (/^\d*\.?\d{0,2}$/.test(sanitizedValue) || sanitizedValue === "") {
+                                updateState({ currRate: sanitizedValue })
+                            }}}
+                            onBlur={handleCurrRateNoBlur}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault(); 
+                                document.getElementById("refDocNo1")?.focus();
+                              }}}
+                            onFocus={(e) => {
+                              if (parseFormattedNumber(e.target.value) === 0) {
+                                e.target.value = "";
+                              }
+                            }} 
+
+                            placeholder=" "
+                            className="peer global-tran-textbox-ui text-right" disabled={isFormDisabled || glCurrDefault === currCode} />
+                            
+                        <label htmlFor="currName" className="global-tran-floating-label"> Currency Rate
+                        </label>
+                  </div> */}
+
+                {/* Payterm */}
+
+                <div className="relative group flex-[1.3]">
                   <input
                     type="text"
-                    id="payeeCode"
-                    value={vendName?.vendCode || ""}
+                    id="locName"
+                    value={state.locName || state.locCode || ""} // or show locCode if you prefer
                     readOnly
                     placeholder=" "
                     className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled}
-                  />
-                  <label
-                    htmlFor="payeeCode"
-                    className="global-tran-floating-label"
-                  >
-                    <span className="global-tran-asterisk-ui"> * </span>
-                    Payee Code
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => updateState({ payeeModalOpen: true })}
-                    className={`global-tran-textbox-button-search-padding-ui ${
-                      isFetchDisabled
-                        ? "global-tran-textbox-button-search-disabled-ui"
-                        : "global-tran-textbox-button-search-enabled-ui"
-                    } global-tran-textbox-button-search-ui`}
-                    disabled={isFormDisabled}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
-                </div>
-
-                {/* Payee Name Display */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="payeeName"
-                    placeholder=" "
-                    value={vendName?.vendName || ""}
-                    className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled}
-                  />
-                  <label
-                    htmlFor="payeeName"
-                    className="global-tran-floating-label"
-                  >
-                    <span className="global-tran-asterisk-ui"> * </span>
-                    Payee Name
-                  </label>
-                </div>
-
-                {/* Ref No (Ref PR No1) */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="refPrNo1"
-                    value={refPrNo1}
-                    placeholder=" "
-                    onChange={(e) => updateState({ refPrNo1: e.target.value })}
-                    className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled}
-                  />
-                  <label
-                    htmlFor="refPrNo1"
-                    className="global-tran-floating-label"
-                  >
-                    Attention
-                  </label>
-                </div>
-              </div>
-
-              {/* Column 3: PR Type / Date Needed / Ref No / Total Qty */}
-              <div className="global-tran-textbox-group-div-ui">
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="currCode"
-                    placeholder=" "
-                    value={currencyName}
-                    readOnly
-                    className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled}
-                  />
-                  <label
-                    htmlFor="currCode"
-                    className="global-tran-floating-label"
-                  >
-                    Currency
-                  </label>
-                  <button
-                    onClick={() => updateState({ currencyModalOpen: true })}
-                    className={`global-tran-textbox-button-search-padding-ui ${
-                      isFetchDisabled
-                        ? "global-tran-textbox-button-search-disabled-ui"
-                        : "global-tran-textbox-button-search-enabled-ui"
-                    } global-tran-textbox-button-search-ui`}
-                    disabled={isFormDisabled}
-                  >
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="currRate"
-                    value={currencyRate}
-                    onChange={(e) =>
-                      updateState({ currencyRate: e.target.value })
-                    }
-                    onBlur={handleCurrencyRateBlur}
-                    placeholder=" "
-                    className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled || glCurrDefault === currencyCode}
-                  />
-                  <label
-                    htmlFor="currRate"
-                    className="global-tran-floating-label"
-                  >
-                    Currency Rate
-                  </label>
-                </div>
-
-                {/* Date Needed */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="payTerm"
-                    value={paytermCode}
-                    placeholder=" "
-                    onChange={(e) =>
-                      updateState({ paytermCode: e.target.value })
-                    }
-                    className="peer global-tran-textbox-ui"
-                    disabled={isFormDisabled}
-                  />
-                  <label
-                    htmlFor="payTerm"
-                    className="global-tran-floating-label"
-                  >
-                    Payterm
-                  </label>
-                  <button
-                    type="button"
                     onClick={() =>
-                      updateState({
-                        showPaytermModal: true,
-                        selectedRowIndex: null,
-                      })
+                      !isFormDisabled &&
+                      updateState({ locationLookupOpen: true })
                     }
+                  />
+
+                  <label
+                    htmlFor="vendCode"
+                    className="global-tran-floating-label"
+                  >
+                    Location <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
                     className={`global-tran-textbox-button-search-padding-ui ${
                       isFetchDisabled
                         ? "global-tran-textbox-button-search-disabled-ui"
                         : "global-tran-textbox-button-search-enabled-ui"
                     } global-tran-textbox-button-search-ui`}
                     disabled={isFormDisabled}
+                    onClick={() =>
+                      !isFormDisabled &&
+                      updateState({ locationLookupOpen: true })
+                    }
                   >
                     <FontAwesomeIcon icon={faMagnifyingGlass} />
                   </button>
+                  <div></div>
                 </div>
 
-                {/* PR Type */}
-                <div className="relative">
-                  <select
-                    id="prType"
-                    className="peer global-tran-textbox-ui"
-                    value={selectedPrType}
-                    onChange={handlePrTypeChange}
-                    disabled={isFormDisabled}
+                {/* po type */}
+
+                {/* <div className="relative">
+                <select
+                  id="poType"
+                  className="peer global-tran-textbox-ui"
+                  value={selectedPoType}
+                  onChange={handlePrTypeChange}
+                  disabled={isFormDisabled}
+                >
+                  <option value="">Open</option>
+                  <option value="">Closed</option>
+                  <option value="">Cancelled</option>
+                </select>
+                <label htmlFor="prType" className="global-tran-floating-label">
+                  PO Status
+                </label>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                  <svg
+                    className="h-4 w-4 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
                   >
-                    <option value="">Open</option>
-                    <option value="">Closed</option>
-                    <option value="">Cancelled</option>
-                  </select>
-                  <label
-                    htmlFor="prType"
-                    className="global-tran-floating-label"
-                  >
-                    JO Status
-                  </label>
-                  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                    <svg
-                      className="h-4 w-4 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
                 </div>
+              </div> */}
+
+                {/* colum 3 */}
+                {/* </div>
+              <div className="relative">
+                <select
+                  id="poType"
+                  className="peer global-tran-textbox-ui"
+                  value={selectedPoType}
+                  onChange={handlePrTypeChange}
+                  disabled={isFormDisabled}
+                >
+                  <option value="">Open</option>
+                  <option value="">Closed</option>
+                  <option value="">Cancelled</option>
+                </select>
+                <label htmlFor="prType" className="global-tran-floating-label">
+                  PO Status
+                </label>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                  <svg
+                    className="h-4 w-4 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div> */}
               </div>
 
               {/* Remarks (spans all 3 header columns) */}
@@ -1973,7 +2028,7 @@ const JO = () => {
           <div className="global-tran-tab-nav-ui">
             <div className="flex flex-row sm:flex-row">
               <span className="global-tran-tab-padding-ui global-tran-tab-text_active-ui">
-                Job Detail
+                Item Detail
               </span>
             </div>
           </div>
@@ -1984,23 +2039,23 @@ const JO = () => {
                 <thead className="global-tran-thead-div-ui">
                   <tr>
                     <th className="global-tran-th-ui">LN</th>
-                    <th className="global-tran-th-ui">Job Code</th>
-                    <th className="global-tran-th-ui">Scope of Work</th>
+                    <th className="global-tran-th-ui">Item Code</th>
+                    <th className="global-tran-th-ui">Item Description</th>
                     <th className="global-tran-th-ui">Specification</th>
-                    <th className="global-tran-th-ui">Quantity</th>
-                    <th className="global-tran-th-ui">Unit Price</th>
                     <th className="global-tran-th-ui">UOM</th>
-                    <th className="global-tran-th-ui">Gross Amt</th>
-                    <th className="global-tran-th-ui">Disc Rate</th>
-                    <th className="global-tran-th-ui">Disc Amt</th>
-                    <th className="global-tran-th-ui">Total Amt</th>
-                    <th className="global-tran-th-ui">VAT Code</th>
-                    <th className="global-tran-th-ui">VAT Amt</th>
-                    <th className="global-tran-th-ui">Net Amt</th>
-                    <th className="global-tran-th-ui">Delivery Date</th>
-                    <th className="global-tran-th-ui">PR No</th>
-                    <th className="global-tran-th-ui">PR LN</th>
-                    <th className="global-tran-th-ui">Acct Code</th>
+                    <th className="global-tran-th-ui">RR Quantity</th>
+                    <th className="global-tran-th-ui">Free Quantity</th>
+                    <th className="global-tran-th-ui">Unit Cost</th>
+                    <th className="global-tran-th-ui">Amount</th>
+                    <th className="global-tran-th-ui">VAT</th>
+                    <th className="global-tran-th-ui">VAT Rate</th>
+                    <th className="global-tran-th-ui">VAT Amount</th>
+                    <th className="global-tran-th-ui">Net Amount</th>
+                    <th className="global-tran-th-ui">Lot No</th>
+                    <th className="global-tran-th-ui">BB Date</th>
+                    <th className="global-tran-th-ui">QC Status</th>
+                    <th className="global-tran-th-ui">Warehouse</th>
+                    <th className="global-tran-th-ui">Location</th>
                     {!isFormDisabled && (
                       <th className="global-tran-th-ui sticky right-0 bg-blue-300 dark:bg-blue-900 z-30">
                         Delete
@@ -2017,29 +2072,33 @@ const JO = () => {
                         {index + 1}
                       </td>
 
-                      {/* Job Code */}
+                      {/* Item Code */}
                       <td className="global-tran-td-ui">
                         <input
                           type="text"
                           className="w-[120px] global-tran-td-inputclass-ui"
-                          value={row.jobCode || ""}
+                          value={row.itemCode || ""}
                           onChange={(e) =>
-                            handleDetailChange(index, "jobCode", e.target.value)
+                            handleDetailChange(
+                              index,
+                              "itemCode",
+                              e.target.value
+                            )
                           }
                           disabled={isFormDisabled}
                         />
                       </td>
 
-                      {/* Scope of Work */}
+                      {/* Item Description */}
                       <td className="global-tran-td-ui">
                         <input
                           type="text"
                           className="w-[220px] global-tran-td-inputclass-ui"
-                          value={row.scopeOfWork || ""}
+                          value={row.itemName || ""}
                           onChange={(e) =>
                             handleDetailChange(
                               index,
-                              "scopeOfWork",
+                              "itemName",
                               e.target.value
                             )
                           }
@@ -2049,53 +2108,16 @@ const JO = () => {
 
                       {/* Specification */}
                       <td className="global-tran-td-ui">
-                        <input
-                          type="text"
-                          className="w-[220px] global-tran-td-inputclass-ui"
-                          value={row.specification || ""}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "specification",
-                              e.target.value
-                            )
-                          }
-                          disabled={isFormDisabled}
-                        />
-                      </td>
+                       <input
+  type="text"
+  className="w-[220px] global-tran-td-inputclass-ui cursor-pointer"
+  value={row.itemSpecs || ""}
+  readOnly
+  onDoubleClick={() => openSpecsModal(index)}
+  title="Double-click to edit specification"
+/>
 
-                      {/* Quantity */}
-                      <td className="global-tran-td-ui text-right">
-                        <input
-                          type="text"
-                          className="w-[100px] global-tran-td-inputclass-ui text-right"
-                          value={row.quantity || ""}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "quantity",
-                              e.target.value
-                            )
-                          }
-                          disabled={isFormDisabled}
-                        />
-                      </td>
 
-                      {/* Unit Price */}
-                      <td className="global-tran-td-ui text-right">
-                        <input
-                          type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.unitPrice || ""}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "unitPrice",
-                              e.target.value
-                            )
-                          }
-                          disabled={isFormDisabled}
-                        />
                       </td>
 
                       {/* UOM */}
@@ -2111,16 +2133,42 @@ const JO = () => {
                         />
                       </td>
 
-                      {/* Gross Amt */}
+                      {/* RR Quantity */}
                       <td className="global-tran-td-ui text-right">
                         <input
                           type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.grossAmt || ""}
+                          className="w-[120px] global-tran-td-inputclass-ui text-right"
+                          value={row.rrQty || ""}
+                          onChange={(e) =>
+                            handleDetailChange(index, "rrQty", e.target.value)
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </td>
+
+                      {/* Free Quantity */}
+                      <td className="global-tran-td-ui text-right">
+                        <input
+                          type="text"
+                          className="w-[120px] global-tran-td-inputclass-ui text-right"
+                          value={row.freeQty || ""}
+                          onChange={(e) =>
+                            handleDetailChange(index, "freeQty", e.target.value)
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </td>
+
+                      {/* Unit Cost */}
+                      <td className="global-tran-td-ui text-right">
+                        <input
+                          type="text"
+                          className="w-[120px] global-tran-td-inputclass-ui text-right"
+                          value={row.unitCost || ""}
                           onChange={(e) =>
                             handleDetailChange(
                               index,
-                              "grossAmt",
+                              "unitCost",
                               e.target.value
                             )
                           }
@@ -2128,16 +2176,16 @@ const JO = () => {
                         />
                       </td>
 
-                      {/* Disc Rate */}
+                      {/* Amount (GROSS_AMOUNT) */}
                       <td className="global-tran-td-ui text-right">
                         <input
                           type="text"
-                          className="w-[90px] global-tran-td-inputclass-ui text-right"
-                          value={row.discRate || ""}
+                          className="w-[140px] global-tran-td-inputclass-ui text-right"
+                          value={row.grossAmount || ""} // ✅ shows GROSS_AMOUNT
                           onChange={(e) =>
                             handleDetailChange(
                               index,
-                              "discRate",
+                              "grossAmount",
                               e.target.value
                             )
                           }
@@ -2145,29 +2193,50 @@ const JO = () => {
                         />
                       </td>
 
-                      {/* Disc Amt */}
+                      {/* VAT Code (lookup) */}
+                      <td className="global-tran-td-ui">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            className="w-[90px] global-tran-td-inputclass-ui pr-10 cursor-pointer"
+                            value={row.vatCode || ""}
+                            readOnly
+                            onClick={() => handleOpenVatLookup(index)}
+                            disabled={isFormDisabled}
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-1 flex items-center px-2"
+                            onClick={() => handleOpenVatLookup(index)}
+                            disabled={isFormDisabled}
+                            tabIndex={-1}
+                          >
+                            <FontAwesomeIcon icon={faMagnifyingGlass} />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* VAT Rate (from VAT lookup) */}
                       <td className="global-tran-td-ui text-right">
                         <input
                           type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.discAmt || ""}
-                          onChange={(e) =>
-                            handleDetailChange(index, "discAmt", e.target.value)
-                          }
-                          disabled={isFormDisabled}
+                          className="w-[120px] global-tran-td-inputclass-ui text-right"
+                          value={row.vatRate || ""}
+                          readOnly
+                          disabled
                         />
                       </td>
 
-                      {/* Total Amt */}
+                      {/* VAT Amount */}
                       <td className="global-tran-td-ui text-right">
                         <input
                           type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.totalAmt || ""}
+                          className="w-[140px] global-tran-td-inputclass-ui text-right"
+                          value={row.vatAmount || ""}
                           onChange={(e) =>
                             handleDetailChange(
                               index,
-                              "totalAmt",
+                              "vatAmount",
                               e.target.value
                             )
                           }
@@ -2175,107 +2244,87 @@ const JO = () => {
                         />
                       </td>
 
-                      {/* VAT Code */}
+                      {/* Net Amount */}
+                      <td className="global-tran-td-ui text-right">
+                        <input
+                          type="text"
+                          className="w-[140px] global-tran-td-inputclass-ui text-right"
+                          value={row.netAmount || ""}
+                          onChange={(e) =>
+                            handleDetailChange(
+                              index,
+                              "netAmount",
+                              e.target.value
+                            )
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </td>
+
+                      {/* Lot No */}
                       <td className="global-tran-td-ui">
                         <input
                           type="text"
-                          className="w-[80px] global-tran-td-inputclass-ui"
-                          value={row.vatCode || ""}
+                          className="w-[110px] global-tran-td-inputclass-ui"
+                          value={row.lotNo || ""}
                           onChange={(e) =>
-                            handleDetailChange(index, "vatCode", e.target.value)
-                          }
-                          onDoubleClick={() => {
-                            if (isFormDisabled) return;
-                            updateState({
-                              vatLookupModalOpen: true,
-                              selectedRowIndex: index,
-                            });
-                          }}
-                          disabled={isFormDisabled}
-                        />
-                      </td>
-
-                      {/* VAT Amt */}
-                      <td className="global-tran-td-ui text-right">
-                        <input
-                          type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.vatAmt || ""}
-                          onChange={(e) =>
-                            handleDetailChange(index, "vatAmt", e.target.value)
+                            handleDetailChange(index, "lotNo", e.target.value)
                           }
                           disabled={isFormDisabled}
                         />
                       </td>
 
-                      {/* Net Amt */}
-                      <td className="global-tran-td-ui text-right">
-                        <input
-                          type="text"
-                          className="w-[110px] global-tran-td-inputclass-ui text-right"
-                          value={row.netAmt || ""}
-                          onChange={(e) =>
-                            handleDetailChange(index, "netAmt", e.target.value)
-                          }
-                          disabled={isFormDisabled}
-                        />
-                      </td>
-
-                      {/* Delivery Date */}
+                      {/* BB Date */}
                       <td className="global-tran-td-ui">
                         <input
                           type="date"
                           className="w-[130px] global-tran-td-inputclass-ui"
-                          value={row.deliveryDate || ""}
+                          value={""}
                           onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "deliveryDate",
-                              e.target.value
-                            )
+                            handleDetailChange(index, "bbDate", e.target.value)
                           }
                           disabled={isFormDisabled}
                         />
                       </td>
 
-                      {/* PR No */}
+                      {/* QC Status */}
                       <td className="global-tran-td-ui">
                         <input
                           type="text"
                           className="w-[120px] global-tran-td-inputclass-ui"
-                          value={row.prNo || ""}
-                          onChange={(e) =>
-                            handleDetailChange(index, "prNo", e.target.value)
-                          }
-                          disabled={isFormDisabled}
-                        />
-                      </td>
-
-                      {/* PR LN */}
-                      <td className="global-tran-td-ui">
-                        <input
-                          type="text"
-                          className="w-[80px] global-tran-td-inputclass-ui"
-                          value={row.prLn || ""}
-                          onChange={(e) =>
-                            handleDetailChange(index, "prLn", e.target.value)
-                          }
-                          disabled={isFormDisabled}
-                        />
-                      </td>
-
-                      {/* Acct Code */}
-                      <td className="global-tran-td-ui">
-                        <input
-                          type="text"
-                          className="w-[130px] global-tran-td-inputclass-ui"
-                          value={row.acctCode || ""}
+                          value={row.qcStatus || ""}
                           onChange={(e) =>
                             handleDetailChange(
                               index,
-                              "acctCode",
+                              "qcStatus",
                               e.target.value
                             )
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </td>
+
+                      {/* Warehouse */}
+                      <td className="global-tran-td-ui">
+                        <input
+                          type="text"
+                          className="w-[160px] global-tran-td-inputclass-ui"
+                          value={row.whName || state.WHname || ""}
+                          onChange={(e) =>
+                            handleDetailChange(index, "whName", e.target.value)
+                          }
+                          disabled={isFormDisabled}
+                        />
+                      </td>
+
+                      {/* Location */}
+                      <td className="global-tran-td-ui">
+                        <input
+                          type="text"
+                          className="w-[160px] global-tran-td-inputclass-ui"
+                          value={row.locName || state.locName || ""}
+                          onChange={(e) =>
+                            handleDetailChange(index, "locName", e.target.value)
                           }
                           disabled={isFormDisabled}
                         />
@@ -2303,11 +2352,37 @@ const JO = () => {
           <div className="global-tran-tab-footer-main-div-ui">
             <div className="global-tran-tab-footer-button-div-ui">
               <div className="inline-block">
+                {showTypeDropdown && (
+                  <div className="mb-2 bg-white dark:bg-slate-800 border rounded-md shadow-lg z-50 min-w-[140px]">
+                    <button
+                      type="button"
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"
+                      onClick={() => handleSelectTypeAndAddRow("FG")}
+                    >
+                      FG
+                    </button>
+                    <button
+                      type="button"
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"
+                      onClick={handleOpenMSLookup}
+                    >
+                      MS
+                    </button>
+                    <button
+                      type="button"
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"
+                      onClick={() => handleSelectTypeAndAddRow("RM")}
+                    >
+                      RM
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={handleAddRowClick}
-                  disabled={isFormDisabled || !reqRcCode}
+                  disabled={isFormDisabled || !rcCode || !reqRcCode}
                   className={`global-tran-tab-footer-button-add-ui ${
-                    isFormDisabled || !reqRcCode
+                    isFormDisabled || !rcCode || !reqRcCode
                       ? "opacity-50 cursor-not-allowed"
                       : ""
                   }`}
@@ -2322,46 +2397,16 @@ const JO = () => {
             <div className="global-tran-tab-footer-total-main-div-ui">
               <div className="global-tran-tab-footer-total-div-ui">
                 <label
-                  htmlFor="TotalGross"
+                  htmlFor="TotalQty"
                   className="global-tran-tab-footer-total-label-ui"
                 >
-                  Gross Amount:
+                  Total Qty Needed:
                 </label>
                 <label
-                  htmlFor="TotalGross"
+                  htmlFor="TotalQty"
                   className="global-tran-tab-footer-total-value-ui"
                 >
-                  {totals.totalGross}
-                </label>
-              </div>
-
-              <div className="global-tran-tab-footer-total-div-ui">
-                <label
-                  htmlFor="TotalVat"
-                  className="global-tran-tab-footer-total-label-ui"
-                >
-                  VAT Amount:
-                </label>
-                <label
-                  htmlFor="TotalVat"
-                  className="global-tran-tab-footer-total-value-ui"
-                >
-                  {totals.totalVat}
-                </label>
-              </div>
-
-              <div className="global-tran-tab-footer-total-div-ui">
-                <label
-                  htmlFor="TotalNet"
-                  className="global-tran-tab-footer-total-label-ui"
-                >
-                  Net Amount:
-                </label>
-                <label
-                  htmlFor="TotalNet"
-                  className="global-tran-tab-footer-total-value-ui"
-                >
-                  {totals.totalNet}
+                  {totals.totalQtyNeeded}
                 </label>
               </div>
             </div>
@@ -2415,14 +2460,6 @@ const JO = () => {
         />
       )}
 
-      {/* Payment Terms Lookup Modal */}
-      {showPaytermModal && (
-        <PaytermLookupModal
-          isOpen={showPaytermModal}
-          onClose={handleClosePaytermModal}
-        />
-      )}
-
       {billtermModalOpen && (
         <BillTermLookupModal
           isOpen={billtermModalOpen}
@@ -2430,19 +2467,49 @@ const JO = () => {
         />
       )}
 
-      {prLookupModalOpen && (
-        <SearchPROpenModal
-          isOpen={prLookupModalOpen}
-          onClose={handleSelectPR}
-          branchCode={branchCode}
-          prTranType="PR02" // JO = PR02
+      {state.payeeLookupOpen && (
+        <PayeeMastLookupModal
+          isOpen={state.payeeLookupOpen}
+          onClose={handleClosePayeeLookup}
         />
       )}
 
-      {payeeModalOpen && (
-        <PayeeMastLookupModal
-          isOpen={payeeModalOpen}
-          onClose={handleClosePayeeModal}
+      {state.warehouseLookupOpen && (
+        <WarehouseLookupModal
+          isOpen={state.warehouseLookupOpen}
+          onClose={handleCloseWarehouseLookup}
+          filter="ActiveAll"
+        />
+      )}
+
+      {state.locationLookupOpen && (
+        <LocationLookupModal
+          isOpen={state.locationLookupOpen}
+          onClose={handleCloseLocationLookup}
+          filter="ActiveAll"
+        />
+      )}
+
+      {custModalOpen && (
+        <CustomerMastLookupModal
+          isOpen={custModalOpen}
+          onClose={handleCloseCustModal}
+        />
+      )}
+
+      {state.vatLookupOpen && (
+  <VATLookupModal
+    isOpen={state.vatLookupOpen}
+    onClose={handleCloseVatLookup}
+    customParam="ActiveAll"
+  />
+)}
+
+
+      {state.poLookupModalOpen && (
+        <SearchPOOpenModal
+          isOpen={state.poLookupModalOpen}
+          onClose={handleClosePOOpenModal}
         />
       )}
 
@@ -2484,17 +2551,52 @@ const JO = () => {
         />
       )}
 
-      {vatLookupModalOpen && (
-        <VATLookupModal
-          isOpen={vatLookupModalOpen}
-          onClose={handleCloseVATLookup}
-          customParam={null} // or pass a filter if needed
+      {state.specsModalOpen && (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
+    <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-slate-800 shadow-xl border border-gray-200 dark:border-slate-700">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+          Specification 
+        </h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Enter complete specification / scope of work.
+        </p>
+      </div>
+
+      <div className="p-4">
+        <textarea
+          className="w-full h-48 resize-none rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-gray-800 dark:text-gray-100 p-3 outline-none focus:ring-2 focus:ring-blue-400"
+          value={state.specsTempText || ""}
+          onChange={(e) => updateState({ specsTempText: e.target.value })}
+          autoFocus
         />
-      )}
+      </div>
+
+      <div className="px-4 py-3 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+        <button
+          type="button"
+          className="px-3 py-2 text-xs font-medium rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600"
+          onClick={closeSpecsModal}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="px-3 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"
+          onClick={saveSpecsModal}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {showSpinner && <LoadingSpinner />}
     </div>
   );
 };
 
-export default JO;
+export default MSRR;

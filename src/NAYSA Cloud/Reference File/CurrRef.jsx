@@ -22,7 +22,11 @@ import {
 import Swal from "sweetalert2";
 
 // Global
-import { reftables, reftablesPDFGuide, reftablesVideoGuide } from "@/NAYSA Cloud/Global/reftable";
+import {
+  reftables,
+  reftablesPDFGuide,
+  reftablesVideoGuide,
+} from "@/NAYSA Cloud/Global/reftable";
 
 // Helper to normalize ID key from API rows
 const getId = (row) => {
@@ -34,9 +38,6 @@ const getId = (row) => {
 const CurrencyCode = ({ onSelect }) => {
   // Get user from auth context
   const { user } = useAuth();
-
-  // Debug check to see if user is properly set
-  console.log("Auth context user object:", user);
 
   // Document Global Setup
   const docType = "Currency";
@@ -67,9 +68,9 @@ const CurrencyCode = ({ onSelect }) => {
 
   // Table sorting state
   const [sortBy, setSortBy] = useState("currCode"); // Default sort column
-  const [sortDir, setSortDir] = useState("asc");    // Default sort direction
+  const [sortDir, setSortDir] = useState("asc"); // Default sort direction
 
-  // New state variable for query
+  // New state variable for query (not used yet, reserved)
   const [query, setQuery] = useState("");
 
   // Initial load
@@ -80,7 +81,8 @@ const CurrencyCode = ({ onSelect }) => {
   // Close Help menu on click-away
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const clickedOutsideGuide = guideRef.current && !guideRef.current.contains(event.target);
+      const clickedOutsideGuide =
+        guideRef.current && !guideRef.current.contains(event.target);
       if (clickedOutsideGuide) setOpenGuide(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -103,15 +105,16 @@ const CurrencyCode = ({ onSelect }) => {
   const fetchCurrencies = () => {
     setLoading(true);
 
-    apiClient.get("/lookupCurr", {
-      params: {
-        PARAMS: JSON.stringify({
-          search: "",
-          page: 1,
-          pageSize: 50,
-        }),
-      },
-    })
+    apiClient
+      .get("/lookupCurr", {
+        params: {
+          PARAMS: JSON.stringify({
+            search: "",
+            page: 1,
+            pageSize: 50,
+          }),
+        },
+      })
       .then(({ data }) => {
         // Supports two shapes:
         // 1) [{ result: "[...]" }]
@@ -125,7 +128,11 @@ const CurrencyCode = ({ onSelect }) => {
             } catch {
               setCurr([]);
               setFiltered([]);
-              Swal.fire("Error", "Failed to parse currency data from the server", "error");
+              Swal.fire(
+                "Error",
+                "Failed to parse currency data from the server",
+                "error"
+              );
             }
             return;
           }
@@ -140,7 +147,11 @@ const CurrencyCode = ({ onSelect }) => {
       })
       .catch((err) => {
         console.error("Failed to fetch currency:", err);
-        Swal.fire("Error", "Failed to fetch currency data from the server", "error");
+        Swal.fire(
+          "Error",
+          "Failed to fetch currency data from the server",
+          "error"
+        );
         setCurr([]);
         setFiltered([]);
       })
@@ -152,10 +163,11 @@ const CurrencyCode = ({ onSelect }) => {
     let newFiltered = currency.filter((item) => {
       const code = String(item.CURR_CODE ?? item.currCode ?? "").toLowerCase();
       const name = String(item.CURR_NAME ?? item.currName ?? "").toLowerCase();
-      
 
-      return code.includes((filters.currCode || "").toLowerCase()) &&
-        name.includes((filters.currName || "").toLowerCase());
+      return (
+        code.includes((filters.currCode || "").toLowerCase()) &&
+        name.includes((filters.currName || "").toLowerCase())
+      );
     });
 
     // Apply sorting
@@ -211,22 +223,22 @@ const CurrencyCode = ({ onSelect }) => {
     setIsEditing(true);
   };
 
-const resetForm = () => {
-  // Clear form fields completely
-  setCurrCode("");
-  setCurrName("");
-  setEditingId(null);
-  setIsEditing(false);
-  setIsAdding(false);
-  
-  // Reset selected currency
-  setSelectedCurrency(null);
-  
-  // Reset filters too when not in editing mode
-  if (!isEditing) {
-    setFilters({ currCode: "", currName: "" });
-  }
-};
+  const resetForm = () => {
+    // Clear form fields completely
+    setCurrCode("");
+    setCurrName("");
+    setEditingId(null);
+    setIsEditing(false);
+    setIsAdding(false);
+
+    // Reset selected currency
+    setSelectedCurrency(null);
+
+    // Reset filters too when not in editing mode
+    if (!isEditing) {
+      setFilters({ currCode: "", currName: "" });
+    }
+  };
 
   const handleEditRow = (curr) => {
     if (!curr) return;
@@ -238,9 +250,35 @@ const resetForm = () => {
     setSelectedCurrency(curr);
   };
 
+  // ───── Duplicate helper ─────
+  const isDuplicateCurrCode = (code, currentCode = null) => {
+    const normalized = String(code || "").trim().toUpperCase();
+    const currentNormalized = currentCode
+      ? String(currentCode || "").trim().toUpperCase()
+      : null;
+
+    if (!normalized) return false;
+
+    return currency.some((item) => {
+      const existingCode = String(
+        item.CURR_CODE ?? item.currCode ?? ""
+      ).trim().toUpperCase();
+
+      // If editing, ignore the original code of the selected row
+      if (currentNormalized && existingCode === currentNormalized) {
+        return false;
+      }
+
+      return existingCode === normalized;
+    });
+  };
+
   // Save (ADD/UPDATE)
   const handleSaveCurrency = async () => {
-    if (!currCode || !currName) {
+    const normalizedCode = String(currCode || "").trim().toUpperCase();
+    const trimmedName = String(currName || "").trim();
+
+    if (!normalizedCode || !trimmedName) {
       Swal.fire({
         title: "Error!",
         text: "Please fill out all required fields: Currency Code and Currency Name.",
@@ -250,41 +288,66 @@ const resetForm = () => {
       return;
     }
 
+    // Determine original code when editing
+    const originalCode = selectedCurrency
+      ? String(
+          selectedCurrency.CURR_CODE ?? selectedCurrency.currCode ?? ""
+        )
+          .trim()
+          .toUpperCase()
+      : null;
+
+    // Duplicate check for both Add and Edit
+    if (isDuplicateCurrCode(normalizedCode, originalCode)) {
+      await Swal.fire({
+        title: "Duplicate Code",
+        text: "Duplicate Currency Code is not allowed.",
+        icon: "error",
+        confirmButtonText: "Okay",
+      });
+      return;
+    }
+
     // Extract the userCode from the authentication context
-    // Check all possible property names based on your AuthContext structure
     const userCode = user?.USER_CODE || user?.username || "SYSTEM";
-    console.log("Using userCode for save:", userCode);
 
     setSaving(true);
     try {
       // Structure data according to API requirements
       const requestData = {
-        currCode: String(currCode).trim(),
-        currName: String(currName).trim(),
+        currCode: normalizedCode,
+        currName: trimmedName,
         userCode: userCode,
         // Only include ID for updates if API needs it
-        ...(editingId && { id: editingId })
+        ...(editingId && { id: editingId }),
       };
-
-      console.log("Sending save request with data:", requestData);
 
       const { data } = await apiClient.post("/upsertCurr", requestData);
 
       if (data?.status === "success" || data?.success) {
         await Swal.fire({
           title: "Success!",
-          text: isAdding ? "Currency added successfully" : "Currency updated successfully",
+          text: isAdding
+            ? "Currency added successfully"
+            : "Currency updated successfully",
           icon: "success",
           confirmButtonText: "Okay",
         });
         fetchCurrencies();
         resetForm();
       } else {
-        Swal.fire("Error", data?.message || "Failed to save currency", "error");
+        Swal.fire(
+          "Error",
+          data?.message || "Failed to save currency",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error saving currency:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Failed to save currency";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to save currency";
       Swal.fire("Error", `${errorMessage}`, "error");
     } finally {
       setSaving(false);
@@ -302,7 +365,8 @@ const resetForm = () => {
     console.log("Selected currency for deletion:", selectedCurrency);
 
     // Extract the currency code (check both formats)
-    const currencyCode = selectedCurrency.CURR_CODE ?? selectedCurrency.currCode;
+    const currencyCode =
+      selectedCurrency.CURR_CODE ?? selectedCurrency.currCode;
 
     if (!currencyCode) {
       Swal.fire("Error", "Cannot identify the selected currency", "error");
@@ -310,13 +374,13 @@ const resetForm = () => {
     }
 
     // Extract the userCode from the authentication context
-    // Check all possible property names based on your AuthContext structure
     const userCode = user?.USER_CODE || user?.username || "SYSTEM";
-    console.log("Using userCode for delete:", userCode);
 
     const confirm = await Swal.fire({
       title: "Delete this currency?",
-      text: `Code: ${currencyCode} | Name: ${selectedCurrency.CURR_NAME ?? selectedCurrency.currName}`,
+      text: `Code: ${currencyCode} | Name: ${
+        selectedCurrency.CURR_NAME ?? selectedCurrency.currName
+      }`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#dc2626",
@@ -332,12 +396,9 @@ const resetForm = () => {
 
       const requestData = {
         json_data: JSON.stringify(payload),
-        userCode: userCode
+        userCode: userCode,
       };
 
-      console.log("Sending delete request with data:", requestData);
-
-      // Use the dedicated delete endpoint
       const { data } = await apiClient.post("/deleteCurr", requestData);
 
       if (data?.success || data?.status === "success") {
@@ -351,11 +412,18 @@ const resetForm = () => {
         resetForm();
         setSelectedCurrency(null); // Clear selection after deletion
       } else {
-        Swal.fire("Error", data?.message || "Failed to delete currency.", "error");
+        Swal.fire(
+          "Error",
+          data?.message || "Failed to delete currency.",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Delete error:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Failed to delete currency";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to delete currency";
       Swal.fire("Error", errorMessage, "error");
     }
   };
@@ -398,7 +466,11 @@ const resetForm = () => {
 
           <button
             onClick={() => handleEditRow(selectedCurrency)}
-            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${!selectedCurrency || isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${
+              !selectedCurrency || isEditing
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             disabled={!selectedCurrency || isEditing}
           >
             <FontAwesomeIcon icon={faEdit} /> Edit
@@ -406,7 +478,11 @@ const resetForm = () => {
 
           <button
             onClick={handleDeleteCurrency}
-            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${!selectedCurrency || isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${
+              !selectedCurrency || isEditing
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             disabled={!selectedCurrency || isEditing}
           >
             <FontAwesomeIcon icon={faTrashAlt} /> Delete
@@ -414,11 +490,14 @@ const resetForm = () => {
 
           <button
             onClick={handleSaveCurrency}
-            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${!isEditing || saving ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${
+              !isEditing || saving ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             disabled={!isEditing || saving}
             title="Ctrl+S to Save"
           >
-            <FontAwesomeIcon icon={faSave} /> {saving ? "Saving..." : "Save"}
+            <FontAwesomeIcon icon={faSave} />{" "}
+            {saving ? "Saving..." : "Save"}
           </button>
 
           <button
@@ -434,12 +513,17 @@ const resetForm = () => {
                 setSelectedCurrency(null);
               } else {
                 // If not editing and nothing selected, just reset filters
-                setFilters({ currCode: "", currName: ""});
+                setFilters({ currCode: "", currName: "" });
               }
             }}
             className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
           >
-            <FontAwesomeIcon icon={faUndo} /> {isEditing ? "Reset" : selectedCurrency ? "Clear Selection" : "Reset Filters"}
+            <FontAwesomeIcon icon={faUndo} />{" "}
+            {isEditing
+              ? "Reset"
+              : selectedCurrency
+              ? "Clear Selection"
+              : "Reset Filters"}
           </button>
 
           <button
@@ -455,21 +539,36 @@ const resetForm = () => {
               onClick={() => setOpenGuide(!isOpenGuide)}
               className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
             >
-              <FontAwesomeIcon icon={faInfoCircle} /> Info <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
+              <FontAwesomeIcon icon={faInfoCircle} /> Info{" "}
+              <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
             </button>
             {isOpenGuide && (
               <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black/10 z-[60] dark:bg-gray-800">
                 <button
-                  onClick={() => { handlePDFGuide(); setOpenGuide(false); }}
+                  onClick={() => {
+                    handlePDFGuide();
+                    setOpenGuide(false);
+                  }}
                   className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                 >
-                  <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" /> User Guide
+                  <FontAwesomeIcon
+                    icon={faFilePdf}
+                    className="mr-2 text-red-600"
+                  />{" "}
+                  User Guide
                 </button>
                 <button
-                  onClick={() => { handleVideoGuide(); setOpenGuide(false); }}
+                  onClick={() => {
+                    handleVideoGuide();
+                    setOpenGuide(false);
+                  }}
                   className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
                 >
-                  <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-600" /> Video Guide
+                  <FontAwesomeIcon
+                    icon={faVideo}
+                    className="mr-2 text-blue-600"
+                  />{" "}
+                  Video Guide
                 </button>
               </div>
             )}
@@ -479,13 +578,16 @@ const resetForm = () => {
 
       <div className="mt-4 mb-4 bg-white rounded-lg shadow-md overflow-x-auto">
         <div className="w-full bg-white p-4 sm:p-6 shadow-md rounded-lg">
-
           {/* Stacked layout with Form Column above Currencies Table */}
           <div className="flex flex-col gap-4">
             {/* Form Column */}
             <div className="w-full">
               <div className="border rounded-lg overflow-hidden p-4 bg-gray-50">
-                {saving &&<div className="text-xs text-blue-600 mb-2">Processing...</div>}
+                {saving && (
+                  <div className="text-xs text-blue-600 mb-2">
+                    Processing...
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Currency Code */}
@@ -494,22 +596,65 @@ const resetForm = () => {
                       type="text"
                       id="CURR_CODE"
                       placeholder=" "
-                      className={`peer global-ref-textbox-ui ${isEditing && isAdding
-                        ? "global-ref-textbox-enabled"
-                        : "global-ref-textbox-disabled"
-                        }`}
+                      className={`peer global-ref-textbox-ui ${
+                        isEditing && isAdding
+                          ? "global-ref-textbox-enabled"
+                          : "global-ref-textbox-disabled"
+                      }`}
                       value={currCode}
-                      onChange={(e) => setCurrCode(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setCurrCode(e.target.value.toUpperCase())
+                      }
+                      onBlur={async () => {
+                        const normalized = String(currCode || "")
+                          .trim()
+                          .toUpperCase();
+                        if (!normalized) return;
+
+                        const originalCode = selectedCurrency
+                          ? String(
+                              selectedCurrency.CURR_CODE ??
+                                selectedCurrency.currCode ??
+                                ""
+                            )
+                              .trim()
+                              .toUpperCase()
+                          : null;
+
+                        if (
+                          isDuplicateCurrCode(normalized, originalCode)
+                        ) {
+                          await Swal.fire({
+                            title: "Duplicate Code",
+                            text: "Duplicate Currency Code is not allowed.",
+                            icon: "error",
+                            confirmButtonText: "Okay",
+                          });
+                          setCurrCode("");
+                          return;
+                        }
+
+                        setCurrCode(normalized);
+                      }}
                       disabled={!isEditing || !isAdding}
                       maxLength={10}
                     />
                     <label
                       htmlFor="CURR_CODE"
-                      className={`global-ref-floating-label ${!isEditing || (!isAdding && isEditing) ? "global-ref-label-disabled" : "global-ref-label-enabled"
-                        }`}
+                      className={`global-ref-floating-label ${
+                        !isEditing ||
+                        (!isAdding && isEditing)
+                          ? "global-ref-label-disabled"
+                          : "global-ref-label-enabled"
+                      }`}
                     >
-                      Currency Code <span className="global-ref-asterisk-ui">*</span>
-                      {isEditing && !isAdding && <span className="ml-1 text-gray-400">(not editable)</span>}
+                      Currency Code{" "}
+                      <span className="global-ref-asterisk-ui">*</span>
+                      {isEditing && !isAdding && (
+                        <span className="ml-1 text-gray-400">
+                          (not editable)
+                        </span>
+                      )}
                     </label>
                   </div>
 
@@ -519,18 +664,25 @@ const resetForm = () => {
                       type="text"
                       id="CURR_NAME"
                       placeholder=" "
-                      className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"
-                        }`}
+                      className={`peer global-ref-textbox-ui ${
+                        isEditing
+                          ? "global-ref-textbox-enabled"
+                          : "global-ref-textbox-disabled"
+                      }`}
                       value={currName}
                       onChange={(e) => setCurrName(e.target.value)}
                       disabled={!isEditing}
                     />
                     <label
                       htmlFor="CURR_NAME"
-                      className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"
-                        }`}
+                      className={`global-ref-floating-label ${
+                        !isEditing
+                          ? "global-ref-label-disabled"
+                          : "global-ref-label-enabled"
+                      }`}
                     >
-                      Currency Name <span className="global-ref-asterisk-ui">*</span>
+                      Currency Name{" "}
+                      <span className="global-ref-asterisk-ui">*</span>
                     </label>
                   </div>
                 </div>
@@ -544,19 +696,37 @@ const resetForm = () => {
                   <table className="global-ref-table-div-ui">
                     <thead className="global-ref-thead-div-ui">
                       <tr>
-                        <th className="global-ref-th-ui cursor-pointer select-none"
+                        <th
+                          className="global-ref-th-ui cursor-pointer select-none"
                           onClick={() => {
                             setSortBy("currCode");
-                            setSortDir(prev => prev === "asc" ? "desc" : "asc");
-                          }}>
-                          Currency Code {sortBy === "currCode" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                            setSortDir((prev) =>
+                              prev === "asc" ? "desc" : "asc"
+                            );
+                          }}
+                        >
+                          Currency Code{" "}
+                          {sortBy === "currCode"
+                            ? sortDir === "asc"
+                              ? "▲"
+                              : "▼"
+                            : ""}
                         </th>
-                        <th className="global-ref-th-ui cursor-pointer select-none"
+                        <th
+                          className="global-ref-th-ui cursor-pointer select-none"
                           onClick={() => {
                             setSortBy("currName");
-                            setSortDir(prev => prev === "asc" ? "desc" : "asc");
-                          }}>
-                          Description {sortBy === "currName" ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                            setSortDir((prev) =>
+                              prev === "asc" ? "desc" : "asc"
+                            );
+                          }}
+                        >
+                          Description{" "}
+                          {sortBy === "currName"
+                            ? sortDir === "asc"
+                              ? "▲"
+                              : "▼"
+                            : ""}
                         </th>
                       </tr>
 
@@ -567,7 +737,9 @@ const resetForm = () => {
                             className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
                             placeholder="Filter…"
                             value={filters.currCode}
-                            onChange={(e) => handleFilterChange(e, "currCode")}
+                            onChange={(e) =>
+                              handleFilterChange(e, "currCode")
+                            }
                           />
                         </th>
                         <th className="global-ref-th-ui">
@@ -575,7 +747,9 @@ const resetForm = () => {
                             className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
                             placeholder="Filter…"
                             value={filters.currName}
-                            onChange={(e) => handleFilterChange(e, "currName")}
+                            onChange={(e) =>
+                              handleFilterChange(e, "currName")
+                            }
                           />
                         </th>
                       </tr>
@@ -586,19 +760,30 @@ const resetForm = () => {
                         filtered.map((curr, index) => (
                           <tr
                             key={getId(curr) ?? index}
-                            className={`global-tran-tr-ui ${getId(selectedCurrency) === getId(curr) ? 'bg-blue-50' : ''}`}
+                            className={`global-tran-tr-ui ${
+                              getId(selectedCurrency) === getId(curr)
+                                ? "bg-blue-50"
+                                : ""
+                            }`}
                             onClick={() => handleSelect(curr)}
                             onDoubleClick={() => {
                               if (!isEditing) handleEditRow(curr);
                             }}
                           >
-                            <td className="global-ref-td-ui">{curr.CURR_CODE ?? curr.currCode ?? ""}</td>
-                            <td className="global-ref-td-ui">{curr.CURR_NAME ?? curr.currName ?? "-"}</td>
+                            <td className="global-ref-td-ui">
+                              {curr.CURR_CODE ?? curr.currCode ?? ""}
+                            </td>
+                            <td className="global-ref-td-ui">
+                              {curr.CURR_NAME ?? curr.currName ?? "-"}
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="2" className="global-ref-norecords-ui">
+                          <td
+                            colSpan="2"
+                            className="global-ref-norecords-ui"
+                          >
                             {loading ? (
                               <span className="inline-flex items-center gap-2">
                                 <FontAwesomeIcon icon={faSpinner} spin />
@@ -643,7 +828,10 @@ const resetForm = () => {
         {/* Footer */}
         <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center mt-4 rounded-b-lg">
           <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{filtered.length}</span> of <span className="font-medium">{currency.length}</span> currencies
+            Showing{" "}
+            <span className="font-medium">{filtered.length}</span> of{" "}
+            <span className="font-medium">{currency.length}</span>{" "}
+            currencies
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, forwardRef, useImperativeHandle } from "react";
 import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faTrashAlt, faPlus, faSave, faUndo } from "@fortawesome/free-solid-svg-icons";
@@ -10,7 +10,7 @@ import {
   useSwalDeleteSuccess
 } from "@/NAYSA Cloud/Global/behavior";
 
-const UsersTab = ({ roles, fetchRoles, user, saving, setSaving }) => {
+const UsersTab = forwardRef(({ roles, fetchRoles, user, saving, setSaving }, ref) => {
   const [isEditing, setIsEditing] = useState(false);
   const [roleCode, setRoleCode] = useState("");
   const [roleName, setRoleName] = useState("");
@@ -173,32 +173,15 @@ const UsersTab = ({ roles, fetchRoles, user, saving, setSaving }) => {
     setIsEditing(true);
   };
 
+   useImperativeHandle(ref, () => ({
+    add: startNew,
+    save: handleSaveRole,
+    reset: resetForm,
+  }));
+
   return (
     <div className="w-full">
-      {/* Action Buttons */}
-      <div className="flex gap-2 mb-4 justify-end">
-        <button
-          onClick={startNew}
-          className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-        >
-          <FontAwesomeIcon icon={faPlus} /> Add
-        </button>
-        <button
-          onClick={handleSaveRole}
-          className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${!isEditing || saving ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={!isEditing || saving}
-          title="Ctrl+S to Save"
-        >
-          <FontAwesomeIcon icon={faSave} /> Save
-        </button>
-        <button
-          onClick={resetForm}
-          className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-          disabled={saving}
-        >
-          <FontAwesomeIcon icon={faUndo} /> Reset
-        </button>
-      </div>
+      
 
       {/* Two Columns Side by Side */}
       <div className="flex flex-col md:flex-row gap-6">
@@ -409,6 +392,6 @@ const UsersTab = ({ roles, fetchRoles, user, saving, setSaving }) => {
       </div>
     </div>
   );
-};
+});
 
 export default UsersTab;

@@ -1,917 +1,946 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
-import Swal from "sweetalert2";
+// src/NAYSA Cloud/Reference File/BranchRef.jsx
+import React, { useEffect, useRef, useState } from "react";
+import { apiClient } from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
+import { useAuth } from "@/NAYSA Cloud/Authentication/AuthContext.jsx";
 
-// UI
+import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEdit,
-  faMagnifyingGlass,
-  faTrashAlt,
-  faPrint,
-  faChevronDown,
-  faInfoCircle,
-  faFileCsv,
-  faFileExcel,
-  faFilePdf,
-  faVideo,
+  faPlus,
   faSave,
   faUndo,
-  faPlus,
+  faTrashAlt,
+  faSpinner,
+  faFileExport,
+  faInfoCircle,
+  faChevronDown,
+  faFilePdf,
+  faVideo,
 } from "@fortawesome/free-solid-svg-icons";
 
-// Global
-import { reftables, reftablesPDFGuide, reftablesVideoGuide } from "@/NAYSA Cloud/Global/reftable";
-
-// Exports
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-/** Centralized API instance */
-// const API = axios.create({ baseURL: "http://localhost:8000/api" });
-
-// ✅ Use your centralized API
-import apiClient, {
-  fetchData,
-  fetchDataJson,
-  fetchDataJsonLookup,
-  postRequest,
-  postPdfRequest,
-} from "@/NAYSA Cloud/Configuration/BaseURL.jsx";
-
-/** Simple validators */
-const isTinValid = (v) => /^[0-9-]{9,20}$/.test(String(v || ""));
-const req = (v) => String(v || "").trim().length > 0;
-
-/** Case-insensitive "includes" that tolerates nulls */
-const includesCI = (hay, needle) =>
-  String(hay ?? "").toLowerCase().includes(String(needle ?? "").toLowerCase());
+import ButtonBar from "@/NAYSA Cloud/Global/ButtonBar.jsx";
+import FieldRenderer from "@/NAYSA Cloud/Global/FieldRenderer.jsx";
+import {
+  reftables,
+  reftablesPDFGuide,
+  reftablesVideoGuide,
+} from "@/NAYSA Cloud/Global/reftable";
 
 const BranchRef = () => {
-  // Document meta
-  const docType = "Branch";
-  const documentTitle = reftables[docType] || "Transaction";
+  const { user } = useAuth();
+
+  // ───── Document meta ─────
+  const docType = "Branch"; // key must exist in reftables.js
+  const documentTitle = reftables[docType] || "Branch Reference";
   const pdfLink = reftablesPDFGuide[docType];
   const videoLink = reftablesVideoGuide[docType];
 
-  // Table + form state
+  // ───── State ─────
   const [branches, setBranches] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingBranch, setEditingBranch] = useState(null);
+  const [filtered, setFiltered] = useState([]);
 
-  // UX state
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [isOpenExport, setOpenExport] = useState(false);
-  const [isOpenGuide, setOpenGuide] = useState(false);
-
-  // Table helpers
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("branchCode");
-  const [sortDir, setSortDir] = useState("asc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // NEW: per-column filters
-  const [columnFilters, setColumnFilters] = useState({
-    branchCode: "",
-    branchName: "",
-    main: "",          // select
-    branchAddr1: "",
-    branchTin: "",
-    telNo: "",
-    faxNo: "",
-    zipCode: "",
-    active: "",        // select
+  // ✅ Filters for ALL columns
+  const [filters, setFilters] = useState({
+    code: "",
+    name: "",
+    address: "",
+    zip: "",
+    tin: "",
+    contact: "",
+    type: "",
+    active: "",
   });
 
-  // Refs for click-away
-  const exportRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [editingBranch, setEditingBranch] = useState(null);
+
+  const [sortBy, setSortBy] = useState("code");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const [isOpenGuide, setOpenGuide] = useState(false);
+  const [isOpenExport, setOpenExport] = useState(false);
+
   const guideRef = useRef(null);
+  const exportRef = useRef(null);
 
-  // // Fetch
-  // const fetchBranches = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const { data } = await API.get("/branch");
-  //     const resultString = data?.data?.[0]?.result;
-  //     setBranches(resultString ? JSON.parse(resultString) : []);
-  //   } catch (error) {
-  //     console.error("Error fetching branches:", error);
-  //     Swal.fire("Error", "Failed to load branches.", "error");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-  // useEffect(() => { fetchBranches(); }, []);
+  const userCode =
+    user?.USER_CODE || user?.username || user?.userCode || "SYSTEM";
 
+  const getRowId = (row) =>
+    row ? String(row.branchCode ?? row.branch_code ?? "") : "";
 
-  // Fetch
-const fetchBranches = async () => {
-  setLoading(true);
-  try {
-    const res = await fetchData("/branch"); // ✅ centralized helper
-    const resultString = res?.data?.[0]?.result;
-    setBranches(resultString ? JSON.parse(resultString) : []);
-  } catch (error) {
-    console.error("Error fetching branches:", error);
-    Swal.fire("Error", "Failed to load branches.", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+  // ───── Mapping helpers ─────
+  const mapMainToBranchType = (val) => {
+    if (!val) return "Branch";
+    const v = String(val).toLowerCase();
+    if (v === "yes" || v === "y") return "Main";
+    return "Branch";
+  };
 
+  const mapBranchTypeToYN = (val) => {
+    const v = String(val || "").toLowerCase();
+    return v === "main" ? "Y" : "N";
+  };
 
-  // Close menus on outside click
+  const mapActiveToYesNo = (val) => {
+    if (!val) return "Yes";
+    const v = String(val).toLowerCase();
+    if (v === "y" || v === "yes") return "Yes";
+    if (v === "n" || v === "no") return "No";
+    return "Yes";
+  };
+
+  const mapYesNoToYN = (val) => {
+    const v = String(val || "").toLowerCase();
+    return v === "no" ? "N" : "Y";
+  };
+
+  // ───── Fetch branches ─────
+  const fetchBranches = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiClient.get("/branch");
+      const resultString =
+        data?.data?.[0]?.result || data?.[0]?.result || null;
+      const list = resultString ? JSON.parse(resultString) : [];
+      const arr = Array.isArray(list) ? list : [];
+      setBranches(arr);
+      setFiltered(arr);
+    } catch (err) {
+      console.error("Error fetching branches:", err);
+      Swal.fire("Error", "Failed to load branches.", "error");
+      setBranches([]);
+      setFiltered([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      const clickedOutsideExport = exportRef.current && !exportRef.current.contains(event.target);
-      const clickedOutsideGuide = guideRef.current && !guideRef.current.contains(event.target);
-      if (clickedOutsideExport) setOpenExport(false);
-      if (clickedOutsideGuide) setOpenGuide(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    fetchBranches();
   }, []);
 
-  // Global Ctrl+S
+  // ───── Filter + sort ─────
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        if (!saving && isEditing) handleSaveBranch();
+    const f = {
+      code: (filters.code || "").toLowerCase(),
+      name: (filters.name || "").toLowerCase(),
+      address: (filters.address || "").toLowerCase(),
+      zip: (filters.zip || "").toLowerCase(),
+      tin: (filters.tin || "").toLowerCase(),
+      contact: (filters.contact || "").toLowerCase(),
+      type: (filters.type || "").toLowerCase(),
+      active: (filters.active || "").toLowerCase(),
+    };
+
+    let list = branches.filter((b) => {
+      const code = String(b.branchCode ?? "").toLowerCase();
+      const name = String(b.branchName ?? "").toLowerCase();
+
+      const address = [
+        b.branchAddr1,
+        b.branchAddr2,
+        b.branchAddr3,
+      ]
+        .filter(Boolean)
+        .join(", ")
+        .toLowerCase();
+
+      const zip = String(b.zipCode ?? "").toLowerCase();
+      const tin = String(b.branchTin ?? "").toLowerCase();
+      const contact = String(b.telNo ?? "").toLowerCase();
+      const type = mapMainToBranchType(b.main).toLowerCase();
+      const active = String(b.active ?? "").toLowerCase(); // keep as-is from DB/UI
+
+      return (
+        code.includes(f.code) &&
+        name.includes(f.name) &&
+        address.includes(f.address) &&
+        zip.includes(f.zip) &&
+        tin.includes(f.tin) &&
+        contact.includes(f.contact) &&
+        type.includes(f.type) &&
+        active.includes(f.active)
+      );
+    });
+
+    if (sortBy) {
+      list = [...list].sort((a, b) => {
+        let aVal = "";
+        let bVal = "";
+
+        if (sortBy === "code") {
+          aVal = String(a.branchCode ?? "").toLowerCase();
+          bVal = String(b.branchCode ?? "").toLowerCase();
+        } else if (sortBy === "name") {
+          aVal = String(a.branchName ?? "").toLowerCase();
+          bVal = String(b.branchName ?? "").toLowerCase();
+        }
+
+        if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    setFiltered(list);
+  }, [branches, filters, sortBy, sortDir]);
+
+  const handleFilterChange = (key, value) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const resetFilters = () =>
+    setFilters({
+      code: "",
+      name: "",
+      address: "",
+      zip: "",
+      tin: "",
+      contact: "",
+      type: "",
+      active: "",
+    });
+
+  // ───── Click outside for dropdowns ─────
+  useEffect(() => {
+    const onClick = (e) => {
+      if (guideRef.current && !guideRef.current.contains(e.target)) {
+        setOpenGuide(false);
+      }
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setOpenExport(false);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [saving, isEditing, editingBranch]);
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
-  // Search + COLUMN FILTERS + sort + pagination
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  // ───── Selection & editing ─────
+  const handleSelectRow = (row) => {
+    if (isEditing) return;
+    setSelectedRow(row);
+  };
 
-    // 1) global search (optional)
-    const base = q
-      ? branches.filter((b) =>
-          [b.branchCode, b.branchName, b.branchAddr1, b.branchTin, b.telNo, b.zipCode]
-            .some((x) => String(x || "").toLowerCase().includes(q))
-        )
-      : branches;
+  const mapRowToEditing = (row) => {
+    if (!row) return null;
+    return {
+      branchCode: row.branchCode ?? "",
+      branchName: row.branchName ?? "",
+      branchAddr1: row.branchAddr1 ?? "",
+      branchAddr2: row.branchAddr2 ?? "",
+      branchAddr3: row.branchAddr3 ?? "",
+      branchTin: row.branchTin ?? "",
+      contactNo: row.telNo ?? "",
+      zipCode: row.zipCode ?? "",
+      branchType: mapMainToBranchType(row.main), // Main/Branch
+      active: mapActiveToYesNo(row.active), // Yes/No
+      __existing: true,
+    };
+  };
 
-    // 2) per-column filters (all must match)
-    const withColFilters = base.filter((b) => {
-      const f = columnFilters;
-      if (f.branchCode && !includesCI(b.branchCode, f.branchCode)) return false;
-      if (f.branchName && !includesCI(b.branchName, f.branchName)) return false;
-      if (f.branchAddr1 && !includesCI(b.branchAddr1, f.branchAddr1)) return false;
-      if (f.branchTin && !includesCI(b.branchTin, f.branchTin)) return false;
-      if (f.telNo && !includesCI(b.telNo, f.telNo)) return false;
-      if (f.faxNo && !includesCI(b.faxNo, f.faxNo)) return false;
-      if (f.zipCode && !includesCI(b.zipCode, f.zipCode)) return false;
-
-      // select filters: exact match when a value is chosen
-      if (f.main && String(b.main ?? "") !== String(f.main)) return false;
-      if (f.active && String(b.active ?? "") !== String(f.active)) return false;
-
-      return true;
-    });
-
-    // 3) sort
-    const factor = sortDir === "asc" ? 1 : -1;
-    return [...withColFilters].sort((a, b) => {
-      const A = String(a?.[sortBy] ?? "");
-      const B = String(b?.[sortBy] ?? "");
-      return A.localeCompare(B) * factor;
-    });
-  }, [branches, query, columnFilters, sortBy, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page, pageSize]);
-
-  // New / Edit / Reset flows
   const startNew = () => {
+    setSelectedRow(null);
     setEditingBranch({
-      __existing: false,
       branchCode: "",
       branchName: "",
-      main: "Branch",
       branchAddr1: "",
       branchAddr2: "",
       branchAddr3: "",
-      country: "",
       branchTin: "",
-      telNo: "",
-      faxNo: "",
+      contactNo: "",
       zipCode: "",
-      active: "Y",
+      branchType: "Branch",
+      active: "Yes",
+      __existing: false,
     });
+    setIsAdding(true);
     setIsEditing(true);
   };
 
-  const handleEditRow = (index) => {
-    const item = branches[index];
-    setEditingBranch({ ...item, __existing: true });
+  const handleEditRow = (row) => {
+    if (!row) return;
+    setEditingBranch(mapRowToEditing(row));
+    setIsAdding(false);
     setIsEditing(true);
+    setSelectedRow(row);
+  };
+
+  const handleRowDoubleClick = (row) => {
+    if (!isEditing) handleEditRow(row);
   };
 
   const resetForm = () => {
-    fetchBranches();
     setEditingBranch(null);
     setIsEditing(false);
-    setOpenExport(false);
-    setOpenGuide(false);
-    setPage(1);
+    setIsAdding(false);
+    setSelectedRow(null);
   };
 
-  // Save
-  // Save
-const handleSaveBranch = async () => {
-  if (!editingBranch) return;
-
-  const { branchCode, branchName, branchAddr1, branchTin } = editingBranch;
-
-  // Validate requireds
-  if (!req(branchCode) || !req(branchName) || !req(branchAddr1) || !req(branchTin)) {
-    Swal.fire("Missing data", "Please fill: Branch Code, Name, Address, and TIN.", "warning");
-    return;
-  }
-  if (!isTinValid(branchTin)) {
-    Swal.fire("Invalid TIN", "TIN should contain only digits and dashes.", "warning");
-    return;
-  }
-
-  // If you have AuthContext, prefer: const userCode = user?.USER_CODE || "SYSTEM";
-  const payload = {
-    json_data: {
-      branchCode: editingBranch.branchCode,
-      branchName: editingBranch.branchName,
-      branchType: editingBranch.main,
-      branchAddr1: editingBranch.branchAddr1,
-      branchAddr2: editingBranch.branchAddr2 || "",
-      branchAddr3: editingBranch.branchAddr3 || "",
-      country: editingBranch.country || "",
-      branchTin: editingBranch.branchTin,
-      telNo: editingBranch.telNo || "",
-      faxNo: editingBranch.faxNo || "",
-      zipCode: editingBranch.zipCode || "",
-      main: editingBranch.main,
-      active: editingBranch.active ?? "Y",
-      userCode: "NSI",
-    },
-  };
-
-  const confirm = await Swal.fire({
-    title: "Save Branch?",
-    text: "Make sure details are correct.",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonText: "Save",
-  });
-  if (!confirm.isConfirmed) return;
-
-  setSaving(true);
-  setLoading(true);
-  try {
-    // ✅ centralized POST helper (attaches token + tenant)
-    const res = await postRequest("/upsertBranch", payload);
-
-    // handle common response shapes
-    const status = res?.status ?? res?.data?.status;
-    const message = res?.message ?? res?.data?.message;
-
-    if (status === "success") {
-      await Swal.fire("Saved", "Branch saved successfully.", "success");
-      await fetchBranches();
-      resetForm();
-    } else {
-      Swal.fire("Error", message || "Something went wrong.", "error");
-    }
-  } catch (error) {
-    console.error("Error saving branch:", error);
-    const msg = error?.response?.data?.message || "Error saving branch.";
-    Swal.fire("Error", msg, "error");
-  } finally {
-    setSaving(false);
-    setLoading(false);
-  }
-};
-
-
-  // Delete
-  // Delete
-const handleDeleteBranch = async (index) => {
-  const b = branches[index];
-  if (!b?.branchCode) return;
-
-  const confirm = await Swal.fire({
-    title: "Delete this branch?",
-    text: `Branchcode : ${b.branchCode} | Branchname : ${b.branchName}`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#d33",
-    confirmButtonText: "Yes, delete it",
-  });
-  if (!confirm.isConfirmed) return;
-
-  try {
-    // ✅ centralized POST helper
-    const res = await postRequest("/deleteBranch", {
-      json_data: { branchCode: b.branchCode },
-    });
-
-    const status = res?.status ?? res?.data?.status;
-    const message = res?.message ?? res?.data?.message;
-
-    if (status === "success") {
-      // optimistic update
-      setBranches((prev) => prev.filter((_, i) => i !== index));
-      Swal.fire("Deleted", "The branch has been deleted.", "success");
-    } else {
-      Swal.fire("Error", message || "Deletion failed.", "error");
-    }
-  } catch (error) {
-    console.error("API delete error:", error);
-    const msg = error?.response?.data?.message || "Failed to delete branch.";
-    Swal.fire("Error", msg, "error");
-  }
-};
-
-
-  // Exports
-  const handleExport = (type) => {
-    if (!branches.length) {
-      Swal.fire("No data", "There is no data to export.", "info");
+  // ───── Save (Upsert) ─────
+  const handleSave = async () => {
+    if (!editingBranch) {
+      Swal.fire("Error", "Nothing to save.", "error");
       return;
     }
 
-    const headers = [
-      "Branch Code",
-      "Branch Name",
-      "Branch Type",
-      "Branch Address 1",
-      "Branch Address 2",
-      "Branch Address 3",
-      "Branch TIN",
-      "Telephone No",
-      // "Fax No",
-      "Zip Code",
-      "Active",
-    ];
+    const { branchCode, branchName, branchAddr1, branchTin } = editingBranch;
 
-    const rows = branches.map((branch) => [
-      branch.branchCode || "",
-      branch.branchName || "",
-      branch.main || "",
-      branch.branchAddr1 || "",
-      branch.branchAddr2 || "",
-      branch.branchAddr3 || "",
-      branch.branchTin || "",
-      branch.telNo || "",
-      // branch.faxNo || "",
-      branch.zipCode || "",
-      branch.active || "",
-    ]);
+    if (!branchCode || !branchName || !branchAddr1 || !branchTin) {
+      Swal.fire(
+        "Missing Data",
+        "Please fill Branch Code, Branch Name, Address 1 and TIN.",
+        "warning"
+      );
+      return;
+    }
 
-    if (type === "csv" || type === "excel") {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      XLSX.utils.book_append_sheet(wb, ws, "Branches");
-      if (type === "csv") {
-        XLSX.writeFile(wb, "branches.csv", { bookType: "csv" });
+    const payload = {
+      json_data: {
+        branchCode: String(branchCode).trim(),
+        branchName: String(branchName).trim(),
+        branchAddr1: String(editingBranch.branchAddr1 || "").trim(),
+        branchAddr2: String(editingBranch.branchAddr2 || "").trim(),
+        branchAddr3: String(editingBranch.branchAddr3 || "").trim(),
+        branchTin: String(branchTin || "").trim(),
+        telNo: String(editingBranch.contactNo || "").trim(),
+        faxNo: "",
+        zipCode: String(editingBranch.zipCode || "").trim(),
+        main: mapBranchTypeToYN(editingBranch.branchType), // Y/N
+        active: mapYesNoToYN(editingBranch.active), // Y/N
+        userCode,
+      },
+    };
+
+    const confirm = await Swal.fire({
+      title: "Save Branch?",
+      text: "Make sure the details are correct.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Save",
+    });
+    if (!confirm.isConfirmed) return;
+
+    setSaving(true);
+    setLoading(true);
+    try {
+      const { data } = await apiClient.post("/upsertBranch", payload);
+      const status = data?.status ?? data?.data?.status;
+      const success = data?.success || status === "success";
+
+      if (success) {
+        await Swal.fire(
+          "Saved",
+          isAdding ? "Branch added successfully." : "Branch updated successfully.",
+          "success"
+        );
+        await fetchBranches();
+        resetForm();
       } else {
-        XLSX.writeFile(wb, "branches.xlsx", { bookType: "xlsx" });
+        Swal.fire(
+          "Error",
+          data?.message || data?.data?.message || "Failed to save Branch.",
+          "error"
+        );
       }
-    } else if (type === "pdf") {
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "A4" });
-      doc.setFontSize(15);
-      doc.text("Branch Codes", 40, 40);
-      autoTable(doc, {
-        head: [headers],
-        body: rows,
-        startY: 60,
-        margin: { top: 50 },
-        theme: "grid",
-        styles: { fontSize: 8, textColor: [40, 40, 40], lineColor: [60, 60, 60], lineWidth: 0.1 },
-        headStyles: { fillColor: [0, 0, 128], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-      });
-      doc.save("branches.pdf");
+    } catch (error) {
+      console.error("Error saving Branch:", error);
+      const msg =
+        error?.response?.data?.message || error.message || "Error saving Branch.";
+      Swal.fire("Error", msg, "error");
+    } finally {
+      setSaving(false);
+      setLoading(false);
     }
   };
 
-  // Guides
+  // ───── Delete ─────
+  const handleDelete = async () => {
+    if (!editingBranch || !editingBranch.branchCode) {
+      Swal.fire("Error", "Select a branch to delete first.", "error");
+      return;
+    }
+
+    const branchCode = editingBranch.branchCode;
+    const branchName = editingBranch.branchName || "";
+
+    const confirm = await Swal.fire({
+      title: "Delete this branch?",
+      text: `Branch Code: ${branchCode} | Branch Name: ${branchName}`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Yes, delete",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const payload = {
+        json_data: {
+          branchCode: String(branchCode).trim(),
+          userCode,
+        },
+      };
+
+      const { data } = await apiClient.post("/deleteBranch", payload);
+      const status = data?.status ?? data?.success;
+      const success = data?.success || status === "success";
+
+      if (success) {
+        await Swal.fire("Deleted", "Branch deleted successfully.", "success");
+        await fetchBranches();
+        resetForm();
+      } else {
+        Swal.fire("Error", data?.message || "Failed to delete Branch.", "error");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      const msg =
+        error?.response?.data?.message ||
+        error.message ||
+        "Failed to delete Branch.";
+      Swal.fire("Error", msg, "error");
+    }
+  };
+
+  // ───── Export + Guides ─────
+  const handleExport = () => {
+    setOpenExport(false);
+    Swal.fire("Info", "Export for Branches will be implemented here.", "info");
+  };
+
   const handlePDFGuide = () => {
     if (pdfLink) window.open(pdfLink, "_blank");
     setOpenGuide(false);
   };
+
   const handleVideoGuide = () => {
     if (videoLink) window.open(videoLink, "_blank");
     setOpenGuide(false);
   };
 
-  // Render
+  // ───── ButtonBar ─────
+  const mainButtons = [
+    {
+      key: "add",
+      label: "Add",
+      icon: faPlus,
+      onClick: startNew,
+      disabled: saving || isEditing,
+    },
+    {
+      key: "save",
+      label: saving ? "Saving..." : "Save",
+      icon: faSave,
+      onClick: handleSave,
+      disabled: !isEditing || saving,
+    },
+    {
+      key: "delete",
+      label: "Delete",
+      icon: faTrashAlt,
+      onClick: handleDelete,
+      disabled: saving || !editingBranch || !editingBranch.__existing,
+    },
+    {
+      key: "reset",
+      label: "Reset",
+      icon: faUndo,
+      onClick: () => {
+        if (isEditing) resetForm();
+        else resetFilters();
+      },
+      disabled: saving,
+    },
+  ];
+
+  // ───── Render ─────
   return (
-    <div className="global-ref-main-div-ui mt-20">
-      <div className="mx-auto">
-        {/* Header */}
-        <div className="fixed top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
-            <div className="relative ml-auto sm:ml-4 w-full sm:w-64">
-              <input
-                className="global-ref-filterbox-ui global-ref-filterbox-enabled pl-8"
-                placeholder="Search keyword..."
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              />
-              <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
-            </div>
-          </div>
+    <div className="global-ref-main-div-ui mt-24">
+      {/* HEADER */}
+      <div className="fixed mt-4 top-14 left-6 right-6 z-30 global-ref-header-ui flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <h1 className="global-ref-headertext-ui">{documentTitle}</h1>
+        </div>
 
-          <div className="flex gap-2 justify-center text-xs">
-            <button onClick={startNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
-              <FontAwesomeIcon icon={faPlus} /> Add
-            </button>
+        <div className="flex gap-2 justify-end text-xs">
+          <ButtonBar buttons={mainButtons} />
 
+          {/* Export dropdown */}
+          <div ref={exportRef} className="relative">
             <button
-              onClick={handleSaveBranch}
-              className={`bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={!isEditing || saving}
-              title="Ctrl+S to Save"
+              onClick={() => setOpenExport((prev) => !prev)}
+              className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
             >
-              <FontAwesomeIcon icon={faSave} /> Save
+              <FontAwesomeIcon icon={faFileExport} />
+              Export
+              <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
             </button>
-
-            <button onClick={resetForm} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700" disabled={saving}>
-              <FontAwesomeIcon icon={faUndo} /> Reset
-            </button>
-
-            <div ref={exportRef} className="relative">
-              <button
-                onClick={() => setOpenExport((v) => !v)}
-                className="bg-green-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-              >
-                <FontAwesomeIcon icon={faPrint} /> Export <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
-              </button>
-              {isOpenExport && (
-                <div className="absolute right-0 mt-1 w-40 rounded-lg shadow-lg bg-white ring-1 ring-black/10 z-[60] dark:bg-gray-800">
-                  <button
-                    onClick={() => { handleExport("csv"); setOpenExport(false); }}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
-                  >
-                    <FontAwesomeIcon icon={faFileCsv} className="mr-2 text-green-600" /> CSV
-                  </button>
-                  <button
-                    onClick={() => { handleExport("excel"); setOpenExport(false); }}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
-                  >
-                    <FontAwesomeIcon icon={faFileExcel} className="mr-2 text-green-600" /> Excel
-                  </button>
-                  <button
-                    onClick={() => { handleExport("pdf"); setOpenExport(false); }}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
-                  >
-                    <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" /> PDF
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div ref={guideRef} className="relative">
-              <button
-                onClick={() => setOpenGuide((v) => !v)}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-              >
-                <FontAwesomeIcon icon={faInfoCircle} /> Info <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
-              </button>
-              {isOpenGuide && (
-                <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black/10 z-[60] dark:bg-gray-800">
-                  <button
-                    onClick={() => { handlePDFGuide(); setOpenGuide(false); }}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
-                  >
-                    <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" /> User Guide
-                  </button>
-                  <button
-                    onClick={() => { handleVideoGuide(); setOpenGuide(false); }}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900"
-                  >
-                    <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-600" /> Video Guide
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="global-tran-tab-div-ui">
-          {(loading || saving) && (
-            <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm flex items-center justify-center">
-              <div
-                className="bg-white dark:bg-gray-800 rounded-xl px-6 py-4 shadow-xl flex items-center gap-3"
-                role="status"
-                aria-live="polite"
-                aria-busy="true"
-              >
-                {/* Spinner */}
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-white" />
-                {/* Text */}
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {saving ? "Saving…" : "Loading…"}
-                </span>
+            {isOpenExport && (
+              <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg ring-1 ring-black/10 z-40">
+                <button
+                  onClick={handleExport}
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
+                >
+                  Excel / CSV
+                </button>
               </div>
-            </div>
-          )}
-
-
-          {/* Form grid (flattened) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-
-            {/* Branch Code */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="branchCode"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.branchCode || ""}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), branchCode: e.target.value }))
-                }
-                disabled={!!editingBranch?.__existing}
-                readOnly={!isEditing}
-                maxLength={10}
-              />
-              <label htmlFor="branchCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Branch Code
-              </label>
-            </div>
-
-            {/* Branch Name */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="branchName"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.branchName || ""}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), branchName: e.target.value }))
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="branchName" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Branch Name
-              </label>
-            </div>
-
-            {/* Branch Type */}
-            <div className="relative md:col-span-1">
-              <select
-                id="main"
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.main || "Branch"}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), main: e.target.value }))
-                }
-                disabled={!isEditing}
-              >
-                <option value="Main Branch">Main Branch</option>
-                <option value="Branch">Branch</option>
-              </select>
-              <label htmlFor="main" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Branch Type
-              </label>
-              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-
-            {/* TIN */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="tin"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.branchTin || ""}
-                onChange={(e) => {
-                  const sanitized = e.target.value.replace(/[^0-9-]/g, "");
-                  setEditingBranch((prev) => ({ ...(prev || {}), branchTin: sanitized }));
-                }}
-                disabled={!isEditing}
-              />
-              <label htmlFor="tin" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Tax Identification Number (TIN)
-              </label>
-            </div>
-
-            {/* Telephone No. */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="telNo"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.telNo || ""}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), telNo: e.target.value }))
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="telNo" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Telephone No.
-              </label>
-            </div>
-
-            {/* Zip Code */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="zipCode"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.zipCode || ""}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), zipCode: e.target.value }))
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="zipCode" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Zip Code
-              </label>
-            </div>
-
-            {/* Address — spans 2 columns on md+ */}
-            <div className="relative md:col-span-1">
-              <input
-                type="text"
-                id="address"
-                placeholder=" "
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.branchAddr1 || ""}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), branchAddr1: e.target.value }))
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="address" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Address
-              </label>
-            </div>
-
-            {/* Active */}
-            <div className="relative md:col-span-1">
-              <select
-                id="active"
-                className={`peer global-ref-textbox-ui ${isEditing ? "global-ref-textbox-enabled" : "global-ref-textbox-disabled"}`}
-                value={editingBranch?.active || "Active"}
-                onChange={(e) =>
-                  setEditingBranch((prev) => ({ ...(prev || {}), active: e.target.value }))
-                }
-                disabled={!isEditing}
-              >
-                <option value="Y">Yes</option>
-                <option value="N">No</option>
-              </select>
-              <label htmlFor="active" className={`global-ref-floating-label ${!isEditing ? "global-ref-label-disabled" : "global-ref-label-enabled"}`}>
-                <span className="global-ref-asterisk-ui">*</span> Active
-              </label>
-              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+            )}
           </div>
 
+          {/* Info (PDF / Video) */}
+          <div ref={guideRef} className="relative">
+            <button
+              onClick={() => setOpenGuide((prev) => !prev)}
+              className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+            >
+              <FontAwesomeIcon icon={faInfoCircle} />
+              Info
+              <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+            </button>
+            {isOpenGuide && (
+              <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black/10 z-[60]">
+                <button
+                  onClick={handlePDFGuide}
+                  disabled={!pdfLink}
+                  className="block w-full text-left px-4 py-2 text-xs hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FontAwesomeIcon icon={faFilePdf} className="mr-2 text-red-600" />
+                  User Guide
+                </button>
+                <button
+                  onClick={handleVideoGuide}
+                  disabled={!videoLink}
+                  className="block w-full text-left px-4 py-2 text-xs hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-600" />
+                  Video Guide
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="global-ref-table-main-div-ui">
-          <div className="global-ref-table-main-sub-div-ui">
-            <div className="global-ref-table-div-ui">
-              <table className="global-ref-table-div-ui">
-                <thead className="global-ref-thead-div-ui">
-                  {/* Sortable header row */}
-                  <tr className="global-ref-tr-ui">
-                    {[
-                      ["branchCode", "Branch Code"],
-                      ["branchName", "Branch Name"],
-                      ["main", "Branch Type"],
-                      ["branchAddr1", "Address"],
-                      ["branchTin", "TIN"],
-                      ["telNo", "Telephone No."],
-                      // ["faxNo", "Fax No."],
-                      ["zipCode", "Zip Code"],
-                      ["active", "Active"],
-                      ["_edit", "Edit"],
-                      ["_delete", "Delete"],
-                    ].map(([key, label]) => (
-                      <th
-                        key={key}
-                        className={`global-ref-th-ui ${key.startsWith("_") ? "" : "cursor-pointer select-none"}`}
-                        onClick={() => {
-                          if (key.startsWith("_")) return;
-                          setSortBy(key);
-                          setSortDir((prev) => (sortBy === key && prev === "asc" ? "desc" : "asc"));
-                        }}
-                        title={!key.startsWith("_") ? "Click to sort" : undefined}
-                      >
-                        {label} {sortBy === key ? (sortDir === "asc" ? "▲" : "▼") : ""}
-                      </th>
-                    ))}
-                  </tr>
+      {/* CONTENT CARD */}
+      <div className="mt-4 mb-4 bg-white rounded-lg shadow-md overflow-x-auto">
+        <div className="w-full bg-white p-4 sm:p-6 shadow-md rounded-lg">
+          <div className="flex flex-col gap-4">
+            {/* FORM */}
+            <div className="w-full">
+              <div className="border rounded-lg overflow-hidden p-4 bg-gray-50 relative">
+                {(loading || saving) && (
+                  <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-10">
+                    <span className="inline-flex items-center gap-2 text-xs text-blue-700 font-semibold">
+                      <FontAwesomeIcon icon={faSpinner} spin />
+                      {saving ? "Saving..." : "Loading..."}
+                    </span>
+                  </div>
+                )}
 
-                  {/* NEW: Filter row */}
-                  <tr>
-                    {/* Branch Code */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.branchCode}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, branchCode: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* Branch Name */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.branchName}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, branchName: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* Branch Type (select) */}
-                    <th className="global-ref-th-ui">
-                      <select
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        value={columnFilters.main}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, main: e.target.value })); setPage(1); }}
-                      >
-                        <option value="">All</option>
-                        <option value="Main Branch">Main Branch</option>
-                        <option value="Branch">Branch</option>
-                      </select>
-                    </th>
-                    {/* Address */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.branchAddr1}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, branchAddr1: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* TIN */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.branchTin}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, branchTin: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* Tel */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.telNo}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, telNo: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* Fax */}
-                    {/* <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.faxNo}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, faxNo: e.target.value })); setPage(1); }}
-                      />
-                    </th> */}
-                    {/* Zip */}
-                    <th className="global-ref-th-ui">
-                      <input
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        placeholder="Filter…"
-                        value={columnFilters.zipCode}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, zipCode: e.target.value })); setPage(1); }}
-                      />
-                    </th>
-                    {/* Active (select) */}
-                    <th className="global-ref-th-ui">
-                      <select
-                        className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
-                        value={columnFilters.active}
-                        onChange={(e) => { setColumnFilters(s => ({ ...s, active: e.target.value })); setPage(1); }}
-                      >
-                        <option value="">All</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                    </th>
-                    {/* Edit / Delete spacers */}
-                    <th className="global-ref-th-ui"></th>
-                    <th className="global-ref-th-ui"></th>
-                  </tr>
-                </thead>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                  {/* LEFT COLUMN */}
+                  <div className="space-y-1">
+                    <FieldRenderer
+                      label="Branch Code"
+                      required
+                      type="text"
+                      value={editingBranch?.branchCode || ""}
+                      disabled={
+                        !isEditing || (editingBranch && editingBranch.__existing)
+                      }
+                      onChange={(val) => {
+                        const v = (val || "").toUpperCase();
 
-                <tbody>
-                  {pageRows.length ? (
-                    pageRows.map((branch, idx) => (
-                      <tr key={`${branch.branchCode}-${idx}`} className="global-tran-tr-ui">
-                        <td className="global-ref-td-ui">{branch.branchCode}</td>
-                        <td className="global-ref-td-ui">{branch.branchName}</td>
-                        <td className="global-ref-td-ui">{branch.main}</td>
-                        <td className="global-ref-td-ui">{branch.branchAddr1 || "-"}</td>
-                        <td className="global-ref-td-ui">{branch.branchTin}</td>
-                        <td className="global-ref-td-ui">{branch.telNo || "-"}</td>
-                        {/* <td className="global-ref-td-ui">{branch.faxNo || "-"}</td> */}
-                        <td className="global-ref-td-ui">{branch.zipCode || "-"}</td>
-                        <td className="global-ref-td-ui">{branch.active}</td>
-                        <td className="global-ref-td-ui text-center sticky right-10">
-                          <button
-                            className="global-ref-td-button-edit-ui"
-                            onClick={() => handleEditRow((page - 1) * pageSize + idx)}
-                          >
-                            <FontAwesomeIcon icon={faEdit}/>
-                          </button>
-                        </td>
-                        <td className="global-ref-td-ui text-center sticky right-0">
-                          <button
-                            className="global-ref-td-button-delete-ui"
-                            onClick={() => handleDeleteBranch((page - 1) * pageSize + idx)}
-                          >
-                            <FontAwesomeIcon icon={faTrashAlt}/>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={11} className="global-ref-norecords-ui">
-                        No branches found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchCode: v,
+                        }));
 
-              {/* Pager */}
-              <div className="flex items-center justify-between p-3">
-                <div className="text-xs opacity-80 font-semibold">
-                  Total Records: {filtered.length}
-                </div>
-                <div className="flex items-center gap-3">
+                        // SweetAlert duplicate check (Add mode only)
+                        if (isAdding && v.trim() !== "") {
+                          const exists = branches.some((row) => {
+                            const existing = String(row.branchCode ?? "")
+                              .trim()
+                              .toUpperCase();
+                            return existing === v.trim();
+                          });
 
-                  <div className="text-xs opacity-80 font-semibold">
-                    Page {page} of {totalPages}
+                          if (exists) {
+                            Swal.fire({
+                              icon: "error",
+                              title: "Duplicate Code",
+                              text: "Branch Code already exists and cannot be used.",
+                              confirmButtonText: "OK",
+                            });
+
+                            setEditingBranch((prev) => ({
+                              ...(prev || {}),
+                              branchCode: "",
+                            }));
+                          }
+                        }
+                      }}
+                    />
+                    
+
+                    <FieldRenderer
+                      label="Branch Name"
+                      required
+                      type="text"
+                      value={editingBranch?.branchName || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchName: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Address 1"
+                      required
+                      type="text"
+                      value={editingBranch?.branchAddr1 || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchAddr1: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Address 2"
+                      type="text"
+                      value={editingBranch?.branchAddr2 || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchAddr2: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Address 3"
+                      type="text"
+                      value={editingBranch?.branchAddr3 || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchAddr3: val,
+                        }))
+                      }
+                    />
                   </div>
 
-                  <select
-                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    {[5, 10, 20, 50, 100].map((n) => (
-                      <option key={n} value={n}>
-                        {n}/page
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="px-7 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                  >
-                    Next
-                  </button>
-                  
+                  {/* RIGHT COLUMN */}
+                  <div className="space-y-1">
+                    <FieldRenderer
+                      label="Branch TIN"
+                      required
+                      type="text"
+                      value={editingBranch?.branchTin || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchTin: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Contact No."
+                      type="text"
+                      value={editingBranch?.contactNo || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          contactNo: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Zip Code"
+                      type="text"
+                      value={editingBranch?.zipCode || ""}
+                      disabled={!isEditing}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          zipCode: val,
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Branch Type"
+                      type="select"
+                      value={editingBranch?.branchType || "Branch"}
+                      disabled={!isEditing}
+                      options={[
+                        { value: "Main", label: "Main" },
+                        { value: "Branch", label: "Branch" },
+                      ]}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          branchType: val || "Branch",
+                        }))
+                      }
+                    />
+
+                    <FieldRenderer
+                      label="Active"
+                      type="select"
+                      value={editingBranch?.active || "Yes"}
+                      disabled={!isEditing}
+                      options={[
+                        { value: "Yes", label: "Yes" },
+                        { value: "No", label: "No" },
+                      ]}
+                      onChange={(val) =>
+                        setEditingBranch((prev) => ({
+                          ...(prev || {}),
+                          active: val || "Yes",
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLE */}
+            <div className="global-ref-table-main-div-ui">
+              <div className="global-ref-table-main-sub-div-ui">
+                <div className="global-ref-table-div-ui">
+                  <table className="global-ref-table-div-ui">
+                    <thead className="global-ref-thead-div-ui">
+                      <tr>
+                        <th
+                          className="global-ref-th-ui cursor-pointer select-none"
+                          onClick={() => {
+                            setSortBy("code");
+                            setSortDir((prev) =>
+                              prev === "asc" ? "desc" : "asc"
+                            );
+                          }}
+                        >
+                          Branch Code{" "}
+                          {sortBy === "code"
+                            ? sortDir === "asc"
+                              ? "▲"
+                              : "▼"
+                            : ""}
+                        </th>
+                        <th
+                          className="global-ref-th-ui cursor-pointer select-none"
+                          onClick={() => {
+                            setSortBy("name");
+                            setSortDir((prev) =>
+                              prev === "asc" ? "desc" : "asc"
+                            );
+                          }}
+                        >
+                          Branch Name{" "}
+                          {sortBy === "name"
+                            ? sortDir === "asc"
+                              ? "▲"
+                              : "▼"
+                            : ""}
+                        </th>
+                        <th className="global-ref-th-ui">Address</th>
+                        <th className="global-ref-th-ui">Zip Code</th>
+                        <th className="global-ref-th-ui">TIN</th>
+                        <th className="global-ref-th-ui">Contact No.</th>
+                        <th className="global-ref-th-ui">Main / Branch</th>
+                        <th className="global-ref-th-ui">Active</th>
+                      </tr>
+
+                      {/* ✅ Filter row (ALL columns) */}
+                      <tr>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.code}
+                            onChange={(e) =>
+                              handleFilterChange("code", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.name}
+                            onChange={(e) =>
+                              handleFilterChange("name", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.address}
+                            onChange={(e) =>
+                              handleFilterChange("address", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.zip}
+                            onChange={(e) =>
+                              handleFilterChange("zip", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.tin}
+                            onChange={(e) =>
+                              handleFilterChange("tin", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.contact}
+                            onChange={(e) =>
+                              handleFilterChange("contact", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.type}
+                            onChange={(e) =>
+                              handleFilterChange("type", e.target.value)
+                            }
+                          />
+                        </th>
+                        <th className="global-ref-th-ui">
+                          <input
+                            className="w-full global-ref-filterbox-ui global-ref-filterbox-enabled"
+                            placeholder="Filter…"
+                            value={filters.active}
+                            onChange={(e) =>
+                              handleFilterChange("active", e.target.value)
+                            }
+                          />
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {filtered.length > 0 ? (
+                        filtered.map((row, index) => {
+                          const selected =
+                            getRowId(selectedRow) === getRowId(row);
+
+                          const address = [
+                            row.branchAddr1,
+                            row.branchAddr2,
+                            row.branchAddr3,
+                          ]
+                            .filter(Boolean)
+                            .join(", ");
+
+                          const branchType = mapMainToBranchType(row.main);
+
+                          return (
+                            <tr
+                              key={getRowId(row) || index}
+                              className={`global-tran-tr-ui ${
+                                selected ? "bg-blue-50" : ""
+                              }`}
+                              onClick={() => handleSelectRow(row)}
+                              onDoubleClick={() => handleRowDoubleClick(row)}
+                            >
+                              <td className="global-ref-td-ui">
+                                {row.branchCode}
+                              </td>
+                              <td className="global-ref-td-ui">
+                                {row.branchName}
+                              </td>
+                              <td className="global-ref-td-ui">{address}</td>
+                              <td className="global-ref-td-ui">
+                                {row.zipCode}
+                              </td>
+                              <td className="global-ref-td-ui">
+                                {row.branchTin}
+                              </td>
+                              <td className="global-ref-td-ui">{row.telNo}</td>
+                              <td className="global-ref-td-ui">
+                                {branchType}
+                              </td>
+                              <td className="global-ref-td-ui">{row.active}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={8}
+                            className="global-ref-norecords-ui text-center"
+                          >
+                            {loading ? (
+                              <span className="inline-flex items-center gap-2">
+                                <FontAwesomeIcon icon={faSpinner} spin />
+                                Loading…
+                              </span>
+                            ) : (
+                              "No branches found"
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  <div className="flex items-center justify-between p-3">
+                    <div className="text-xs opacity-80 font-semibold">
+                      Total Records: {filtered.length}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        {/* end Table */}
+
+        {/* FOOTER STRIP */}
+        <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center mt-4 rounded-b-lg">
+          <div className="text-sm text-gray-700">
+            Showing <span className="font-medium">{filtered.length}</span> of{" "}
+            <span className="font-medium">{branches.length}</span> branches
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -52,46 +52,7 @@ const UserRoleTab = ({ users }) => {
 
   return (
     <div className="w-full">
-      {/* Action Buttons */}
-      <div className="flex gap-2 mb-4 justify-end">
-        <button
-          className={`${
-            selectedUsers.length === 0
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600"
-          } text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700`}
-          onClick={() => {
-            if (selectedUsers.length > 0) {
-              setShowModules(true);
-              setSelectedModules([]);
-            }
-          }}
-          disabled={selectedUsers.length === 0}
-        >
-          <FontAwesomeIcon icon={faEye} /> View Rights
-        </button>
-        <button
-          className="bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700"
-          onClick={() => {
-            setSelectedUsers([]);
-            setShowModules(false);
-            setSelectedModules([]);
-          }}
-        >
-          <FontAwesomeIcon icon={faUndo} /> Reset
-        </button>
-        <button
-          className={`${
-            !showModules || selectedModules.length === 0
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-green-600"
-          } text-white px-3 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700`}
-          disabled={!showModules || selectedModules.length === 0}
-          onClick={handleSaveAccess}
-        >
-          <FontAwesomeIcon icon={faCheck} /> Apply
-        </button>
-      </div>
+      
 
       {/* Two Tables Side by Side */}
       <div className="flex flex-col md:flex-row gap-6">
